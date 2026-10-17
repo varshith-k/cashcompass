@@ -105,3 +105,22 @@ export function countBillsAtRisk(bills: FinancialEvent[], points: ForecastPoint[
   const riskByDate = new Map(points.map((point) => [point.date, point.isLowBalanceRisk]));
   return bills.filter((bill) => riskByDate.get(bill.date.slice(0, 10))).length;
 }
+
+/**
+ * Actual (not planned) expense total per category, for the current
+ * calendar month. The same shape a `monthly_category_spend` continuous
+ * aggregate read would return once Tiger Data is live.
+ */
+export function spendByCategoryThisMonth(events: FinancialEvent[]): Map<string, number> {
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const totals = new Map<string, number>();
+
+  for (const event of events) {
+    if (event.direction !== "expense" || event.record !== "actual") continue;
+    if (!event.date.startsWith(monthKey)) continue;
+    totals.set(event.category, (totals.get(event.category) ?? 0) + event.amount);
+  }
+
+  return totals;
+}

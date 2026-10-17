@@ -1,19 +1,44 @@
-import { PiggyBank } from "lucide-react";
+import { connection } from "next/server";
 import { PageHeader } from "@/components/shell/page-header";
-import { ComingSoon } from "@/components/shell/coming-soon";
+import { BudgetsGrid } from "@/components/budgets/budgets-grid";
+import { EditBudgetsSheet } from "@/components/budgets/edit-budgets-sheet";
+import { InsightCard } from "@/components/dashboard/insight-card";
+import { getBudgets } from "@/lib/finance/budgets";
+import { spendByCategoryThisMonth } from "@/lib/finance/calculations";
+import { getFinancialEventRepository } from "@/lib/finance/repository";
+import { formatCurrency } from "@/lib/format";
 
-export default function BudgetsPage() {
+export default async function BudgetsPage() {
+  await connection();
+
+  const events = await getFinancialEventRepository().listEvents();
+  const spendByCategory = spendByCategoryThisMonth(events);
+  const budgets = getBudgets();
+
+  const budgetsWithSpend = budgets.map((budget) => ({
+    ...budget,
+    spent: spendByCategory.get(budget.category) ?? 0,
+  }));
+
+  const overBudget = budgetsWithSpend.find((b) => b.monthlyLimit > 0 && b.spent > b.monthlyLimit);
+
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Budgets"
-        description="Category allocations, spending vs limits, and constructive overspending warnings."
+        description="Category allocations against what you've actually spent this month."
+        actions={<EditBudgetsSheet budgets={budgets} />}
       />
-      <ComingSoon
-        icon={PiggyBank}
-        title="Budget planning is next up"
-        description="Planned for Phase 5, feeding into the same forecast engine as every other module."
-      />
+
+      {overBudget && (
+        <InsightCard
+          message={`You're ${formatCurrency(overBudget.spent - overBudget.monthlyLimit, { cents: true })} over your ${overBudget.category} budget this month. Adjusting the limit or easing up here keeps the rest of your plan on track.`}
+          ctaLabel="Review transactions"
+          ctaHref="/transactions"
+        />
+      )}
+
+      <BudgetsGrid budgets={budgetsWithSpend} />
     </div>
   );
 }

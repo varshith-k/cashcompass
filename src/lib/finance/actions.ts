@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getFinancialEventRepository } from "./repository";
+import { getBudgets, setBudgetLimits } from "./budgets";
 import type { EventDirection, NewFinancialEvent } from "./types";
 
 function parseAmount(raw: FormDataEntryValue | null): number {
@@ -84,4 +85,17 @@ export async function markBillPaid(formData: FormData) {
   revalidatePath("/bills");
   revalidatePath("/transactions");
   revalidatePath("/overview");
+}
+
+export async function updateBudgetLimits(formData: FormData) {
+  const limits: Record<string, number> = {};
+  for (const budget of getBudgets()) {
+    const raw = formData.get(`limit_${budget.category}`);
+    const value = Number(raw);
+    if (Number.isFinite(value) && value >= 0) {
+      limits[budget.category] = Math.round(value * 100) / 100;
+    }
+  }
+  setBudgetLimits(limits);
+  revalidatePath("/budgets");
 }
