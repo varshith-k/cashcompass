@@ -48,3 +48,13 @@ Data connection.
 If `FinancialEvent` in `types.ts` ever changes, update `db/schema.sql` and
 the row mapping in `tiger-repository.ts` to match — they're hand-kept in
 sync, not generated from each other.
+
+## Per-user data (Auth0)
+
+Every repository call is scoped to the signed-in user. `getFinancialEventRepository()` resolves the owner from the verified Auth0 session (`requireOwnerId()` in `src/lib/auth/session.ts`) and passes it to the store, so callers never pass a user id and can't touch another user's rows:
+
+- `tiger-repository.ts` filters every `SELECT`/`UPDATE`/`DELETE` on `owner_id`, and `INSERT` sets it.
+- `demo-repository.ts`, `budgets.ts`, `wishlist-goals.ts` and `../nessie/status.ts` keep one in-memory copy per user. Each new user starts from the demo seed.
+- Signed-out calls redirect to login.
+
+If you already ran an older `db/schema.sql`, recreate the table. It now has `owner_id text NOT NULL`, and the primary key is `(id, event_date)`, which TimescaleDB requires for hypertables.

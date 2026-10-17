@@ -20,6 +20,9 @@ import type { BudgetAllocation } from "@/lib/finance/budgets";
 
 export interface ForecastContext {
   events: FinancialEvent[];
+  /** The signed-in user's budgets and goals, loaded server-side in askCopilot. */
+  budgets: BudgetAllocation[];
+  wishlistGoals: WishlistGoal[];
   openingBalance: number;
   bufferThreshold: number;
   forecastDays: number;

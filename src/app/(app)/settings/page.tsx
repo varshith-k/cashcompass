@@ -6,9 +6,11 @@ import { AccountCard } from "@/components/settings/account-card";
 import { NessieCard } from "@/components/settings/nessie-card";
 import { isNessieConfigured } from "@/lib/nessie/client";
 import { getSyncStatus } from "@/lib/nessie/status";
+import { requireOwnerId } from "@/lib/auth/session";
 
 export default async function SettingsPage() {
   await connection();
+  const ownerId = await requireOwnerId();
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -29,7 +31,7 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
-      <NessieCard isConfigured={isNessieConfigured()} initialStatus={getSyncStatus()} />
+      <NessieCard isConfigured={isNessieConfigured()} initialStatus={getSyncStatus(ownerId)} />
     </div>
   );
 }

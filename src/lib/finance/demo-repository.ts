@@ -1,36 +1,41 @@
 import "server-only";
-import type { FinancialEventRepository } from "./repository";
+import type { FinancialEventStore } from "./repository";
 import type { FinancialEvent, FinancialEventUpdate, NewFinancialEvent } from "./types";
 import { getDemoEvents } from "./demo-data";
 
 /**
  * Used until DATABASE_URL points at a real Tiger Data instance. Backed by
- * a module-level array, so writes persist for the life of the server
+ * module-level memory, so writes persist for the life of the server
  * process (long enough for a demo session) but reset on restart — there's
  * no durable storage until Tiger Data is wired up.
+ *
+ * Each user gets their own copy of the demo events on first access, so
+ * one person's edits never show up for anyone else.
  */
-let store: FinancialEvent[] | null = null;
+const stores = new Map<string, FinancialEvent[]>();
 
-function ensureStore() {
-  if (!store) {
-    store = getDemoEvents();
+function storeFor(ownerId: string) {
+  let events = stores.get(ownerId);
+  if (!events) {
+    events = getDemoEvents();
+    stores.set(ownerId, events);
   }
-  return store;
+  return events;
 }
 
-export class DemoFinancialEventRepository implements FinancialEventRepository {
-  async listEvents() {
-    return ensureStore();
+export class DemoFinancialEventStore implements FinancialEventStore {
+  async listEvents(ownerId: string) {
+    return storeFor(ownerId);
   }
 
-  async createEvent(input: NewFinancialEvent) {
+  async createEvent(ownerId: string, input: NewFinancialEvent) {
     const event: FinancialEvent = { ...input, id: crypto.randomUUID() };
-    ensureStore().push(event);
+    storeFor(ownerId).push(event);
     return event;
   }
 
-  async updateEvent(id: string, patch: FinancialEventUpdate) {
-    const events = ensureStore();
+  async updateEvent(ownerId: string, id: string, patch: FinancialEventUpdate) {
+    const events = storeFor(ownerId);
     const index = events.findIndex((event) => event.id === id);
     if (index === -1) {
       throw new Error(`Financial event ${id} not found`);
@@ -39,8 +44,8 @@ export class DemoFinancialEventRepository implements FinancialEventRepository {
     return events[index];
   }
 
-  async deleteEvent(id: string) {
-    const events = ensureStore();
+  async deleteEvent(ownerId: string, id: string) {
+    const events = storeFor(ownerId);
     const index = events.findIndex((event) => event.id === id);
     if (index !== -1) {
       events.splice(index, 1);

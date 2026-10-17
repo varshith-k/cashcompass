@@ -126,16 +126,15 @@ The proxy is the first gate. **Route Handlers and Server Actions must still call
 - **Never accept a user id from the client.** `withOwner(user, record)` overwrites any `ownerId` the client sends.
 - To read by id, use `assertOwnedBy(record, user)`. It throws `ForbiddenResourceError`; respond **404**.
 - To filter lists, use `onlyOwnedBy(rows, user)`, or better, put `ownerId` in the DB query.
-- The in-memory demo repository is static demo data shared by everyone. That's fine, because it's labeled demo data.
 
-### ⚠️ Required before `DATABASE_URL` (Tiger Data) goes live
+### Financial data is scoped per user (done)
 
-`FinancialEventRepository.listEvents()` and `db/schema.sql` (commit `77ff881`) have **no owner column**. With a real database, every signed-in user would read every user's events. The data-layer owner should:
+`getFinancialEventRepository()` resolves the owner from the verified session on every call (`requireOwnerId()`), so callers never pass a user id:
 
-1. Schema: add `owner_id text not null` to `financial_events` (it stores the Auth0 `sub`). Add an index on `(owner_id, event_date desc)`, and add `owner_id` to the `monthly_category_spend` continuous aggregate's `GROUP BY`.
-2. Interface: `listEvents(ownerId: string)`, and the same `ownerId` first argument on every future read and write method. `tiger-repository.ts` adds `where owner_id = $1`. The demo repository can ignore the argument.
-3. Call sites, e.g. `src/app/(app)/overview/page.tsx`: `const { user } = await requireSession(); await repo.listEvents(user.id);`. Never pass an id that came from the client.
-4. Writes (quick-add, Nessie sync): set `owner_id` from `requireSession()` / `withSession()`, never from the request body.
+- **Tiger Data:** `financial_events.owner_id` is `NOT NULL`. Every `SELECT`, `UPDATE` and `DELETE` filters on it, so an update or delete with someone else's id matches nothing. The continuous aggregate groups by `owner_id`.
+- **Demo/in-memory:** events, budgets, wishlist goals and the Nessie sync status are kept per user. Each new user starts from the demo seed.
+- **Pages and server actions** pass `await requireOwnerId()` to the budget, goal and sync-status helpers. The copilot receives the user's budgets and goals on its `ForecastContext`.
+- Covered by `src/lib/finance/user-isolation.test.ts`.
 
 ### Capital One Nessie demo data
 

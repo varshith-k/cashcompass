@@ -19,6 +19,7 @@ import {
 import { DEMO_PREFERRED_BUFFER, DEMO_STARTING_BALANCE } from "@/lib/finance/demo-data";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { getWishlistGoals } from "@/lib/finance/wishlist-goals";
+import { requireOwnerId } from "@/lib/auth/session";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -71,7 +72,7 @@ export default async function OverviewPage() {
   );
 
   const nextBill = upcomingBills[0];
-  const primaryGoal = getWishlistGoals()[0];
+  const primaryGoal = getWishlistGoals(await requireOwnerId())[0];
   const savingsProgressPct = primaryGoal
     ? Math.min(100, Math.round((savingsProgressForGoal(events, primaryGoal.name) / primaryGoal.targetAmount) * 100))
     : 0;

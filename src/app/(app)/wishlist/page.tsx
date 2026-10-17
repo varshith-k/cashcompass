@@ -6,13 +6,14 @@ import { AddGoalSheet } from "@/components/wishlist/add-goal-sheet";
 import { GoalCard } from "@/components/wishlist/goal-card";
 import { recommendedWeeklyContribution, savingsProgressForGoal } from "@/lib/finance/calculations";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
+import { requireOwnerId } from "@/lib/auth/session";
 import { getWishlistGoals } from "@/lib/finance/wishlist-goals";
 
 export default async function WishlistPage() {
   await connection();
 
   const events = await getFinancialEventRepository().listEvents();
-  const goals = getWishlistGoals();
+  const goals = getWishlistGoals(await requireOwnerId());
 
   return (
     <div>

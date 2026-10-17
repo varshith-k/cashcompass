@@ -6,12 +6,13 @@ export interface SyncStatus {
   skipped: number;
 }
 
-let lastStatus: SyncStatus | null = null;
+/** Last sync per user (keyed by Auth0 `sub`). */
+const lastStatus = new Map<string, SyncStatus>();
 
-export function recordSyncStatus(result: { added: number; skipped: number }) {
-  lastStatus = { timestamp: new Date().toISOString(), ...result };
+export function recordSyncStatus(ownerId: string, result: { added: number; skipped: number }) {
+  lastStatus.set(ownerId, { timestamp: new Date().toISOString(), ...result });
 }
 
-export function getSyncStatus(): SyncStatus | null {
-  return lastStatus;
+export function getSyncStatus(ownerId: string): SyncStatus | null {
+  return lastStatus.get(ownerId) ?? null;
 }

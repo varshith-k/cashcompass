@@ -1,6 +1,4 @@
-import { getBudgets } from "@/lib/finance/budgets";
 import { spendByCategoryThisMonth } from "@/lib/finance/calculations";
-import { getWishlistGoals } from "@/lib/finance/wishlist-goals";
 import { formatCurrency, formatShortDate } from "@/lib/format";
 import {
   checkAffordability,
@@ -64,7 +62,7 @@ export function respondOffline(message: string, ctx: ForecastContext): CopilotRe
 
   if (lower.includes("overspen") || lower.includes("where") && lower.includes("month")) {
     const spend = spendByCategoryThisMonth(ctx.events);
-    const { overBudget, topCategories } = spendingBreakdown(spend, getBudgets());
+    const { overBudget, topCategories } = spendingBreakdown(spend, ctx.budgets);
 
     if (overBudget.length > 0) {
       const lines = overBudget.map(
@@ -114,7 +112,7 @@ export function respondOffline(message: string, ctx: ForecastContext): CopilotRe
 
   if (lower.includes("save") || lower.includes("saving")) {
     const nameMatch = message.match(/for (?:my |the )?([a-z\s]+?)(?:\.|$)/i)?.[1]?.trim();
-    const goals = getWishlistGoals();
+    const goals = ctx.wishlistGoals;
     const plan = suggestSavingsPlan(ctx.events, goals, nameMatch);
 
     if (!plan.found) {
