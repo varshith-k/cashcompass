@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { BudgetsGrid } from "@/components/budgets/budgets-grid";
 import { EditBudgetsSheet } from "@/components/budgets/edit-budgets-sheet";
 import { InsightCard } from "@/components/dashboard/insight-card";
+import { requireOwnerId } from "@/lib/auth/session";
 import { getBudgets } from "@/lib/finance/budgets";
 import { spendByCategoryThisMonth } from "@/lib/finance/calculations";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
@@ -13,7 +14,7 @@ export default async function BudgetsPage() {
 
   const events = await getFinancialEventRepository().listEvents();
   const spendByCategory = spendByCategoryThisMonth(events);
-  const budgets = getBudgets();
+  const budgets = getBudgets(await requireOwnerId());
 
   const budgetsWithSpend = budgets.map((budget) => ({
     ...budget,

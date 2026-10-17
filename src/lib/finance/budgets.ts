@@ -6,7 +6,7 @@ export interface BudgetAllocation {
 }
 
 /**
- * In-memory for now, same caveat as demo-repository.ts: persists for the
+ * Per user (keyed by Auth0 `sub`). In-memory for now, same caveat as demo-repository.ts: persists for the
  * server process's lifetime, not durably. A real budgets table is a
  * Phase 5 addition once Tiger Data is live — see src/lib/finance/README.md.
  */
@@ -19,21 +19,23 @@ const DEFAULT_BUDGETS: BudgetAllocation[] = [
   { category: "Utilities", monthlyLimit: 150 },
 ];
 
-let store: BudgetAllocation[] | null = null;
+const stores = new Map<string, BudgetAllocation[]>();
 
-function ensureStore() {
-  if (!store) {
-    store = DEFAULT_BUDGETS.map((budget) => ({ ...budget }));
+function storeFor(ownerId: string) {
+  let budgets = stores.get(ownerId);
+  if (!budgets) {
+    budgets = DEFAULT_BUDGETS.map((budget) => ({ ...budget }));
+    stores.set(ownerId, budgets);
   }
-  return store;
+  return budgets;
 }
 
-export function getBudgets(): BudgetAllocation[] {
-  return ensureStore();
+export function getBudgets(ownerId: string): BudgetAllocation[] {
+  return storeFor(ownerId);
 }
 
-export function setBudgetLimits(limits: Record<string, number>) {
-  const budgets = ensureStore();
+export function setBudgetLimits(ownerId: string, limits: Record<string, number>) {
+  const budgets = storeFor(ownerId);
   for (const budget of budgets) {
     if (limits[budget.category] !== undefined) {
       budget.monthlyLimit = limits[budget.category];

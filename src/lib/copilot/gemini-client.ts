@@ -1,7 +1,5 @@
 import "server-only";
-import { getBudgets } from "@/lib/finance/budgets";
 import { spendByCategoryThisMonth } from "@/lib/finance/calculations";
-import { getWishlistGoals } from "@/lib/finance/wishlist-goals";
 import { respondOffline } from "./respond-offline";
 import {
   checkRepaymentDelay,
@@ -93,11 +91,11 @@ function runTool(name: string, args: Record<string, unknown>, ctx: ForecastConte
     case "suggest_savings_plan":
       return suggestSavingsPlan(
         ctx.events,
-        getWishlistGoals(),
+        ctx.wishlistGoals,
         args.goalNameContains ? String(args.goalNameContains) : undefined,
       );
     case "spending_breakdown":
-      return spendingBreakdown(spendByCategoryThisMonth(ctx.events), getBudgets());
+      return spendingBreakdown(spendByCategoryThisMonth(ctx.events), ctx.budgets);
     default:
       return { error: `Unknown tool: ${name}` };
   }

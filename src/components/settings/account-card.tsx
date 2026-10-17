@@ -1,18 +1,33 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useActionState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { signInMethodLabel } from "@/lib/auth/map-user";
+import { updateDisplayName, type ProfileFormState } from "@/lib/auth/profile-actions";
 import { useAuth } from "@/lib/auth/provider";
 
-export function AccountCard() {
-  const { user, status, logoutHref } = useAuth();
+const INITIAL_STATE: ProfileFormState = { status: "idle", message: "" };
+
+export function AccountCard({ canEditProfile = false }: { canEditProfile?: boolean }) {
+  const { user, status, source, logoutHref } = useAuth();
+  const [formState, formAction, isSaving] = useActionState(updateDisplayName, INITIAL_STATE);
   const initials = user?.name
     ?.split(" ")
     .map((part) => part[0])
     .join("")
     .slice(0, 2);
+
+  const badge =
+    status !== "authenticated"
+      ? "Signed out"
+      : source === "demo"
+        ? "Demo account"
+        : `Signed in with ${signInMethodLabel(user!.id)}`;
 
   return (
     <Card>
@@ -21,6 +36,7 @@ export function AccountCard() {
       </CardHeader>
       <CardContent className="flex items-center gap-4">
         <Avatar className="size-12">
+          {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" referrerPolicy="no-referrer" />}
           <AvatarFallback className="bg-brand-navy text-white">{initials}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
@@ -28,10 +44,48 @@ export function AccountCard() {
           <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
         </div>
         <Badge variant="outline" className="shrink-0">
-          {status === "authenticated" ? "Demo account" : "Signed out"}
+          {badge}
         </Badge>
       </CardContent>
-      <CardContent className="pt-0">
+
+      {canEditProfile && user && (
+        <CardContent className="pt-0">
+          <form action={formAction} className="space-y-2">
+            <Label htmlFor="display-name">Display name</Label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                id="display-name"
+                name="name"
+                defaultValue={user.name}
+                maxLength={80}
+                autoComplete="name"
+                required
+                aria-describedby="display-name-status"
+                className="min-h-11 sm:min-h-9"
+              />
+              <Button type="submit" disabled={isSaving} className="min-h-11 sm:min-h-9">
+                {isSaving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+            <p
+              id="display-name-status"
+              role="status"
+              aria-live="polite"
+              className={formState.status === "error" ? "text-sm text-destructive" : "text-sm text-muted-foreground"}
+            >
+              {formState.message}
+            </p>
+          </form>
+        </CardContent>
+      )}
+
+      <CardContent className="pt-0 space-y-3">
+        {source === "auth0" && (
+          <p className="text-xs leading-5 text-muted-foreground">
+            Your email and photo come from your {signInMethodLabel(user!.id)} sign-in, managed securely by Auth0.
+            CashCompass never sees your password.
+          </p>
+        )}
         <Button render={<a href={logoutHref}>Sign out</a>} nativeButton={false} variant="outline" size="sm" />
       </CardContent>
     </Card>

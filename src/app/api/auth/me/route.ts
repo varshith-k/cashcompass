@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
+import { withSession } from "@/lib/auth/session";
 
 /**
- * Returns the current session as JSON. Backed by the demo session today;
- * once src/lib/auth/session.ts calls into Auth0, this endpoint needs no
- * changes.
+ * Returns the current session as JSON. Signed-out requests get 401 (from
+ * src/proxy.ts, and again from withSession).
  */
-export async function GET() {
-  const session = await getSession();
-  return NextResponse.json({ session });
-}
+export const GET = withSession(async (_request, { session }) => {
+  return NextResponse.json({ session }, { headers: { "Cache-Control": "private, no-store" } });
+});
