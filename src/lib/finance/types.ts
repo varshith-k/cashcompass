@@ -24,6 +24,9 @@ export interface FinancialEvent {
   scenarioId?: string;
 }
 
+export type NewFinancialEvent = Omit<FinancialEvent, "id">;
+export type FinancialEventUpdate = Partial<NewFinancialEvent>;
+
 export interface SafeToSpendInput {
   availableBalance: number;
   upcomingBills: number;

@@ -1,19 +1,26 @@
-import { CalendarClock } from "lucide-react";
+import { connection } from "next/server";
 import { PageHeader } from "@/components/shell/page-header";
-import { ComingSoon } from "@/components/shell/coming-soon";
+import { AddBillSheet } from "@/components/bills/add-bill-sheet";
+import { BillsTable } from "@/components/bills/bills-table";
+import { selectUpcomingBills } from "@/lib/finance/calculations";
+import { getFinancialEventRepository } from "@/lib/finance/repository";
+import { formatCurrency } from "@/lib/format";
 
-export default function BillsPage() {
+export default async function BillsPage() {
+  await connection();
+
+  const events = await getFinancialEventRepository().listEvents();
+  const bills = selectUpcomingBills(events);
+  const monthlyTotal = bills.reduce((sum, bill) => sum + bill.amount, 0);
+
   return (
     <div>
       <PageHeader
         title="Bills & Payments"
-        description="Upcoming bills, due-date timeline, recurring configuration, and reminders."
+        description={`${bills.length} upcoming, totaling ${formatCurrency(monthlyTotal, { cents: true })}.`}
+        actions={<AddBillSheet />}
       />
-      <ComingSoon
-        icon={CalendarClock}
-        title="Full bill tracking is next up"
-        description="Planned for Phase 3, alongside transactions and Nessie sync. The Overview dashboard already surfaces upcoming bills from the same financial-event data this page will manage."
-      />
+      <BillsTable bills={bills} />
     </div>
   );
 }

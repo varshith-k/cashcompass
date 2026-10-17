@@ -1,7 +1,8 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { Pool, type PoolClient } from "pg";
 import type { FinancialEventRepository } from "./repository";
-import type { FinancialEvent } from "./types";
+import type { FinancialEvent, FinancialEventUpdate, NewFinancialEvent } from "./types";
 
 let pool: Pool | null = null;
 
@@ -68,5 +69,79 @@ export class TigerDataFinancialEventRepository implements FinancialEventReposito
       );
       return result.rows.map(toFinancialEvent);
     });
+  }
+
+  async createEvent(input: NewFinancialEvent): Promise<FinancialEvent> {
+    return this.withClient(async (client) => {
+      const result = await client.query<FinancialEventRow>(
+        `INSERT INTO financial_events
+           (id, event_date, amount, direction, record, certainty,
+            recurrence, source, category, counterparty, scenario_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING *`,
+        [
+          randomUUID(),
+          input.date,
+          input.amount,
+          input.direction,
+          input.record,
+          input.certainty,
+          input.recurrence,
+          input.source,
+          input.category,
+          input.counterparty,
+          input.scenarioId ?? null,
+        ],
+      );
+      return toFinancialEvent(result.rows[0]);
+    });
+  }
+
+  async updateEvent(id: string, patch: FinancialEventUpdate): Promise<FinancialEvent> {
+    return this.withClient(async (client) => {
+      const columns: Record<keyof FinancialEventUpdate, string> = {
+        date: "event_date",
+        amount: "amount",
+        direction: "direction",
+        record: "record",
+        certainty: "certainty",
+        recurrence: "recurrence",
+        source: "source",
+        category: "category",
+        counterparty: "counterparty",
+        scenarioId: "scenario_id",
+      };
+
+      const entries = Object.entries(patch).filter(([, value]) => value !== undefined) as [
+        keyof FinancialEventUpdate,
+        unknown,
+      ][];
+
+      if (entries.length === 0) {
+        const existing = await client.query<FinancialEventRow>(
+          "SELECT * FROM financial_events WHERE id = $1",
+          [id],
+        );
+        if (!existing.rows[0]) throw new Error(`Financial event ${id} not found`);
+        return toFinancialEvent(existing.rows[0]);
+      }
+
+      const setClause = entries.map(([key], index) => `${columns[key]} = $${index + 2}`).join(", ");
+      const values = entries.map(([, value]) => value);
+
+      const result = await client.query<FinancialEventRow>(
+        `UPDATE financial_events SET ${setClause} WHERE id = $1 RETURNING *`,
+        [id, ...values],
+      );
+
+      if (!result.rows[0]) {
+        throw new Error(`Financial event ${id} not found`);
+      }
+      return toFinancialEvent(result.rows[0]);
+    });
+  }
+
+  async deleteEvent(id: string): Promise<void> {
+    await this.withClient((client) => client.query("DELETE FROM financial_events WHERE id = $1", [id]));
   }
 }

@@ -1,19 +1,24 @@
-import { Receipt } from "lucide-react";
+import { connection } from "next/server";
 import { PageHeader } from "@/components/shell/page-header";
-import { ComingSoon } from "@/components/shell/coming-soon";
+import { AddTransactionSheet } from "@/components/transactions/add-transaction-sheet";
+import { TransactionsTable } from "@/components/transactions/transactions-table";
+import { selectRecentTransactions } from "@/lib/finance/calculations";
+import { getFinancialEventRepository } from "@/lib/finance/repository";
 
-export default function TransactionsPage() {
+export default async function TransactionsPage() {
+  await connection();
+
+  const events = await getFinancialEventRepository().listEvents();
+  const transactions = selectRecentTransactions(events);
+
   return (
     <div>
       <PageHeader
         title="Transactions"
-        description="Search, filter, and quick-add manual and Capital One Nessie demo transactions."
+        description="Manual entries and Capital One Nessie demo records, in one history."
+        actions={<AddTransactionSheet />}
       />
-      <ComingSoon
-        icon={Receipt}
-        title="Transaction history is next up"
-        description="Full history, filters, and quick-add are planned for Phase 3. The shared financial-event model this will read from already powers the Overview dashboard."
-      />
+      <TransactionsTable transactions={transactions} />
     </div>
   );
 }
