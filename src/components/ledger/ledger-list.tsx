@@ -6,6 +6,7 @@ import { deleteLedgerEntry, logLedgerPayment } from "@/lib/finance/actions";
 import type { FinancialEvent } from "@/lib/finance/types";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
 import { buildWhatsAppReminderLink } from "@/lib/whatsapp";
+import { PayWithSolanaDialog } from "./pay-with-solana-dialog";
 
 function reminderMessage(entry: FinancialEvent): string {
   return `Hi ${entry.counterparty}! Friendly reminder from CashCompass: you owe ${formatCurrency(entry.amount, { cents: true })}, expected ${formatRelativeDay(entry.date).toLowerCase()}. No rush, just a nudge 🙂`;
@@ -15,10 +16,13 @@ export function LedgerList({
   title,
   entries,
   emptyText,
+  allowSolanaSettlement = false,
 }: {
   title: string;
   entries: FinancialEvent[];
   emptyText: string;
+  /** Only "You owe" entries are payable by the signed-in user — the other list is money owed to them. */
+  allowSolanaSettlement?: boolean;
 }) {
   return (
     <div>
@@ -82,6 +86,14 @@ export function LedgerList({
                   Log payment
                 </Button>
               </form>
+
+              {allowSolanaSettlement && (
+                <PayWithSolanaDialog
+                  ledgerEntryId={entry.id}
+                  counterparty={entry.counterparty}
+                  amountUsd={entry.amount}
+                />
+              )}
 
               <form action={deleteLedgerEntry}>
                 <input type="hidden" name="id" value={entry.id} />

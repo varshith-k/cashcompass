@@ -58,7 +58,7 @@ export function Topbar() {
 
       <Badge
         variant="outline"
-        className="hidden sm:inline-flex border-interactive/30 text-interactive bg-interactive/10"
+        className="hidden sm:inline-flex border-interactive/30 text-brand-navy bg-interactive/10"
       >
         Capital One Nessie demo data
       </Badge>
@@ -72,13 +72,14 @@ export function Topbar() {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="icon" className="rounded-full" aria-label="User menu">
+            <Button variant="ghost" size="icon" className="rounded-full">
               <Avatar className="size-8">
                 {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" referrerPolicy="no-referrer" />}
                 <AvatarFallback className="bg-brand-navy text-white text-xs">
                   {initials ?? "?"}
                 </AvatarFallback>
               </Avatar>
+              <span className="sr-only">User menu</span>
             </Button>
           }
         />

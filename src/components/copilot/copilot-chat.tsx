@@ -111,7 +111,7 @@ export function CopilotChat() {
                   }
                   nativeButton={false}
                   variant="link"
-                  className="h-auto p-0 mt-1.5 text-interactive"
+                  className="h-auto p-0 mt-1.5 text-brand-navy"
                 />
               )}
             </div>
