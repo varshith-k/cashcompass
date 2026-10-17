@@ -15,6 +15,13 @@ const saved = () => page.getByRole("dialog").waitFor({ state: "hidden" });
 try {
   await visit("/overview");
   await page.getByText("Available balance", { exact: true }).waitFor();
+  await page.getByRole("button", { name: /User menu/ }).click();
+  await page.getByRole("menuitem", { name: "Settings", exact: true }).waitFor();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Notifications", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Review upcoming bills", exact: true }).waitFor();
+  await page.keyboard.press("Escape");
+  console.log("PASS account and reminder menus");
   await visit("/copilot");
   await page.getByRole("button", { name: "Can I afford a $1,200 MacBook today?", exact: true }).click();
   await page.getByText("Buy today", { exact: true }).waitFor();

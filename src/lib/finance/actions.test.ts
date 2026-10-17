@@ -9,7 +9,8 @@ vi.mock("./repository", () => ({ getFinancialEventRepository: () => ({
   updateEvent: async (id: string, patch: Partial<FinancialEvent>) => { const i = state.events.findIndex((e) => e.id === id); if (i < 0) throw new Error("not found"); return state.events[i] = { ...state.events[i], ...patch }; },
   deleteEvent: async (id: string) => { state.events = state.events.filter((e) => e.id !== id); },
 }) }));
-import { createTransaction, markBillPaid, settleLedgerAmount, updateTransaction, planWishlistSavings, addWishlistContribution } from "./actions";
+import { createTransaction, markBillPaid, updateTransaction, planWishlistSavings, addWishlistContribution } from "./actions";
+import { settleLedgerAmount } from "./ledger";
 import { revalidatePath } from "next/cache";
 import { addWishlistGoal } from "./wishlist-goals";
 const bill: FinancialEvent = { id: "bill", date: "2026-10-20T00:00:00.000Z", amount: 100, direction: "expense", record: "planned", certainty: "certain", recurrence: "recurring", source: "manual", category: "Utilities", counterparty: "Energy" };

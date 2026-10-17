@@ -3,7 +3,7 @@
 import { requireOwnerId } from "@/lib/auth/session";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { claimSettlement, releaseSettlement } from "./receipts";
-import { settleLedgerAmount } from "@/lib/finance/actions";
+import { settleLedgerAmount } from "@/lib/finance/ledger";
 import { SOLANA_DEMO_RECIPIENT, usdToLamports } from "./config";
 import { verifySolanaTransfer } from "./verify";
 import type { SolanaPaymentVerification } from "./types";

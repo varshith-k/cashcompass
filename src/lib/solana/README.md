@@ -20,7 +20,7 @@ Tiger Data seams the same way those two are isolated from each other.
   never trusts amounts the client reports.
 - `actions.ts` — `settleLedgerWithSolana()`, a Server Action called directly
   from `PayWithSolanaDialog` (not via a `<form>`). Verifies on-chain, then
-  calls `settleLedgerAmount()` in `src/lib/finance/actions.ts` — the same
+  calls `settleLedgerAmount()` in `src/lib/finance/ledger.ts` — the same
   settlement path the manual "Log payment" button uses — so a Solana
   settlement updates the ledger/forecast exactly like any other repayment.
 - `src/components/ledger/pay-with-solana-dialog.tsx` — the UI: connect
