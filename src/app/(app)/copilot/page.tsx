@@ -1,19 +1,14 @@
-import { Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
-import { ComingSoon } from "@/components/shell/coming-soon";
+import { CopilotChat } from "@/components/copilot/copilot-chat";
 
 export default function CopilotPage() {
   return (
     <div>
       <PageHeader
         title="AI Copilot"
-        description="Ask Gemini whether a purchase is affordable, grounded in your real forecast data."
+        description="Ask whether a purchase is affordable, grounded in your real forecast — never invented."
       />
-      <ComingSoon
-        icon={Sparkles}
-        title="The Gemini copilot is next up"
-        description="Planned for Phase 4. It will call the same deterministic forecast engine as the dashboard — never invent balances or projections."
-      />
+      <CopilotChat />
     </div>
   );
 }
