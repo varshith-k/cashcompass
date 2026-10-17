@@ -47,6 +47,7 @@ export function BudgetsGrid({ budgets }: { budgets: BudgetWithSpend[] }) {
                 </div>
                 <Progress
                   value={Math.min(pct, 100)}
+                  aria-label={`${budget.category} budget used`}
                   className={cn(
                     "block",
                     tone === "critical" && "[&_[data-slot=progress-indicator]]:bg-critical",

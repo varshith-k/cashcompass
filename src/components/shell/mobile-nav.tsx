@@ -121,7 +121,7 @@ export function BottomNav() {
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex flex-col items-center justify-center gap-1.5 rounded-lg p-3 text-xs font-medium min-h-18",
-                    active ? "bg-secondary text-interactive" : "text-foreground",
+                    active ? "bg-secondary text-brand-navy" : "text-foreground",
                   )}
                 >
                   <Icon className="size-5" strokeWidth={1.75} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { isValidElement, useId, useMemo, useState, cloneElement } from "react";
 import { AlertTriangle, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -191,8 +191,13 @@ export function WhatIfSimulator({
             <>
               <Field label="Bill">
                 <Select value={selectedBillId} onValueChange={(v) => setSelectedBillId(v ?? "")}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choose a bill" />
+                  <SelectTrigger className="w-full" aria-label="Bill">
+                    <SelectValue placeholder="Choose a bill">
+                      {(value: string | null) => {
+                        const bill = bills.find((b) => b.id === value);
+                        return bill ? `${bill.counterparty} — ${formatCurrency(bill.amount)}` : "Choose a bill";
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {bills.map((bill) => (
@@ -213,8 +218,13 @@ export function WhatIfSimulator({
             <>
               <Field label="Repayment">
                 <Select value={selectedRepaymentId} onValueChange={(v) => setSelectedRepaymentId(v ?? "")}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choose a repayment" />
+                  <SelectTrigger className="w-full" aria-label="Repayment">
+                    <SelectValue placeholder="Choose a repayment">
+                      {(value: string | null) => {
+                        const repayment = repayments.find((r) => r.id === value);
+                        return repayment ? `${repayment.counterparty} — ${formatCurrency(repayment.amount)}` : "Choose a repayment";
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {repayments.map((r) => (
@@ -302,10 +312,11 @@ export function WhatIfSimulator({
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const id = useId();
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
-      {children}
+      <Label htmlFor={id}>{label}</Label>
+      {isValidElement(children) ? cloneElement(children, { id } as object) : children}
     </div>
   );
 }

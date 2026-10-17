@@ -57,6 +57,7 @@ export function GoalCard({
           </div>
           <Progress
             value={pct}
+            aria-label={`${goal.name} savings progress`}
             className={cn(
               "block",
               reached && "[&_[data-slot=progress-indicator]]:bg-positive",

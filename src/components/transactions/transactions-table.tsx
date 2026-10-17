@@ -65,8 +65,10 @@ export function TransactionsTable({ transactions }: { transactions: FinancialEve
         </div>
 
         <Select value={category} onValueChange={(value) => setCategory(value ?? "all")}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Category" />
+          <SelectTrigger className="w-40" aria-label="Category">
+            <SelectValue placeholder="Category">
+              {(value: string | null) => (value === "all" || !value ? "All categories" : value)}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
@@ -111,7 +113,7 @@ export function TransactionsTable({ transactions }: { transactions: FinancialEve
                     {t.category}
                   </Badge>
                   {t.source === "nessie" && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-interactive/30 text-interactive">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-interactive/30 text-brand-navy">
                       Nessie
                     </Badge>
                   )}
