@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { signInMethodLabel } from "@/lib/auth/map-user";
 import { updateDisplayName, type ProfileFormState } from "@/lib/auth/profile-actions";
 import { useAuth } from "@/lib/auth/provider";
+import { loginHref, signupHref } from "@/lib/auth/routes";
 
 const INITIAL_STATE: ProfileFormState = { status: "idle", message: "" };
 
@@ -86,8 +87,20 @@ export function AccountCard({ canEditProfile = false }: { canEditProfile?: boole
             CashCompass never sees your password.
           </p>
         )}
-        <Button render={<a href={logoutHref}>Sign out</a>} nativeButton={false}
-                  role="link" variant="outline" size="sm" />
+        {source === "demo" ? (
+          <p className="rounded-lg bg-accent px-3 py-2 text-xs leading-5 text-muted-foreground">
+            <span className="font-medium text-foreground">Demo mode.</span> This server is running without Auth0 keys, so
+            everyone is the demo user and sign-in, sign-out and account creation are turned off. Add the AUTH0_* values to
+            .env.local and restart the server to enable them.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {/* Plain <a>: these are full-page redirects through Auth0. */}
+            <Button render={<a href={logoutHref}>Sign out</a>} nativeButton={false} role="link" variant="outline" size="sm" />
+            <Button render={<a href={loginHref({ forceLogin: true })}>Switch account</a>} nativeButton={false} role="link" variant="ghost" size="sm" />
+            <Button render={<a href={signupHref({ forceLogin: true })}>Create another account</a>} nativeButton={false} role="link" variant="ghost" size="sm" />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

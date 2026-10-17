@@ -53,11 +53,14 @@ type LoginOptions = {
   returnTo?: string;
   /** Skip the Universal Login chooser and go straight to a connection, e.g. "google-oauth2". */
   connection?: string;
+  /** Show the login screen even if Auth0 already has a session (switch or add an account). */
+  forceLogin?: boolean;
 };
 
 function buildLoginHref(options: LoginOptions, extra: Record<string, string> = {}): string {
   const params = new URLSearchParams({ returnTo: safeReturnTo(options.returnTo), ...extra });
   if (options.connection) params.set("connection", options.connection);
+  if (options.forceLogin) params.set("prompt", "login");
   return `${AUTH_ROUTES.login}?${params.toString()}`;
 }
 
