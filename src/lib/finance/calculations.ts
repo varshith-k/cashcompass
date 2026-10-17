@@ -83,3 +83,25 @@ export function selectUpcomingBills(events: FinancialEvent[]) {
 export function selectRecentTransactions(events: FinancialEvent[]) {
   return events.filter((event) => event.record === "actual").sort((a, b) => b.date.localeCompare(a.date));
 }
+
+export interface ForecastSummary {
+  minBalance: number;
+  minBalanceDate: string;
+  daysAtRisk: number;
+}
+
+/** Headline stats for a forecast — what the what-if comparison cards show. */
+export function summarizeForecast(points: ForecastPoint[]): ForecastSummary {
+  const lowest = points.reduce((min, point) => (point.projectedBalance < min.projectedBalance ? point : min));
+  return {
+    minBalance: lowest.projectedBalance,
+    minBalanceDate: lowest.date,
+    daysAtRisk: points.filter((point) => point.isLowBalanceRisk).length,
+  };
+}
+
+/** Of a set of bills, how many fall on a day the forecast flags as low-balance risk. */
+export function countBillsAtRisk(bills: FinancialEvent[], points: ForecastPoint[]) {
+  const riskByDate = new Map(points.map((point) => [point.date, point.isLowBalanceRisk]));
+  return bills.filter((bill) => riskByDate.get(bill.date.slice(0, 10))).length;
+}

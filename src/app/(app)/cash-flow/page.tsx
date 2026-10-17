@@ -1,18 +1,34 @@
-import { TrendingUp } from "lucide-react";
+import { connection } from "next/server";
 import { PageHeader } from "@/components/shell/page-header";
-import { ComingSoon } from "@/components/shell/coming-soon";
+import { WhatIfSimulator } from "@/components/cash-flow/what-if-simulator";
+import { DEMO_PREFERRED_BUFFER, DEMO_STARTING_BALANCE } from "@/lib/finance/demo-data";
+import { getFinancialEventRepository } from "@/lib/finance/repository";
 
-export default function CashFlowPage() {
+const FORECAST_HISTORY_DAYS = 5;
+const FORECAST_TOTAL_DAYS = 35;
+
+export default async function CashFlowPage() {
+  await connection();
+
+  const events = await getFinancialEventRepository().listEvents();
+
+  const nextPayday = events
+    .filter((e) => e.category === "Payroll" && e.record === "planned")
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
+
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Cash Flow"
-        description="The full forecast timeline and what-if scenario simulator — buy now vs. after payday, delay an expense, and more."
+        description="Your forecast, and what changes when you move a purchase, a bill, or a repayment."
       />
-      <ComingSoon
-        icon={TrendingUp}
-        title="The what-if simulator is next up"
-        description="Planned for Phase 4. The Overview dashboard already shows the baseline forecast this page will extend with reversible scenario comparisons."
+      <WhatIfSimulator
+        events={events}
+        openingBalance={DEMO_STARTING_BALANCE}
+        bufferThreshold={DEMO_PREFERRED_BUFFER}
+        forecastDays={FORECAST_TOTAL_DAYS}
+        historyDays={FORECAST_HISTORY_DAYS}
+        nextPaydayDate={nextPayday?.date ?? new Date().toISOString()}
       />
     </div>
   );
