@@ -150,17 +150,28 @@ export async function deleteLedgerEntry(formData: FormData) {
   revalidatePath("/overview");
 }
 
-export async function logLedgerPayment(formData: FormData) {
-  const id = String(formData.get("id"));
-  const amountPaid = parseAmount(formData.get("amountPaid"));
+/**
+ * Settles (fully or partially) a ledger entry by id. Shared by the manual
+ * "Log payment" action and the Solana devnet settlement flow in
+ * src/lib/solana/actions.ts, so both record the repayment the same way.
+ */
+export async function settleLedgerAmount(
+  id: string,
+  amountPaid: number,
+  options?: { counterpartyNote?: string },
+) {
   const repo = getFinancialEventRepository();
   const events = await repo.listEvents();
   const original = events.find((event) => event.id === id);
   if (!original) throw new Error("Ledger entry not found");
 
   const remaining = original.amount;
+  const counterparty = options?.counterpartyNote
+    ? `${original.counterparty} (${options.counterpartyNote})`
+    : original.counterparty;
+
   if (amountPaid >= remaining) {
-    await repo.updateEvent(id, { record: "actual", date: new Date().toISOString(), amount: remaining });
+    await repo.updateEvent(id, { record: "actual", date: new Date().toISOString(), amount: remaining, counterparty });
   } else {
     await repo.createEvent({
       date: new Date().toISOString(),
@@ -171,7 +182,7 @@ export async function logLedgerPayment(formData: FormData) {
       recurrence: "one-time",
       source: "manual",
       category: "Repayment",
-      counterparty: original.counterparty,
+      counterparty,
     });
     await repo.updateEvent(id, { amount: Math.round((remaining - amountPaid) * 100) / 100 });
   }
@@ -179,6 +190,12 @@ export async function logLedgerPayment(formData: FormData) {
   revalidatePath("/ledger");
   revalidatePath("/transactions");
   revalidatePath("/overview");
+}
+
+export async function logLedgerPayment(formData: FormData) {
+  const id = String(formData.get("id"));
+  const amountPaid = parseAmount(formData.get("amountPaid"));
+  await settleLedgerAmount(id, amountPaid);
 }
 
 export async function addWishlistContribution(formData: FormData) {

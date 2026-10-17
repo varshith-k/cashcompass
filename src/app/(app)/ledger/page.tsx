@@ -27,6 +27,7 @@ export default async function LedgerPage() {
         title="You owe"
         entries={iOwe}
         emptyText="You don't owe anyone right now."
+        allowSolanaSettlement
       />
     </div>
   );

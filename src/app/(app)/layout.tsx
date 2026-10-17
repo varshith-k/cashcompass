@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth/session";
 import { AuthProvider } from "@/lib/auth/provider";
+import { SolanaProvider } from "@/lib/solana/provider";
 import { AppShell } from "@/components/shell/app-shell";
 
 export default async function AppLayout({
@@ -11,7 +12,9 @@ export default async function AppLayout({
 
   return (
     <AuthProvider session={session}>
-      <AppShell>{children}</AppShell>
+      <SolanaProvider>
+        <AppShell>{children}</AppShell>
+      </SolanaProvider>
     </AuthProvider>
   );
 }
