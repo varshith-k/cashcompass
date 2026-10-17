@@ -315,6 +315,8 @@ Provide:
 - Bill categories
 - Payment reminders
 - Monthly obligation totals
+- Photo-based bill capture: upload a photo of a bill/receipt, extract payee, amount, and due date automatically, and pre-fill the add-bill form for the user to confirm before saving. Never auto-saves unconfirmed data. Uses Gemini's image input (same seam as the AI copilot); when no Gemini key is configured, fails honestly to a manual-entry prompt rather than guessing fields. No raw image storage — the photo is used once to extract fields, then discarded.
+- WhatsApp payment reminders: for ledger entries where someone owes the user money, an optional phone number lets the user send a one-tap reminder via WhatsApp's click-to-chat link (`wa.me`), grounded in the entry's real amount and due date. No WhatsApp Business API, Meta approval, or credentials required — this is intentionally the zero-credential version of that idea.
 
 Urgency must be meaningful. A bill due tomorrow should be distinguishable from one due next month without making every bill alarming.
 
@@ -568,6 +570,7 @@ Where backend support does not exist, expose clearly labeled demo functionality 
 
 - Build transaction list, filters, search, quick add, edit, and delete.
 - Add bill list, due dates, recurring configuration, and reminders.
+- Add photo-based bill capture (Gemini image extraction, pre-filled and user-confirmed, no image storage).
 - Integrate Capital One Nessie demo data.
 - Add source labels, synchronization status, duplicate protection, and simulated-data disclosures.
 
@@ -584,6 +587,7 @@ Where backend support does not exist, expose clearly labeled demo functionality 
 - Add budget planning and recommendations.
 - Add wishlist and planned AutoSave goals.
 - Add money owed/lent ledger and repayment events.
+- Add WhatsApp click-to-chat payment reminders for money owed to the user.
 - Feed all modules into the same forecast engine.
 
 ### Phase 6 — Polish and verification

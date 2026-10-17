@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Plus } from "lucide-react";
+import { Camera, Loader2, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -21,17 +21,63 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createBill } from "@/lib/finance/actions";
+import { scanBillImage } from "@/lib/bill-scan/actions";
 import { EXPENSE_CATEGORIES } from "@/lib/finance/categories";
 
 export function AddBillSheet() {
   const [open, setOpen] = useState(false);
+  const [counterparty, setCounterparty] = useState("");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState("");
   const [category, setCategory] = useState<string>(EXPENSE_CATEGORIES[0]);
   const [recurring, setRecurring] = useState(true);
   const [pending, setPending] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function resetForm() {
+    setCounterparty("");
+    setAmount("");
+    setDate("");
+    setCategory(EXPENSE_CATEGORIES[0]);
+    setRecurring(true);
+    setScanMessage(null);
+  }
+
+  async function handlePhoto(file: File) {
+    setScanning(true);
+    setScanMessage(null);
+    try {
+      const photoData = new FormData();
+      photoData.set("photo", file);
+      const result = await scanBillImage(photoData);
+
+      if (!result.ok) {
+        setScanMessage(result.message ?? "Couldn't read that photo — fill in the form manually.");
+        return;
+      }
+
+      const fields = result.fields!;
+      if (fields.counterparty) setCounterparty(fields.counterparty);
+      if (fields.amount) setAmount(String(fields.amount));
+      if (fields.date) setDate(fields.date);
+      if (fields.category) setCategory(fields.category);
+      setScanMessage("Pulled these fields from the photo — double-check before saving.");
+    } finally {
+      setScanning(false);
+    }
+  }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) resetForm();
+      }}
+    >
       <SheetTrigger
         render={
           <Button size="sm">
@@ -51,6 +97,7 @@ export function AddBillSheet() {
             try {
               await createBill(formData);
               formRef.current?.reset();
+              resetForm();
               setOpen(false);
             } finally {
               setPending(false);
@@ -58,19 +105,75 @@ export function AddBillSheet() {
           }}
           className="flex-1 overflow-y-auto px-4 pb-6 space-y-4"
         >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handlePhoto(file);
+              e.target.value = "";
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={scanning}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {scanning ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Camera className="size-4" />
+            )}
+            {scanning ? "Reading photo…" : "Scan a bill photo"}
+          </Button>
+          {scanMessage && (
+            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <Sparkles className="size-3.5 mt-0.5 shrink-0" />
+              {scanMessage}
+            </p>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="counterparty">Biller</Label>
-            <Input id="counterparty" name="counterparty" required placeholder="Duke Energy" />
+            <Input
+              id="counterparty"
+              name="counterparty"
+              required
+              placeholder="Duke Energy"
+              value={counterparty}
+              onChange={(e) => setCounterparty(e.target.value)}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="amount">Amount</Label>
-              <Input id="amount" name="amount" type="number" step="0.01" min="0.01" required placeholder="0.00" />
+              <Input
+                id="amount"
+                name="amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="date">Due date</Label>
-              <Input id="date" name="date" type="date" required />
+              <Input
+                id="date"
+                name="date"
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
             </div>
           </div>
 

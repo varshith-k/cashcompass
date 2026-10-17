@@ -45,6 +45,13 @@ then implement them in both `demo-repository.ts` and `tiger-repository.ts` —
 keeping both in sync is what lets the app run with or without a live Tiger
 Data connection.
 
+One exception: `counterpartyPhone` (the ledger's WhatsApp-reminder number)
+is deliberately *not* in `db/schema.sql` or `tiger-repository.ts`'s row
+mapping — it's UI convenience, not time-series analytics data. The demo
+repository keeps it; Tiger Data drops it on write. If that ever needs to
+change, add the column and extend the row mapping the same way as any
+other field.
+
 If `FinancialEvent` in `types.ts` ever changes, update `db/schema.sql` and
 the row mapping in `tiger-repository.ts` to match — they're hand-kept in
 sync, not generated from each other.
