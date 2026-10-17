@@ -99,7 +99,11 @@ export class TigerDataFinancialEventRepository implements FinancialEventReposito
 
   async updateEvent(id: string, patch: FinancialEventUpdate): Promise<FinancialEvent> {
     return this.withClient(async (client) => {
-      const columns: Record<keyof FinancialEventUpdate, string> = {
+      // Deliberately partial: counterpartyPhone is ledger/WhatsApp-reminder
+      // UI convenience, not time-series analytics data, so it isn't part
+      // of the hypertable schema. A patch containing it just drops that
+      // one field for this backend rather than erroring.
+      const columns: Partial<Record<keyof FinancialEventUpdate, string>> = {
         date: "event_date",
         amount: "amount",
         direction: "direction",
@@ -112,10 +116,9 @@ export class TigerDataFinancialEventRepository implements FinancialEventReposito
         scenarioId: "scenario_id",
       };
 
-      const entries = Object.entries(patch).filter(([, value]) => value !== undefined) as [
-        keyof FinancialEventUpdate,
-        unknown,
-      ][];
+      const entries = Object.entries(patch).filter(
+        ([key, value]) => value !== undefined && key in columns,
+      ) as [keyof FinancialEventUpdate, unknown][];
 
       if (entries.length === 0) {
         const existing = await client.query<FinancialEventRow>(

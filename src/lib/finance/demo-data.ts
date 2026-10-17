@@ -116,6 +116,7 @@ const DEMO_EVENT_TEMPLATES: DemoEventTemplate[] = [
     source: "manual",
     category: "Repayment",
     counterparty: "Sam (roommate)",
+    counterpartyPhone: "+15555550123",
   },
   {
     id: "evt-phone-bill",

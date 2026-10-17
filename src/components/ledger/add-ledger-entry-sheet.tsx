@@ -73,6 +73,16 @@ export function AddLedgerEntrySheet() {
             <Input id="counterparty" name="counterparty" required placeholder="Sam" />
           </div>
 
+          {direction === "income" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="phone">Their phone (optional)</Label>
+              <Input id="phone" name="phone" type="tel" placeholder="+1 555 123 4567" />
+              <p className="text-xs text-muted-foreground">
+                Lets you send a WhatsApp reminder later — no account or API key needed.
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="amount">Amount</Label>

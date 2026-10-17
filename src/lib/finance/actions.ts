@@ -133,6 +133,7 @@ export async function createLedgerEntry(formData: FormData) {
     source: "manual",
     category: "Repayment",
     counterparty: String(formData.get("counterparty") || "").trim() || "Unknown",
+    counterpartyPhone: String(formData.get("phone") || "").trim() || undefined,
   });
   revalidatePath("/ledger");
   revalidatePath("/overview");
