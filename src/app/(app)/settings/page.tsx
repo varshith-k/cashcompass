@@ -6,17 +6,19 @@ import { AccountCard } from "@/components/settings/account-card";
 import { NessieCard } from "@/components/settings/nessie-card";
 import { isNessieConfigured } from "@/lib/nessie/client";
 import { getSyncStatus } from "@/lib/nessie/status";
-import { requireOwnerId } from "@/lib/auth/session";
+import { requireSession } from "@/lib/auth/session";
+import { isProfileEditingEnabled } from "@/lib/auth/management";
 
 export default async function SettingsPage() {
   await connection();
-  const ownerId = await requireOwnerId();
+  const session = await requireSession();
+  const ownerId = session.user.id;
 
   return (
     <div className="max-w-2xl space-y-6">
       <PageHeader title="Settings" description="Account, appearance, and demo data preferences." />
 
-      <AccountCard />
+      <AccountCard canEditProfile={session.source === "auth0" && isProfileEditingEnabled()} />
 
       <Card>
         <CardHeader>

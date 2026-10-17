@@ -12,6 +12,25 @@ function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
 }
 
+/** Human label for how the user signed in, from the Auth0 `sub` prefix ("google-oauth2|…"). */
+export function signInMethodLabel(userId: string): string {
+  const provider = userId.split("|")[0];
+  switch (provider) {
+    case "google-oauth2":
+      return "Google";
+    case "auth0":
+      return "Email";
+    case "apple":
+      return "Apple";
+    case "github":
+      return "GitHub";
+    case "windowslive":
+      return "Microsoft";
+    default:
+      return "Auth0";
+  }
+}
+
 /**
  * Narrows an Auth0 session user to AuthUser. `id` is the Auth0 `sub` — the
  * only stable identity key. Returns null when there's no usable `sub`.

@@ -154,6 +154,8 @@ Nessie is simulated banking and is **separate from Auth0**. Neither system sees 
 | `AUTH0_CLIENT_SECRET` | **Secret, server-only** |
 | `AUTH0_SECRET` | **Secret.** `openssl rand -hex 32`, different per environment |
 | `APP_BASE_URL` | `http://localhost:3000` or `https://<prod domain>`. Leave unset on previews |
+| `AUTH0_PROFILE_EDITING` | Optional. `true` enables name editing in Settings; needs Management API access (setup doc §6) |
+| `AUTH0_MANAGEMENT_DOMAIN` | Optional. Canonical `*.auth0.com` domain, only when `AUTH0_DOMAIN` is a custom domain |
 
 These replace the v3 names that were in the old `.env.example` (`AUTH0_BASE_URL`, `AUTH0_ISSUER_BASE_URL`). Setup steps: `docs/AUTH0_SETUP.md`.
 
@@ -169,14 +171,14 @@ These replace the v3 names that were in the old `.env.example` (`AUTH0_BASE_URL`
 | `src/app/api/auth/me/route.ts` | Uses `withSession` (401 when signed out) |
 | `.env.example` | v4 Auth0 variables. Gemini and Nessie lines unchanged |
 | `package.json` | Adds `@auth0/nextjs-auth0`, plus dev deps `vitest` and `server-only`; scripts `test` and `typecheck` |
-| New (auth-owned) | `src/proxy.ts`, `src/lib/auth0.ts`, `src/lib/auth/{config,map-user,routes,errors,ownership}.ts`, `src/app/auth-error/`, tests, `vitest.config.ts`, `docs/AUTH*.md` |
+| New (auth-owned) | `src/proxy.ts`, `src/lib/auth0.ts`, `src/lib/auth/{config,map-user,routes,errors,ownership,management,profile-actions}.ts`, `src/app/auth-error/`, tests, `vitest.config.mts`, `docs/AUTH*.md` |
+| `src/app/page.tsx` | Was a redirect to `/overview`. Now the **signed-out landing page** (Get started / Log in); signed-in users and demo mode still redirect to `/overview` |
+| `src/components/shell/topbar.tsx` | Avatar shows the profile photo (`AvatarImage`), falling back to initials |
+| `src/components/settings/account-card.tsx` | Photo; badge shows "Signed in with Google/Email" or "Demo account"; optional display-name form |
+| `src/app/(app)/settings/page.tsx` | Passes `canEditProfile`; reads the per-user sync status |
+| `src/app/(app)/{overview,budgets,wishlist}/page.tsx` | Pass `await requireOwnerId()` to the goal and budget helpers |
+| `src/lib/finance/*`, `src/lib/nessie/{actions,status}.ts`, `src/lib/copilot/*`, `db/schema.sql` | Per-user data scoping (see §6) |
 
-**Not touched:** `src/app/(app)/**`, `src/components/**`, `src/app/layout.tsx`, `src/app/page.tsx`, `next.config.ts`, `globals.css`.
+**Not touched:** `src/app/layout.tsx`, `src/app/(app)/layout.tsx`, `next.config.ts`, `globals.css`, the sidebar, the dashboard components and the feature components.
 
-### Suggested small follow-ups for the frontend
-
-These are the frontend's files, so they're left alone:
-
-1. **Avatar photo:** in `topbar.tsx` and `settings/page.tsx`, add `{user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}` before `AvatarFallback`.
-2. **Settings badge:** show `source === "demo" ? "Demo account" : "Signed in with Auth0"` instead of a hard-coded "Demo account".
-3. **Signed-out landing page (optional):** `/` currently redirects into the app, which bounces signed-out visitors straight to Universal Login. For a marketing landing page, render it at `/` (already public) with `<a href={signupHref}>Get started</a>` and `<a href={loginHref}>Log in</a>` from `@/lib/auth/routes`.
+Everything the frontend needs from auth is in place: landing page, avatar photo, account badge and profile editing. Restyle any of it freely; keep the hrefs from `@/lib/auth/routes` / `useAuth()` and the `requireOwnerId()` calls.

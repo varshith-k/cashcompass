@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { isAuth0Configured, isDemoAuthMode } from "@/lib/auth/config";
 import { classifyAuthError } from "@/lib/auth/errors";
-import { toAuthUser } from "@/lib/auth/map-user";
+import { signInMethodLabel, toAuthUser } from "@/lib/auth/map-user";
 import { assertOwnedBy, ForbiddenResourceError, onlyOwnedBy, withOwner } from "@/lib/auth/ownership";
 import { isApiPath, isPublicPath, loginHref, safeReturnTo, signupHref } from "@/lib/auth/routes";
 import type { AuthUser } from "@/lib/auth/types";
@@ -31,6 +31,14 @@ describe("toAuthUser", () => {
     expect(toAuthUser(null)).toBeNull();
     expect(toAuthUser({ email: "a@x.io" })).toBeNull();
     expect(toAuthUser({ sub: "  " })).toBeNull();
+  });
+});
+
+describe("signInMethodLabel", () => {
+  it("names the identity provider from the sub prefix", () => {
+    expect(signInMethodLabel("google-oauth2|123")).toBe("Google");
+    expect(signInMethodLabel("auth0|abc")).toBe("Email");
+    expect(signInMethodLabel("samlp|corp|x")).toBe("Auth0");
   });
 });
 

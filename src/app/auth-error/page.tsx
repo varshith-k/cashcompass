@@ -33,11 +33,12 @@ export default async function AuthErrorPage({ searchParams }: PageProps<"/auth-e
         <CardContent className="space-y-6">
           <p className="text-sm leading-6 text-muted-foreground">{copy.message}</p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" className="min-h-11" render={<a href={loginHref()}>Try signing in again</a>} />
+            <Button size="lg" className="min-h-11" nativeButton={false} render={<a href={loginHref()}>Try signing in again</a>} />
             <Button
               size="lg"
               variant="outline"
               className="min-h-11"
+              nativeButton={false}
               render={<a href={signupHref()}>Create an account</a>}
             />
           </div>

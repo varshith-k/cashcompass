@@ -75,7 +75,17 @@ Don't use Capital One logos or wordmarks on the login page.
 4. Changing domains later only means updating `APP_BASE_URL` and the Auth0 URL lists. No code changes.
 5. Rotate `AUTH0_SECRET` to sign everyone out. Rotate the client secret in Auth0 if it ever leaks.
 
-## 6. Hackathon demo account
+## 6. Optional: in-app profile editing
+
+Settings can let users change their display name. Auth0 has to allow the app to update users first:
+
+1. **Applications → APIs → Auth0 Management API → Machine to Machine Applications**: authorize **CashCompass** and tick only the `update:users` scope.
+2. **Applications → CashCompass → Advanced Settings → Grant Types**: enable **Client Credentials**.
+3. Set `AUTH0_PROFILE_EDITING=true`. If `AUTH0_DOMAIN` is a custom domain, also set `AUTH0_MANAGEMENT_DOMAIN` to your `*.auth0.com` tenant domain.
+
+For Google users, Auth0 overwrites the name from Google on each login unless you turn off **Sync user profile attributes at each login** under Authentication → Social → Google. Email and photo always come from the sign-in provider.
+
+## 7. Hackathon demo account
 
 1. Auth0 → **User Management → Users → Create User**, using the `Username-Password-Authentication` connection.
    - For example `demo@cashcompass.app` with a strong password used only for this. Mark the email as verified if prompted.
@@ -85,13 +95,13 @@ Don't use Capital One logos or wordmarks on the login page.
 
 ### Showing Auth0 to judges (about 30 s)
 
-1. Open the site while signed out. You're redirected to Universal Login with CashCompass branding.
+1. Open the site while signed out. The landing page shows **Get started** and **Log in**. Click **Get started** to open Universal Login with CashCompass branding.
 2. Sign in with Google or the demo account. You land on `/overview` with your name in the top bar.
-3. Open **Settings** to show the profile (name, email, avatar).
+3. Open **Settings** to show the profile: photo, name, email and "Signed in with Google". Edit the name if profile editing is enabled (§6).
 4. Sign out from the avatar menu, then try `/overview`. It redirects to login. Show that `curl https://<PROD_DOMAIN>/api/auth/me` returns **401**.
 5. Mention the setup: Authorization Code + PKCE, an `httpOnly` encrypted session, no tokens in the browser, and per-user data keyed by Auth0 `sub`.
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 | Symptom | Fix |
 |---|---|
