@@ -8,14 +8,15 @@ import {
   RecentTransactionsCard,
   UpcomingBillsCard,
 } from "@/components/dashboard/recent-activity";
-import { computeForecast, computeSafeToSpend, sumByDirection } from "@/lib/finance/calculations";
 import {
-  DEMO_PREFERRED_BUFFER,
-  DEMO_STARTING_BALANCE,
-  getDemoEvents,
-  getDemoRecentTransactions,
-  getDemoUpcomingBills,
-} from "@/lib/finance/demo-data";
+  computeForecast,
+  computeSafeToSpend,
+  selectRecentTransactions,
+  selectUpcomingBills,
+  sumByDirection,
+} from "@/lib/finance/calculations";
+import { DEMO_PREFERRED_BUFFER, DEMO_STARTING_BALANCE } from "@/lib/finance/demo-data";
+import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -25,14 +26,14 @@ const FORECAST_TOTAL_DAYS = 35;
 export default async function OverviewPage() {
   await connection();
 
-  const DEMO_EVENTS = getDemoEvents();
-  const DEMO_UPCOMING_BILLS = getDemoUpcomingBills(DEMO_EVENTS);
-  const DEMO_RECENT_TRANSACTIONS = getDemoRecentTransactions(DEMO_EVENTS);
+  const events = await getFinancialEventRepository().listEvents();
+  const upcomingBills = selectUpcomingBills(events);
+  const recentTransactions = selectRecentTransactions(events);
 
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - FORECAST_HISTORY_DAYS);
 
-  const forecast = computeForecast(DEMO_STARTING_BALANCE, DEMO_EVENTS, {
+  const forecast = computeForecast(DEMO_STARTING_BALANCE, events, {
     days: FORECAST_TOTAL_DAYS,
     startDate,
     lowBalanceThreshold: DEMO_PREFERRED_BUFFER,
@@ -41,8 +42,8 @@ export default async function OverviewPage() {
   const todayIndex = FORECAST_HISTORY_DAYS;
   const currentBalance = forecast[todayIndex].projectedBalance;
 
-  const upcomingBillsTotal = DEMO_UPCOMING_BILLS.reduce((sum, bill) => sum + bill.amount, 0);
-  const savingsEarmarks = DEMO_EVENTS.filter((e) => e.category === "Savings").reduce(
+  const upcomingBillsTotal = upcomingBills.reduce((sum, bill) => sum + bill.amount, 0);
+  const savingsEarmarks = events.filter((e) => e.category === "Savings").reduce(
     (sum, e) => sum + e.amount,
     0,
   );
@@ -54,20 +55,20 @@ export default async function OverviewPage() {
     preferredBuffer: DEMO_PREFERRED_BUFFER,
   });
 
-  const nextPayday = DEMO_EVENTS.filter(
+  const nextPayday = events.filter(
     (e) => e.category === "Payroll" && e.record === "planned",
   ).sort((a, b) => a.date.localeCompare(b.date))[0];
 
   const monthlyIncome = sumByDirection(
-    DEMO_EVENTS.filter((e) => e.record === "actual" || e.record === "planned"),
+    events.filter((e) => e.record === "actual" || e.record === "planned"),
     "income",
   );
   const monthlyExpenses = sumByDirection(
-    DEMO_EVENTS.filter((e) => e.category !== "Savings"),
+    events.filter((e) => e.category !== "Savings"),
     "expense",
   );
 
-  const nextBill = DEMO_UPCOMING_BILLS[0];
+  const nextBill = upcomingBills[0];
   const savingsGoalTarget = 600;
   const savingsProgressPct = Math.min(100, Math.round((savingsEarmarks / savingsGoalTarget) * 100));
 
@@ -99,7 +100,7 @@ export default async function OverviewPage() {
           label="Upcoming bills"
           value={formatCurrency(upcomingBillsTotal)}
           icon={CalendarClock}
-          sublabel={`${DEMO_UPCOMING_BILLS.length} bills`}
+          sublabel={`${upcomingBills.length} bills`}
         />
         <MetricCard
           label="Savings progress"
@@ -127,8 +128,8 @@ export default async function OverviewPage() {
       )}
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <RecentTransactionsCard transactions={DEMO_RECENT_TRANSACTIONS} />
-        <UpcomingBillsCard bills={DEMO_UPCOMING_BILLS} />
+        <RecentTransactionsCard transactions={recentTransactions} />
+        <UpcomingBillsCard bills={upcomingBills} />
       </div>
     </div>
   );

@@ -68,3 +68,18 @@ export function sumByDirection(
     .filter((event) => event.direction === direction)
     .reduce((total, event) => total + event.amount, 0);
 }
+
+export function selectUpcomingBills(events: FinancialEvent[]) {
+  return events
+    .filter(
+      (event) =>
+        event.direction === "expense" &&
+        event.record === "planned" &&
+        event.category !== "Savings",
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export function selectRecentTransactions(events: FinancialEvent[]) {
+  return events.filter((event) => event.record === "actual").sort((a, b) => b.date.localeCompare(a.date));
+}

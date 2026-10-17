@@ -173,18 +173,3 @@ export function getDemoEvents(): FinancialEvent[] {
     date: isoDaysFromToday(dayOffset),
   }));
 }
-
-export function getDemoUpcomingBills(events: FinancialEvent[] = getDemoEvents()) {
-  return events
-    .filter(
-      (event) =>
-        event.direction === "expense" &&
-        event.record === "planned" &&
-        event.category !== "Savings",
-    )
-    .sort((a, b) => a.date.localeCompare(b.date));
-}
-
-export function getDemoRecentTransactions(events: FinancialEvent[] = getDemoEvents()) {
-  return events.filter((event) => event.record === "actual").sort((a, b) => b.date.localeCompare(a.date));
-}
