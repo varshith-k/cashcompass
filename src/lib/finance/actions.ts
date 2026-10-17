@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getFinancialEventRepository } from "./repository";
 import { getBudgets, setBudgetLimits } from "./budgets";
+import { addWishlistGoal, deleteWishlistGoal as removeWishlistGoal } from "./wishlist-goals";
 import type { EventDirection, NewFinancialEvent } from "./types";
 
 function parseAmount(raw: FormDataEntryValue | null): number {
@@ -97,5 +98,43 @@ export async function updateBudgetLimits(formData: FormData) {
     }
   }
   setBudgetLimits(limits);
+  revalidatePath("/budgets");
+}
+
+export async function createWishlistGoal(formData: FormData) {
+  const name = String(formData.get("name") || "").trim();
+  if (!name) throw new Error("Goal name is required");
+
+  addWishlistGoal({
+    name,
+    targetAmount: parseAmount(formData.get("targetAmount")),
+    targetDate: parseDate(formData.get("targetDate")),
+  });
+  revalidatePath("/wishlist");
+}
+
+export async function deleteWishlistGoal(formData: FormData) {
+  const id = String(formData.get("id"));
+  removeWishlistGoal(id);
+  revalidatePath("/wishlist");
+}
+
+export async function addWishlistContribution(formData: FormData) {
+  const goalName = String(formData.get("goalName") || "").trim();
+  if (!goalName) throw new Error("Missing goal");
+
+  await getFinancialEventRepository().createEvent({
+    date: new Date().toISOString(),
+    amount: parseAmount(formData.get("amount")),
+    direction: "expense",
+    record: "actual",
+    certainty: "certain",
+    recurrence: "one-time",
+    source: "manual",
+    category: "Savings",
+    counterparty: goalName,
+  });
+  revalidatePath("/wishlist");
+  revalidatePath("/overview");
   revalidatePath("/budgets");
 }

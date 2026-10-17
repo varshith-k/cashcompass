@@ -20,6 +20,10 @@ export function formatShortDate(iso: string) {
   });
 }
 
+export function daysUntil(iso: string) {
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+}
+
 export function formatRelativeDay(iso: string) {
   const target = new Date(iso);
   target.setHours(0, 0, 0, 0);

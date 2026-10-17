@@ -111,6 +111,19 @@ export function countBillsAtRisk(bills: FinancialEvent[], points: ForecastPoint[
  * calendar month. The same shape a `monthly_category_spend` continuous
  * aggregate read would return once Tiger Data is live.
  */
+export function savingsProgressForGoal(events: FinancialEvent[], goalName: string): number {
+  return events
+    .filter((event) => event.category === "Savings" && event.counterparty === goalName)
+    .reduce((sum, event) => sum + event.amount, 0);
+}
+
+/** Weekly amount needed to hit a target by its date, given what's saved so far. */
+export function recommendedWeeklyContribution(remaining: number, targetDate: string): number {
+  if (remaining <= 0) return 0;
+  const weeksLeft = Math.max(1, Math.ceil((new Date(targetDate).getTime() - Date.now()) / (7 * 86_400_000)));
+  return Math.ceil(remaining / weeksLeft);
+}
+
 export function spendByCategoryThisMonth(events: FinancialEvent[]): Map<string, number> {
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
