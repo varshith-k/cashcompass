@@ -59,8 +59,6 @@ export function WhatIfSimulator({
   const [amount, setAmount] = useState(initialAmount);
   const [label, setLabel] = useState(initialLabel);
   const [delayDays, setDelayDays] = useState("7");
-  const [selectedBillId, setSelectedBillId] = useState<string>("");
-  const [selectedRepaymentId, setSelectedRepaymentId] = useState<string>("");
   const [weeklyAmount, setWeeklyAmount] = useState("50");
   const [weeks, setWeeks] = useState("8");
 
@@ -69,6 +67,10 @@ export function WhatIfSimulator({
     () => events.filter((e) => e.certainty === "uncertain" && e.record === "planned"),
     [events],
   );
+  // Pre-select the first bill/repayment so every scenario shows a change
+  // immediately instead of looking identical to the baseline.
+  const [selectedBillId, setSelectedBillId] = useState<string>(() => bills[0]?.id ?? "");
+  const [selectedRepaymentId, setSelectedRepaymentId] = useState<string>(() => repayments[0]?.id ?? "");
 
   const startDate = useMemo(() => {
     const d = new Date();
@@ -160,6 +162,15 @@ export function WhatIfSimulator({
   const scenarioBillsAtRisk = countBillsAtRisk(selectUpcomingBills(scenarioEvents), scenarioPoints);
   const scenarioLabel = SCENARIOS.find((s) => s.value === kind)?.label ?? "Scenario";
   const getsWorse = scenarioSummary.minBalance < baselineSummary.minBalance - 0.01;
+  // The minimum often doesn't move (e.g. a change after the low point), so also
+  // surface the largest day-by-day difference from the baseline.
+  const biggestChange = scenarioPoints.slice(todayIndex).reduce<{ diff: number; date: string | null }>(
+    (best, point, i) => {
+      const diff = point.projectedBalance - (baselinePoints[todayIndex + i]?.projectedBalance ?? point.projectedBalance);
+      return Math.abs(diff) > Math.abs(best.diff) + 0.005 ? { diff, date: point.date } : best;
+    },
+    { diff: 0, date: null },
+  );
 
   return (
     <Card>
@@ -277,7 +288,7 @@ export function WhatIfSimulator({
           <StatCard
             label="Minimum projected balance"
             value={formatCurrency(scenarioSummary.minBalance, { cents: true })}
-            sublabel={`Baseline: ${formatCurrency(baselineSummary.minBalance, { cents: true })}`}
+            sublabel={`Baseline: ${formatCurrency(baselineSummary.minBalance, { cents: true })} · Buffer: ${formatCurrency(bufferThreshold)}`}
             tone={getsWorse ? "caution" : "positive"}
           />
           <StatCard
@@ -287,10 +298,10 @@ export function WhatIfSimulator({
             tone={scenarioBillsAtRisk > baselineBillsAtRisk ? "caution" : "positive"}
           />
           <StatCard
-            label="Buffer"
-            value={formatCurrency(bufferThreshold)}
-            sublabel="Your preferred minimum"
-            tone="neutral"
+            label="Biggest change vs baseline"
+            value={biggestChange.date ? `${biggestChange.diff > 0 ? "+" : "−"}${formatCurrency(Math.abs(biggestChange.diff), { cents: true })}` : "No change"}
+            sublabel={biggestChange.date ? `On ${formatShortDate(biggestChange.date)}` : "Adjust the inputs above"}
+            tone={biggestChange.diff < -0.005 ? "caution" : "neutral"}
           />
         </div>
 

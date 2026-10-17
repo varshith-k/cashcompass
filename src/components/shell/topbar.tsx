@@ -9,7 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuItem,
+  DropdownMenuLinkItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -18,12 +18,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { useAuth } from "@/lib/auth/provider";
+import type { Reminder } from "@/lib/finance/reminders";
+import { cn } from "@/lib/utils";
 import { NAV_ITEMS, SETTINGS_ITEM } from "./nav-items";
 import { MobileNavTrigger } from "./mobile-nav";
 
-export function Topbar() {
+export function Topbar({ reminders = [] }: { reminders?: Reminder[] }) {
   const pathname = usePathname();
-  const { user, logoutHref } = useAuth();
+  const { user, source, logoutHref } = useAuth();
   const current = [...NAV_ITEMS, SETTINGS_ITEM].find(
     (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
   );
@@ -67,11 +69,41 @@ export function Topbar() {
       </Badge>
 
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label="Notifications"><Bell className="size-4" /></Button>} />
-        <DropdownMenuContent align="end">
-          <DropdownMenuGroup><DropdownMenuLabel>Financial reminders</DropdownMenuLabel></DropdownMenuGroup>
-          <DropdownMenuItem render={<Link href="/bills">Review upcoming bills</Link>} />
-          <DropdownMenuItem render={<Link href="/ledger">Check expected repayments</Link>} />
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              aria-label={reminders.length ? `Notifications, ${reminders.length} reminder${reminders.length === 1 ? "" : "s"}` : "Notifications"}
+            >
+              <Bell className="size-4" />
+              {reminders.length > 0 && (
+                <span aria-hidden className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-critical text-white text-[10px] font-semibold leading-4 text-center tabular-nums">
+                  {reminders.length > 9 ? "9+" : reminders.length}
+                </span>
+              )}
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end" className="w-72">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Reminders · next 7 days</DropdownMenuLabel>
+          </DropdownMenuGroup>
+          {reminders.length === 0 ? (
+            <p className="px-1.5 py-2 text-sm text-muted-foreground">You&apos;re all caught up. No bills or repayments due this week.</p>
+          ) : (
+            reminders.slice(0, 8).map((reminder) => (
+              <DropdownMenuLinkItem key={reminder.id} render={<Link href={reminder.href} />} className="flex-col items-start gap-0">
+                <span className="text-sm font-medium">{reminder.title}</span>
+                <span className={cn("text-xs", reminder.tone === "overdue" ? "text-critical" : reminder.tone === "soon" ? "text-caution" : "text-muted-foreground")}>
+                  {reminder.detail}
+                </span>
+              </DropdownMenuLinkItem>
+            ))
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuLinkItem render={<Link href="/bills" />}>All bills & payments</DropdownMenuLinkItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -101,8 +133,13 @@ export function Topbar() {
             </DropdownMenuLabel>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem render={<a href="/settings">Settings</a>} />
-          <DropdownMenuItem render={<a href={logoutHref}>Sign out</a>} />
+          <DropdownMenuLinkItem render={<Link href="/settings" />}>Settings</DropdownMenuLinkItem>
+          {source === "demo" ? (
+            <p className="px-1.5 py-1.5 text-xs text-muted-foreground">Demo mode: sign-in is off on this server.</p>
+          ) : (
+            // Plain <a>: logout is a full-page redirect through Auth0, never a client navigation.
+            <DropdownMenuLinkItem href={logoutHref}>Sign out</DropdownMenuLinkItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

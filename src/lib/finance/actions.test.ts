@@ -9,7 +9,7 @@ vi.mock("./repository", () => ({ getFinancialEventRepository: () => ({
   updateEvent: async (id: string, patch: Partial<FinancialEvent>) => { const i = state.events.findIndex((e) => e.id === id); if (i < 0) throw new Error("not found"); return state.events[i] = { ...state.events[i], ...patch }; },
   deleteEvent: async (id: string) => { state.events = state.events.filter((e) => e.id !== id); },
 }) }));
-import { createTransaction, markBillPaid, updateTransaction, planWishlistSavings, addWishlistContribution } from "./actions";
+import { createTransaction, markBillPaid, undoMarkBillPaid, updateTransaction, planWishlistSavings, addWishlistContribution } from "./actions";
 import { settleLedgerAmount } from "./ledger";
 import { revalidatePath } from "next/cache";
 import { addWishlistGoal } from "./wishlist-goals";
@@ -25,6 +25,21 @@ describe("connected financial actions", () => {
     await expect(markBillPaid(form({ id: "bill" }))).rejects.toThrow();
     expect(state.events).toHaveLength(2);
     expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
+  });
+  it("undoes Mark paid: restores the due date and removes the auto-created next bill", async () => {
+    state.events = [{ ...bill }];
+    const undo = await markBillPaid(form({ id: "bill" }));
+    expect(state.events).toHaveLength(2);
+    await undoMarkBillPaid(undo);
+    expect(state.events).toEqual([bill]);
+    await expect(undoMarkBillPaid(undo)).rejects.toThrow();
+  });
+  it("undo leaves a one-time bill single and ignores a foreign next id", async () => {
+    const other = { ...bill, id: "other", counterparty: "Someone else" };
+    state.events = [{ ...bill, recurrence: "one-time" }, other];
+    const undo = await markBillPaid(form({ id: "bill" }));
+    await undoMarkBillPaid({ ...undo, nextId: "other" });
+    expect(state.events).toEqual([{ ...bill, recurrence: "one-time" }, other]);
   });
   it("keeps partial repayment amounts exact and marks full repayment certain", async () => {
     state.events = [{ ...bill, category: "Repayment", recurrence: "one-time", direction: "income", certainty: "uncertain" }];

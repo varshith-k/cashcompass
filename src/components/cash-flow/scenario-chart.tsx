@@ -14,8 +14,9 @@ import {
 import type { ForecastPoint } from "@/lib/finance/types";
 import { formatCurrency, formatShortDate } from "@/lib/format";
 
-const BASELINE_COLOR = "var(--interactive)";
-const SCENARIO_COLOR = "var(--chart-3)";
+// Muted baseline vs. bold scenario, so the two lines are easy to tell apart.
+const BASELINE_COLOR = "var(--muted-foreground)";
+const SCENARIO_COLOR = "var(--interactive)";
 
 interface ScenarioChartProps {
   baseline: ForecastPoint[];
@@ -82,6 +83,7 @@ export function ScenarioChart({
               dataKey="baselineBalance"
               stroke={BASELINE_COLOR}
               strokeWidth={2}
+              strokeDasharray="5 4"
               fill="url(#scenarioBaselineFill)"
               dot={false}
               activeDot={{ r: 4, fill: BASELINE_COLOR, stroke: "var(--card)", strokeWidth: 2 }}
@@ -90,7 +92,7 @@ export function ScenarioChart({
               type="monotone"
               dataKey="scenarioBalance"
               stroke={SCENARIO_COLOR}
-              strokeWidth={2}
+              strokeWidth={2.5}
               dot={false}
               activeDot={{ r: 4, fill: SCENARIO_COLOR, stroke: "var(--card)", strokeWidth: 2 }}
             />

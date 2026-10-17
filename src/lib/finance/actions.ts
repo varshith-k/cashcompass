@@ -7,7 +7,17 @@ import { getFinancialEventRepository } from "./repository";
 import { settleLedgerAmount } from "./ledger";
 import { getBudgets, setBudgetLimits } from "./budgets";
 import { getWishlistGoals, addWishlistGoal, deleteWishlistGoal as removeWishlistGoal } from "./wishlist-goals";
-import type { EventDirection, NewFinancialEvent } from "./types";
+import type { EventCertainty, EventDirection, NewFinancialEvent } from "./types";
+
+/** Everything needed to reverse a "Mark paid" (returned to the Bills list for its Undo button). */
+export interface BillPaidUndo {
+  id: string;
+  counterparty: string;
+  originalDate: string;
+  originalCertainty: EventCertainty;
+  /** Next month's occurrence created for a recurring bill, removed again on undo. */
+  nextId?: string;
+}
 
 function parseAmount(raw: FormDataEntryValue | null): number {
   const value = Number(raw);
@@ -92,7 +102,7 @@ export async function deleteBill(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
-export async function markBillPaid(formData: FormData) {
+export async function markBillPaid(formData: FormData): Promise<BillPaidUndo> {
   const id = String(formData.get("id"));
   const repo = getFinancialEventRepository();
   const original = (await repo.listEvents()).find((event) => event.id === id);
@@ -100,10 +110,40 @@ export async function markBillPaid(formData: FormData) {
     throw new Error("Unpaid bill not found");
   }
   await repo.updateEvent(id, { record: "actual", certainty: "certain", date: new Date().toISOString() });
+  let nextId: string | undefined;
   if (original.recurrence === "recurring") {
     const { id: previousId, ...next } = original;
     void previousId;
-    await repo.createEvent({ ...next, source: "manual", sourceRecordId: undefined, date: nextMonthlyDate(original.date) });
+    nextId = (await repo.createEvent({ ...next, source: "manual", sourceRecordId: undefined, date: nextMonthlyDate(original.date) })).id;
+  }
+  revalidatePath("/", "layout");
+  return { id, counterparty: original.counterparty, originalDate: original.date, originalCertainty: original.certainty, nextId };
+}
+
+/**
+ * Reverses markBillPaid: the payment goes back to an unpaid bill on its
+ * original due date, and the auto-created next occurrence is removed. Only
+ * touches the signed-in user's own records (the repository is owner-scoped).
+ */
+export async function undoMarkBillPaid(undo: BillPaidUndo) {
+  const repo = getFinancialEventRepository();
+  const events = await repo.listEvents();
+  const paid = events.find((event) => event.id === undo?.id);
+  if (!paid || paid.record !== "actual" || paid.direction !== "expense") {
+    throw new Error("Paid bill not found");
+  }
+  // A stored timestamp (not form input), so validate it as a full ISO date.
+  const parsed = new Date(String(undo.originalDate));
+  if (Number.isNaN(parsed.getTime())) throw new Error("Invalid original due date");
+  const originalDate = parsed.toISOString();
+  await repo.updateEvent(paid.id, {
+    record: "planned",
+    certainty: undo.originalCertainty === "uncertain" ? "uncertain" : "certain",
+    date: originalDate,
+  });
+  const next = undo.nextId ? events.find((event) => event.id === undo.nextId) : undefined;
+  if (next && next.record === "planned" && next.counterparty === paid.counterparty && next.recurrence === "recurring") {
+    await repo.deleteEvent(next.id);
   }
   revalidatePath("/", "layout");
 }
