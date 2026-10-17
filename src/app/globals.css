@@ -1,0 +1,148 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-manrope);
+  --color-brand-navy: var(--brand-navy);
+  --color-interactive: var(--interactive);
+  --color-interactive-hover: var(--interactive-hover);
+  --color-positive: var(--positive);
+  --color-caution: var(--caution);
+  --color-critical: var(--critical);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #f5f8fc;
+  --foreground: #102a43;
+  --card: #ffffff;
+  --card-foreground: #102a43;
+  --popover: #ffffff;
+  --popover-foreground: #102a43;
+  --primary: #0276b1;
+  --primary-foreground: #ffffff;
+  --secondary: #ebf4fa;
+  --secondary-foreground: #004977;
+  --muted: #ebf4fa;
+  --muted-foreground: #526477;
+  --accent: #ebf4fa;
+  --accent-foreground: #004977;
+  --destructive: #d03027;
+  --border: #dfe7ef;
+  --input: #dfe7ef;
+  --ring: #0276b1;
+  --chart-1: #004977;
+  --chart-2: #0276b1;
+  --chart-3: #0f766e;
+  --chart-4: #b45309;
+  --chart-5: #d03027;
+  --radius: 0.75rem;
+  --sidebar: #004977;
+  --sidebar-foreground: #f4f8fc;
+  --sidebar-primary: #0276b1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #015e8e;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-ring: #53b5ed;
+  --brand-navy: #004977;
+  --interactive: #0276b1;
+  --interactive-hover: #015e8e;
+  --positive: #0f766e;
+  --caution: #b45309;
+  --critical: #d03027;
+}
+
+.dark {
+  --background: #0b1625;
+  --foreground: #f4f8fc;
+  --card: #14273b;
+  --card-foreground: #f4f8fc;
+  --popover: #14273b;
+  --popover-foreground: #f4f8fc;
+  --primary: #53b5ed;
+  --primary-foreground: #0b1625;
+  --secondary: #1a3249;
+  --secondary-foreground: #f4f8fc;
+  --muted: #1a3249;
+  --muted-foreground: #adc0d0;
+  --accent: #1a3249;
+  --accent-foreground: #f4f8fc;
+  --destructive: #e8564c;
+  --border: #294156;
+  --input: #294156;
+  --ring: #53b5ed;
+  --chart-1: #53b5ed;
+  --chart-2: #0276b1;
+  --chart-3: #2dd4bf;
+  --chart-4: #f0a449;
+  --chart-5: #e8564c;
+  --sidebar: #101f32;
+  --sidebar-foreground: #f4f8fc;
+  --sidebar-primary: #53b5ed;
+  --sidebar-primary-foreground: #0b1625;
+  --sidebar-accent: #1a3249;
+  --sidebar-accent-foreground: #f4f8fc;
+  --sidebar-border: #294156;
+  --sidebar-ring: #53b5ed;
+  --brand-navy: #101f32;
+  --interactive: #53b5ed;
+  --interactive-hover: #76c5f2;
+  --positive: #2dd4bf;
+  --caution: #f0a449;
+  --critical: #e8564c;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

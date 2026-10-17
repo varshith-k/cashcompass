@@ -1,0 +1,21 @@
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+  // CashCompass has no static/public content — every route is personalized,
+  // request-time financial data behind the auth boundary. Cache Components
+  // (and the partial prefetching it enables) is built for mixed static/
+  // dynamic sites, so it buys nothing here while forcing a Suspense
+  // boundary around every data read. Left off; revisit if a public/
+  // marketing route is ever added.
+  turbopack: {
+    rules: {
+      "*.css": {
+        loaders: ["@tailwindcss/turbopack"],
+        as: "*.css",
+      },
+    },
+  },
+};
+
+export default nextConfig;
