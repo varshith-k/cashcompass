@@ -1,18 +1,32 @@
-import { HandCoins } from "lucide-react";
+import { connection } from "next/server";
 import { PageHeader } from "@/components/shell/page-header";
-import { ComingSoon } from "@/components/shell/coming-soon";
+import { AddLedgerEntrySheet } from "@/components/ledger/add-ledger-entry-sheet";
+import { LedgerList } from "@/components/ledger/ledger-list";
+import { selectLedgerEntries } from "@/lib/finance/calculations";
+import { getFinancialEventRepository } from "@/lib/finance/repository";
 
-export default function LedgerPage() {
+export default async function LedgerPage() {
+  await connection();
+
+  const events = await getFinancialEventRepository().listEvents();
+  const { owedToMe, iOwe } = selectLedgerEntries(events);
+
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Money Owed / Lent"
-        description="A lightweight ledger for who owes whom, expected repayment dates, and settlement status."
+        description="Expected repayments feed the forecast as uncertain — never counted as guaranteed cash."
+        actions={<AddLedgerEntrySheet />}
       />
-      <ComingSoon
-        icon={HandCoins}
-        title="The ledger is next up"
-        description="Planned for Phase 5. Expected repayments will feed the forecast as uncertain, clearly distinguished from confirmed cash."
+      <LedgerList
+        title="Owed to you"
+        entries={owedToMe}
+        emptyText="Nobody owes you anything right now."
+      />
+      <LedgerList
+        title="You owe"
+        entries={iOwe}
+        emptyText="You don't owe anyone right now."
       />
     </div>
   );

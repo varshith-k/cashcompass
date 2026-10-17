@@ -119,6 +119,63 @@ export async function deleteWishlistGoal(formData: FormData) {
   revalidatePath("/wishlist");
 }
 
+export async function createLedgerEntry(formData: FormData) {
+  const direction = parseDirection(formData.get("direction"));
+  await getFinancialEventRepository().createEvent({
+    date: parseDate(formData.get("date")),
+    amount: parseAmount(formData.get("amount")),
+    direction,
+    record: "planned",
+    // Money owed TO the user isn't guaranteed to arrive; money the user
+    // owes is an obligation they intend to pay, so it's treated as certain.
+    certainty: direction === "income" ? "uncertain" : "certain",
+    recurrence: "one-time",
+    source: "manual",
+    category: "Repayment",
+    counterparty: String(formData.get("counterparty") || "").trim() || "Unknown",
+  });
+  revalidatePath("/ledger");
+  revalidatePath("/overview");
+}
+
+export async function deleteLedgerEntry(formData: FormData) {
+  const id = String(formData.get("id"));
+  await getFinancialEventRepository().deleteEvent(id);
+  revalidatePath("/ledger");
+  revalidatePath("/overview");
+}
+
+export async function logLedgerPayment(formData: FormData) {
+  const id = String(formData.get("id"));
+  const amountPaid = parseAmount(formData.get("amountPaid"));
+  const repo = getFinancialEventRepository();
+  const events = await repo.listEvents();
+  const original = events.find((event) => event.id === id);
+  if (!original) throw new Error("Ledger entry not found");
+
+  const remaining = original.amount;
+  if (amountPaid >= remaining) {
+    await repo.updateEvent(id, { record: "actual", date: new Date().toISOString(), amount: remaining });
+  } else {
+    await repo.createEvent({
+      date: new Date().toISOString(),
+      amount: amountPaid,
+      direction: original.direction,
+      record: "actual",
+      certainty: "certain",
+      recurrence: "one-time",
+      source: "manual",
+      category: "Repayment",
+      counterparty: original.counterparty,
+    });
+    await repo.updateEvent(id, { amount: Math.round((remaining - amountPaid) * 100) / 100 });
+  }
+
+  revalidatePath("/ledger");
+  revalidatePath("/transactions");
+  revalidatePath("/overview");
+}
+
 export async function addWishlistContribution(formData: FormData) {
   const goalName = String(formData.get("goalName") || "").trim();
   if (!goalName) throw new Error("Missing goal");

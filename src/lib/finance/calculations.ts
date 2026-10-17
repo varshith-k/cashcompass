@@ -84,6 +84,15 @@ export function selectRecentTransactions(events: FinancialEvent[]) {
   return events.filter((event) => event.record === "actual").sort((a, b) => b.date.localeCompare(a.date));
 }
 
+/** Outstanding ledger entries: planned Repayment-category events, split by direction. */
+export function selectLedgerEntries(events: FinancialEvent[]) {
+  const outstanding = events.filter((event) => event.category === "Repayment" && event.record === "planned");
+  return {
+    owedToMe: outstanding.filter((event) => event.direction === "income").sort((a, b) => a.date.localeCompare(b.date)),
+    iOwe: outstanding.filter((event) => event.direction === "expense").sort((a, b) => a.date.localeCompare(b.date)),
+  };
+}
+
 export interface ForecastSummary {
   minBalance: number;
   minBalanceDate: string;
