@@ -1,5 +1,5 @@
 import "server-only";
-import { geminiApiUrl } from "@/lib/gemini-config";
+import { postGemini } from "@/lib/gemini-config";
 import { respondOffline, respondToTool, type CopilotTool } from "./respond-offline";
 import type { ForecastContext } from "./tools";
 import type { CopilotResult } from "./types";
@@ -68,15 +68,12 @@ interface GeminiResponse {
   candidates?: { content?: { parts?: GeminiPart[] } }[];
 }
 
-async function callGemini(apiKey: string, contents: unknown[]): Promise<GeminiResponse | null> {
-  const response = await fetch(geminiApiUrl(), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    signal: AbortSignal.timeout(15000),
-    body: JSON.stringify({ systemInstruction: SYSTEM_INSTRUCTION, contents, tools: TOOLS }),
-  });
-  if (!response.ok) return null;
-  return response.json();
+function callGemini(apiKey: string, contents: unknown[]): Promise<GeminiResponse | null> {
+  return postGemini<GeminiResponse>(
+    apiKey,
+    { systemInstruction: SYSTEM_INSTRUCTION, contents, tools: TOOLS },
+    { timeoutMs: 15000, label: "copilot" },
+  );
 }
 
 /** Gemini selects a validated tool. Financial prose and cards are rendered from its result. */
@@ -88,7 +85,14 @@ export async function respondWithGemini(message: string, ctx: ForecastContext): 
     const response = await callGemini(apiKey, [{ role: "user", parts: [{ text: `Available goals: ${ctx.wishlistGoals.map((g) => g.name).join(", ")}. Outstanding repayments: ${ctx.events.filter((e) => e.category === "Repayment" && e.record === "planned").map((e) => e.counterparty).join(", ")}. User request: ${message}` }] }]);
     const call = response?.candidates?.[0]?.content?.parts?.find((p) => p.functionCall)?.functionCall;
     const allowed: CopilotTool[] = ["check_affordability", "check_repayment_delay", "suggest_savings_plan", "spending_breakdown"];
-    if (!call || !allowed.includes(call.name as CopilotTool)) return fallback();
+    if (!call || !allowed.includes(call.name as CopilotTool)) {
+      // A null response was already logged by postGemini.
+      if (response) console.warn("[copilot] Gemini did not choose a supported tool; using local fallback.");
+      return fallback();
+    }
     return { ...respondToTool(call.name as CopilotTool, call.args ?? {}, ctx), engine: "gemini" };
-  } catch { return fallback(); }
+  } catch (error) {
+    console.warn("[copilot] Gemini response handling failed:", error instanceof Error ? error.message : "unknown error");
+    return fallback();
+  }
 }

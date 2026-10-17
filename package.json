@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "audit:ui": "node scripts/audit-ui.mjs",
-    "test:demo": "node scripts/demo-flow.mjs"
+    "test:demo": "node scripts/demo-flow.mjs",
+    "test:gemini": "vitest run --mode gemini-live --silent=false --reporter=verbose src/lib/gemini.live.test.ts"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.32.1",

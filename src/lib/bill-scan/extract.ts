@@ -1,7 +1,7 @@
 import "server-only";
 import { EXPENSE_CATEGORIES } from "@/lib/finance/categories";
 
-import { geminiApiUrl } from "@/lib/gemini-config";
+import { postGemini } from "@/lib/gemini-config";
 
 export interface ExtractedBill {
   counterparty?: string;
@@ -20,10 +20,6 @@ interface GeminiResponse {
  * a request failure, or a response that doesn't parse as the expected
  * JSON shape. The caller always falls back to blank, user-filled form
  * fields rather than silently saving something unconfirmed.
- *
- * Untested against the live API — written against the stable
- * `generateContent` + `responseMimeType: "application/json"` contract,
- * not run with a real key.
  */
 export async function extractBillFromImage(
   base64Data: string,
@@ -38,11 +34,9 @@ Category must be exactly one of: ${EXPENSE_CATEGORIES.join(", ")}.
 Respond with only this JSON shape, no other text: {"counterparty": string, "amount": number, "date": "YYYY-MM-DD", "category": string}.
 If a field truly cannot be read from the image, omit it rather than guessing.`;
 
-    const response = await fetch(geminiApiUrl(), {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      signal: AbortSignal.timeout(20000),
-      body: JSON.stringify({
+    const data = await postGemini<GeminiResponse>(
+      apiKey,
+      {
         contents: [
           {
             role: "user",
@@ -50,13 +44,10 @@ If a field truly cannot be read from the image, omit it rather than guessing.`;
           },
         ],
         generationConfig: { responseMimeType: "application/json" },
-      }),
-    });
-
-    if (!response.ok) return null;
-
-    const data: GeminiResponse = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
+      },
+      { timeoutMs: 20000, label: "bill-scan" },
+    );
+    const text = data?.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
     if (!text) return null;
 
     const parsed = JSON.parse(text) as Partial<ExtractedBill>;
@@ -76,7 +67,8 @@ If a field truly cannot be read from the image, omit it rather than guessing.`;
     }
 
     return Object.keys(result).length > 0 ? result : null;
-  } catch {
+  } catch (error) {
+    console.warn("[bill-scan] Could not read Gemini's response:", error instanceof Error ? error.message : "unknown error");
     return null;
   }
 }
