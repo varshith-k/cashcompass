@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -82,10 +83,14 @@ export function Topbar() {
           }
         />
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel className="font-normal">
-            <p className="text-sm font-medium truncate">{user?.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-          </DropdownMenuLabel>
+          {/* Base UI requires a GroupLabel to sit inside a Group; without it,
+              opening the menu throws and crashes the page. */}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="font-normal">
+              <p className="text-sm font-medium truncate">{user?.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem render={<a href="/settings">Settings</a>} />
           <DropdownMenuItem render={<a href={logoutHref}>Sign out</a>} />
