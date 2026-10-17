@@ -1,6 +1,6 @@
 "use server";
 
-import { settleLedgerAmount } from "@/lib/finance/actions";
+import { settleLedgerAmount } from "@/lib/finance/ledger";
 import { SOLANA_DEMO_RECIPIENT, usdToLamports } from "./config";
 import { verifySolanaTransfer } from "./verify";
 import type { SolanaPaymentVerification } from "./types";

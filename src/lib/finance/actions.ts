@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireOwnerId } from "@/lib/auth/session";
 import { getFinancialEventRepository } from "./repository";
+import { settleLedgerAmount } from "./ledger";
 import { getBudgets, setBudgetLimits } from "./budgets";
 import { addWishlistGoal, deleteWishlistGoal as removeWishlistGoal } from "./wishlist-goals";
 import type { EventDirection, NewFinancialEvent } from "./types";
@@ -147,48 +148,6 @@ export async function deleteLedgerEntry(formData: FormData) {
   const id = String(formData.get("id"));
   await getFinancialEventRepository().deleteEvent(id);
   revalidatePath("/ledger");
-  revalidatePath("/overview");
-}
-
-/**
- * Settles (fully or partially) a ledger entry by id. Shared by the manual
- * "Log payment" action and the Solana devnet settlement flow in
- * src/lib/solana/actions.ts, so both record the repayment the same way.
- */
-export async function settleLedgerAmount(
-  id: string,
-  amountPaid: number,
-  options?: { counterpartyNote?: string },
-) {
-  const repo = getFinancialEventRepository();
-  const events = await repo.listEvents();
-  const original = events.find((event) => event.id === id);
-  if (!original) throw new Error("Ledger entry not found");
-
-  const remaining = original.amount;
-  const counterparty = options?.counterpartyNote
-    ? `${original.counterparty} (${options.counterpartyNote})`
-    : original.counterparty;
-
-  if (amountPaid >= remaining) {
-    await repo.updateEvent(id, { record: "actual", date: new Date().toISOString(), amount: remaining, counterparty });
-  } else {
-    await repo.createEvent({
-      date: new Date().toISOString(),
-      amount: amountPaid,
-      direction: original.direction,
-      record: "actual",
-      certainty: "certain",
-      recurrence: "one-time",
-      source: "manual",
-      category: "Repayment",
-      counterparty,
-    });
-    await repo.updateEvent(id, { amount: Math.round((remaining - amountPaid) * 100) / 100 });
-  }
-
-  revalidatePath("/ledger");
-  revalidatePath("/transactions");
   revalidatePath("/overview");
 }
 
