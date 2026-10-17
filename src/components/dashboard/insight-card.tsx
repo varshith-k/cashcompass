@@ -20,6 +20,7 @@ export function InsightCard({ message, ctaLabel, ctaHref }: InsightCardProps) {
           <p className="text-sm leading-relaxed">{message}</p>
           <Button
             render={<Link href={ctaHref}>{ctaLabel} →</Link>}
+            nativeButton={false}
             variant="link"
             className="h-auto p-0 mt-1.5 text-interactive"
           />

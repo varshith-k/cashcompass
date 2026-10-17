@@ -109,6 +109,7 @@ export function CopilotChat() {
                       <ArrowRight className="size-3.5" />
                     </Link>
                   }
+                  nativeButton={false}
                   variant="link"
                   className="h-auto p-0 mt-1.5 text-interactive"
                 />
