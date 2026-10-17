@@ -14,30 +14,35 @@ function isoDaysFromToday(days: number) {
   return date.toISOString();
 }
 
-/** Same in-memory-for-the-process-lifetime pattern as demo-repository.ts. */
-let store: WishlistGoal[] | null = null;
+/**
+ * Same in-memory-for-the-process-lifetime pattern as demo-repository.ts,
+ * kept per user (keyed by Auth0 `sub`).
+ */
+const stores = new Map<string, WishlistGoal[]>();
 
-function ensureStore() {
-  if (!store) {
-    store = [
+function storeFor(ownerId: string) {
+  let goals = stores.get(ownerId);
+  if (!goals) {
+    goals = [
       { id: "goal-miami", name: "Miami Trip Goal", targetAmount: 900, targetDate: isoDaysFromToday(70) },
     ];
+    stores.set(ownerId, goals);
   }
-  return store;
+  return goals;
 }
 
-export function getWishlistGoals(): WishlistGoal[] {
-  return ensureStore();
+export function getWishlistGoals(ownerId: string): WishlistGoal[] {
+  return storeFor(ownerId);
 }
 
-export function addWishlistGoal(input: Omit<WishlistGoal, "id">): WishlistGoal {
+export function addWishlistGoal(ownerId: string, input: Omit<WishlistGoal, "id">): WishlistGoal {
   const goal: WishlistGoal = { ...input, id: crypto.randomUUID() };
-  ensureStore().push(goal);
+  storeFor(ownerId).push(goal);
   return goal;
 }
 
-export function deleteWishlistGoal(id: string) {
-  const goals = ensureStore();
+export function deleteWishlistGoal(ownerId: string, id: string) {
+  const goals = storeFor(ownerId);
   const index = goals.findIndex((goal) => goal.id === id);
   if (index !== -1) {
     goals.splice(index, 1);

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireOwnerId } from "@/lib/auth/session";
 import { getFinancialEventRepository } from "./repository";
 import { getBudgets, setBudgetLimits } from "./budgets";
 import { addWishlistGoal, deleteWishlistGoal as removeWishlistGoal } from "./wishlist-goals";
@@ -89,23 +90,25 @@ export async function markBillPaid(formData: FormData) {
 }
 
 export async function updateBudgetLimits(formData: FormData) {
+  const ownerId = await requireOwnerId();
   const limits: Record<string, number> = {};
-  for (const budget of getBudgets()) {
+  for (const budget of getBudgets(ownerId)) {
     const raw = formData.get(`limit_${budget.category}`);
     const value = Number(raw);
     if (Number.isFinite(value) && value >= 0) {
       limits[budget.category] = Math.round(value * 100) / 100;
     }
   }
-  setBudgetLimits(limits);
+  setBudgetLimits(ownerId, limits);
   revalidatePath("/budgets");
 }
 
 export async function createWishlistGoal(formData: FormData) {
+  const ownerId = await requireOwnerId();
   const name = String(formData.get("name") || "").trim();
   if (!name) throw new Error("Goal name is required");
 
-  addWishlistGoal({
+  addWishlistGoal(ownerId, {
     name,
     targetAmount: parseAmount(formData.get("targetAmount")),
     targetDate: parseDate(formData.get("targetDate")),
@@ -114,8 +117,9 @@ export async function createWishlistGoal(formData: FormData) {
 }
 
 export async function deleteWishlistGoal(formData: FormData) {
+  const ownerId = await requireOwnerId();
   const id = String(formData.get("id"));
-  removeWishlistGoal(id);
+  removeWishlistGoal(ownerId, id);
   revalidatePath("/wishlist");
 }
 

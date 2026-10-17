@@ -1,5 +1,6 @@
 "use server";
 
+import { requireSession } from "@/lib/auth/session";
 import { extractBillFromImage, type ExtractedBill } from "./extract";
 
 export interface ScanBillResult {
@@ -9,6 +10,8 @@ export interface ScanBillResult {
 }
 
 export async function scanBillImage(formData: FormData): Promise<ScanBillResult> {
+  // Spends the Gemini API key, so only signed-in users may call it.
+  await requireSession();
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, message: "No photo received." };

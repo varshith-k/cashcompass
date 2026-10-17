@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { useAuth } from "@/lib/auth/provider";
@@ -73,6 +73,7 @@ export function Topbar() {
           render={
             <Button variant="ghost" size="icon" className="rounded-full">
               <Avatar className="size-8">
+                {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" referrerPolicy="no-referrer" />}
                 <AvatarFallback className="bg-brand-navy text-white text-xs">
                   {initials ?? "?"}
                 </AvatarFallback>

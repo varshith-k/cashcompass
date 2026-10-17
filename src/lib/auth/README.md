@@ -1,41 +1,33 @@
 # Auth boundary
 
-Everything in this directory is the seam for the Auth0 integration. The rest
-of the app (shell, dashboard, every page) only ever imports from here —
-`getSession()` on the server, `useAuth()` on the client — never from an
-Auth0 package directly. That means the Auth0 work can happen without
-touching, or conflicting with, any UI code.
+Everything in this directory is the seam between Auth0 and the rest of the app. The shell, dashboard and every page import only from here: `getSession()` / `requireSession()` / `withSession()` on the server, and `useAuth()` on the client. Nothing else imports `@auth0/nextjs-auth0` directly.
 
-## Current state (demo mode)
+Full contract: [`docs/AUTH_INTEGRATION_CONTRACT.md`](../../../docs/AUTH_INTEGRATION_CONTRACT.md). Tenant setup: [`docs/AUTH0_SETUP.md`](../../../docs/AUTH0_SETUP.md).
 
-- `demo-user.ts` — the one hardcoded demo user.
-- `session.ts` — `getSession()` / `requireSession()`, server-only, always
-  returns the demo user wrapped in a session.
-- `provider.tsx` — `AuthProvider` (wraps the app in
-  `src/app/(app)/layout.tsx`) and the `useAuth()` hook client components use
-  for `user`, `status`, `loginHref`, `logoutHref`.
-- `src/app/api/auth/{login,logout,callback,me}/route.ts` — stub routes that
-  redirect back into the app. Paths match the `@auth0/nextjs-auth0`
-  convention on purpose.
+## Files
 
-## Wiring up Auth0
+- `session.ts` (server-only). Reads the Auth0 session:
+  - `getSession()` returns `AuthSession | null`.
+  - `requireSession(returnTo?)` redirects to login when signed out.
+  - `withSession(handler)` wraps a Route Handler and returns 401 JSON when signed out.
+- `provider.tsx`. `AuthProvider` wraps the app in `src/app/(app)/layout.tsx`. `useAuth()` returns `{ user, status, source, loginHref, signupHref, logoutHref }`.
+- `types.ts`. `AuthUser` (`id` is the Auth0 `sub`), `AuthSession` and `AuthStatus`.
+- `routes.ts`. Auth URLs, `returnTo` sanitizing, and the public-path allowlist.
+- `ownership.ts`. `withOwner` / `assertOwnedBy` / `onlyOwnedBy` for per-user data.
+- `config.ts`. Demo-mode detection.
+- `map-user.ts`, `errors.ts`. Internal helpers.
+- `../auth0.ts`. The SDK client. `../../proxy.ts` mounts the SDK routes and gates every non-public route.
 
-1. `npm install @auth0/nextjs-auth0`
-2. Fill in the `AUTH0_*` values in `.env.local` (see `.env.example`):
-   `AUTH0_SECRET`, `AUTH0_BASE_URL`, `AUTH0_ISSUER_BASE_URL`,
-   `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`.
-3. Replace the bodies of the four stub routes with the SDK's handlers
-   (`handleLogin`, `handleLogout`, `handleCallback`, `handleProfile` or
-   equivalent for the installed SDK version). Keep the file paths as-is.
-4. Replace the body of `getSession()` in `session.ts` with the SDK's
-   session lookup, keeping the `AuthSession | null` return type in
-   `types.ts` (add fields if Auth0 gives you more than `id`/`name`/`email`,
-   but don't remove any — callers rely on them).
-5. If route protection is needed, add it in `src/proxy.ts` (Next 16 renamed
-   `middleware.ts` → `proxy.ts`) by calling `getSession()`; nothing else
-   needs to change.
+## Modes
 
-Nothing outside this directory and the four stub routes should need to
-change. If a UI component needs a new field on `AuthUser`, add it to
-`types.ts` and keep `demo-user.ts` in sync so the app still runs without
-real Auth0 credentials configured.
+| Auth0 env vars | `NODE_ENV` | Behavior |
+|---|---|---|
+| All set | any | Real Auth0: Universal Login, Google if enabled, encrypted session cookie |
+| Missing | development | **Demo mode**: every request is `DEMO_USER`, nothing is gated, `source: "demo"` |
+| Missing | production | No demo fallback. Protected routes redirect to login, which shows `/auth-error` |
+
+## Routes (SDK v4, mounted by `src/proxy.ts`)
+
+`/auth/login` (`?returnTo=/path`, `&screen_hint=signup`, `&connection=google-oauth2`), `/auth/callback`, `/auth/logout`, `/auth/profile`. Link to them with a plain `<a href>`, not `<Link>`. `/api/auth/me` returns the session as JSON.
+
+If a UI component needs a new field on `AuthUser`, add it to `types.ts`, `map-user.ts` and `demo-user.ts`.

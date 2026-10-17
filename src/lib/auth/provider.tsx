@@ -1,12 +1,16 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import type { AuthSession, AuthStatus, AuthUser } from "./types";
+import type { AuthSession, AuthSource, AuthStatus, AuthUser } from "./types";
+import { AUTH_ROUTES, loginHref, signupHref } from "./routes";
 
 interface AuthContextValue {
   user: AuthUser | null;
   status: AuthStatus;
+  /** "auth0" for real accounts, "demo" without Auth0 credentials; null when signed out. */
+  source: AuthSource | null;
   loginHref: string;
+  signupHref: string;
   logoutHref: string;
 }
 
@@ -23,10 +27,12 @@ export function AuthProvider({
     () => ({
       user: session?.user ?? null,
       status: session ? "authenticated" : "unauthenticated",
-      // These routes follow the @auth0/nextjs-auth0 convention so the
-      // Auth0 integration can implement them without any UI changes.
-      loginHref: "/api/auth/login",
-      logoutHref: "/api/auth/logout",
+      source: session?.source ?? null,
+      // Auth0 SDK v4 routes, mounted by src/proxy.ts. Use plain <a href>
+      // (full-page navigation), not <Link> with prefetch.
+      loginHref: loginHref(),
+      signupHref: signupHref(),
+      logoutHref: AUTH_ROUTES.logout,
     }),
     [session],
   );
