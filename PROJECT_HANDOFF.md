@@ -597,6 +597,7 @@ Where backend support does not exist, expose clearly labeled demo functionality 
 - Verify keyboard and screen-reader behavior.
 - Verify loading, empty, success, error, and synchronization states.
 - Test build, type checking, linting, and relevant unit/integration tests.
+- Trim the Solana wallet-adapter dependency to just the specific wallets actually supported, instead of `@solana/wallet-adapter-wallets`'s catch-all bundle. That package pulls in every adapter including Trezor and React Native/mobile ones this web app never uses, and that unused code is where the critical `protobufjs` and high-severity `braces` npm audit findings live (115 vulnerabilities total after adding Solana, most of them in this dead weight).
 - Run the complete three-minute demo flow.
 - Document known limitations and demo assumptions.
 
