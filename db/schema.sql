@@ -25,8 +25,14 @@ CREATE TABLE IF NOT EXISTS financial_events (
   category text NOT NULL,
   counterparty text NOT NULL,
   scenario_id text,
+  counterparty_phone text,
+  source_record_id text,
   PRIMARY KEY (id, event_date)
 );
+
+-- Safe upgrades for existing installations.
+ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS counterparty_phone text;
+ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS source_record_id text;
 
 -- Hypertable on event_date is what makes this a competitive Tiger Data
 -- submission rather than "Postgres with extra steps": time-range queries
@@ -59,4 +65,12 @@ SELECT add_continuous_aggregate_policy('monthly_category_spend',
   end_offset => INTERVAL '1 day',
   schedule_interval => INTERVAL '1 hour',
   if_not_exists => TRUE
+);
+
+-- A devnet transaction may settle only one ledger entry, across users and restarts.
+CREATE TABLE IF NOT EXISTS solana_settlement_receipts (
+  signature text PRIMARY KEY,
+  owner_id text NOT NULL,
+  entry_id text NOT NULL,
+  claimed_at timestamptz NOT NULL DEFAULT now()
 );

@@ -31,6 +31,7 @@ export function AddBillSheet() {
   const [date, setDate] = useState("");
   const [category, setCategory] = useState<string>(EXPENSE_CATEGORIES[0]);
   const [recurring, setRecurring] = useState(true);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanMessage, setScanMessage] = useState<string | null>(null);
@@ -65,6 +66,8 @@ export function AddBillSheet() {
       if (fields.date) setDate(fields.date);
       if (fields.category) setCategory(fields.category);
       setScanMessage("Pulled these fields from the photo — double-check before saving.");
+    } catch {
+      setScanMessage("Unable to scan the photo. Try again or enter the details manually.");
     } finally {
       setScanning(false);
     }
@@ -94,11 +97,14 @@ export function AddBillSheet() {
           ref={formRef}
           action={async (formData) => {
             setPending(true);
+            setSaveError(null);
             try {
               await createBill(formData);
               formRef.current?.reset();
               resetForm();
               setOpen(false);
+            } catch {
+              setSaveError("Unable to save the bill. Check the fields and try again.");
             } finally {
               setPending(false);
             }
@@ -108,7 +114,7 @@ export function AddBillSheet() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -131,7 +137,7 @@ export function AddBillSheet() {
             {scanning ? "Reading photo…" : "Scan a bill photo"}
           </Button>
           {scanMessage && (
-            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+            <p role="status" className="flex items-start gap-1.5 text-xs text-muted-foreground">
               <Sparkles className="size-3.5 mt-0.5 shrink-0" />
               {scanMessage}
             </p>
@@ -205,7 +211,8 @@ export function AddBillSheet() {
             <Switch id="recurring" name="recurring" checked={recurring} onCheckedChange={setRecurring} />
           </div>
 
-          <Button type="submit" className="w-full" disabled={pending}>
+          {saveError && <p role="alert" className="text-sm text-critical">{saveError}</p>}
+          <Button type="submit" className="w-full" disabled={pending || scanning}>
             {pending ? "Adding…" : "Add bill"}
           </Button>
         </form>

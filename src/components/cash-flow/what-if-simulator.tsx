@@ -40,7 +40,9 @@ interface WhatIfSimulatorProps {
   bufferThreshold: number;
   forecastDays: number;
   historyDays: number;
-  nextPaydayDate: string;
+  nextPaydayDate: string | null;
+  initialAmount?: string;
+  initialLabel?: string;
 }
 
 export function WhatIfSimulator({
@@ -50,10 +52,12 @@ export function WhatIfSimulator({
   forecastDays,
   historyDays,
   nextPaydayDate,
+  initialAmount = "150",
+  initialLabel = "",
 }: WhatIfSimulatorProps) {
   const [kind, setKind] = useState<ScenarioKind>("buy-now");
-  const [amount, setAmount] = useState("150");
-  const [label, setLabel] = useState("");
+  const [amount, setAmount] = useState(initialAmount);
+  const [label, setLabel] = useState(initialLabel);
   const [delayDays, setDelayDays] = useState("7");
   const [selectedBillId, setSelectedBillId] = useState<string>("");
   const [selectedRepaymentId, setSelectedRepaymentId] = useState<string>("");
@@ -68,7 +72,7 @@ export function WhatIfSimulator({
 
   const startDate = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() - historyDays);
+    d.setUTCDate(d.getUTCDate() - historyDays);
     return d;
   }, [historyDays]);
 
@@ -85,10 +89,10 @@ export function WhatIfSimulator({
   );
 
   const { scenarioEvents, assumptions, suggestedAction } = useMemo(() => {
-    const amt = Number(amount) || 0;
-    const weeklyAmt = Number(weeklyAmount) || 0;
-    const weekCount = Math.max(0, Number(weeks) || 0);
-    const delay = Number(delayDays) || 0;
+    const amt = Number.isFinite(Number(amount)) ? Math.min(9999999999.99, Math.max(0, Number(amount))) : 0;
+    const weeklyAmt = Number.isFinite(Number(weeklyAmount)) ? Math.min(9999999999.99, Math.max(0, Number(weeklyAmount))) : 0;
+    const weekCount = Math.min(52, Math.max(0, Math.trunc(Number(weeks) || 0)));
+    const delay = Math.min(365, Math.max(0, Math.trunc(Number(delayDays) || 0)));
 
     switch (kind) {
       case "buy-now": {
@@ -100,6 +104,7 @@ export function WhatIfSimulator({
         };
       }
       case "buy-after-payday": {
+        if (!nextPaydayDate) return { scenarioEvents: events, assumptions: ["No scheduled payday is available."], suggestedAction: "Add a planned income event before comparing purchase dates." };
         const purchase = buildPurchaseEvent({ amount: amt, label: label || "Purchase", date: nextPaydayDate });
         return {
           scenarioEvents: events.concat(purchase),
@@ -148,10 +153,11 @@ export function WhatIfSimulator({
     [openingBalance, scenarioEvents, startDate, forecastDays, bufferThreshold],
   );
 
-  const baselineSummary = summarizeForecast(baselinePoints);
-  const scenarioSummary = summarizeForecast(scenarioPoints);
+  const baselineSummary = summarizeForecast(baselinePoints.slice(todayIndex));
+  const conservativeMinimum = Math.min(...scenarioPoints.slice(todayIndex).map((point) => point.conservativeBalance));
+  const scenarioSummary = summarizeForecast(scenarioPoints.slice(todayIndex));
   const baselineBillsAtRisk = countBillsAtRisk(bills, baselinePoints);
-  const scenarioBillsAtRisk = countBillsAtRisk(bills, scenarioPoints);
+  const scenarioBillsAtRisk = countBillsAtRisk(selectUpcomingBills(scenarioEvents), scenarioPoints);
   const scenarioLabel = SCENARIOS.find((s) => s.value === kind)?.label ?? "Scenario";
   const getsWorse = scenarioSummary.minBalance < baselineSummary.minBalance - 0.01;
 
@@ -161,6 +167,7 @@ export function WhatIfSimulator({
         <CardTitle>What-if simulator</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
+        <p className="text-xs text-muted-foreground">Demo forecast from a seeded opening balance. Monthly bills repeat; other income and expenses appear only on recorded dates. Unlisted daily spending is excluded; uncertain repayments may not arrive. Results cover the visible forecast only.</p>
         <div className="flex flex-wrap gap-1.5">
           {SCENARIOS.map((s) => (
             <Button
@@ -168,6 +175,8 @@ export function WhatIfSimulator({
               type="button"
               size="sm"
               variant={kind === s.value ? "default" : "outline"}
+              disabled={s.value === "buy-after-payday" && !nextPaydayDate}
+              aria-pressed={kind === s.value}
               onClick={() => setKind(s.value)}
             >
               {s.label}
@@ -285,6 +294,7 @@ export function WhatIfSimulator({
           />
         </div>
 
+        <p className="text-xs text-muted-foreground">Scenario minimum without uncertain repayments: {formatCurrency(conservativeMinimum, { cents: true })}. {conservativeMinimum < bufferThreshold ? "This falls below your buffer." : "This stays above your buffer in the visible forecast."}</p>
         <div className="rounded-lg bg-accent px-4 py-3 space-y-2">
           <p className="flex items-start gap-2 text-sm">
             {getsWorse ? (

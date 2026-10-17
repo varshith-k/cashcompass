@@ -86,7 +86,8 @@ export function AccountCard({ canEditProfile = false }: { canEditProfile?: boole
             CashCompass never sees your password.
           </p>
         )}
-        <Button render={<a href={logoutHref}>Sign out</a>} nativeButton={false} variant="outline" size="sm" />
+        <Button render={<a href={logoutHref}>Sign out</a>} nativeButton={false}
+                  role="link" variant="outline" size="sm" />
       </CardContent>
     </Card>
   );

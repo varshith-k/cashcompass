@@ -28,11 +28,21 @@ const page = await browser.newPage();
 
 const overflowIssues = [];
 const a11yIssues = [];
+async function visit(route) {
+  const response = await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });
+  if (!response?.ok()) throw new Error(`${route} returned HTTP ${response?.status()}`);
+  await page.locator("main").waitFor();
+  if (await page.getByText("Unable to load your financial data", { exact: true }).count()) throw new Error(`${route} rendered its error boundary`);
+}
 
+
+await visit("/overview");
+for (const theme of ["light", "dark"]) {
+await page.evaluate((theme) => localStorage.setItem("theme", theme), theme);
 for (const route of ROUTES) {
   for (const width of WIDTHS) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });
+    await visit(route);
 
     const { scrollWidth, clientWidth } = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
@@ -40,32 +50,31 @@ for (const route of ROUTES) {
     }));
 
     if (scrollWidth > clientWidth + 1) {
-      overflowIssues.push({ route, width, scrollWidth, clientWidth, overflowBy: scrollWidth - clientWidth });
+      overflowIssues.push({ theme, route, width, scrollWidth, clientWidth, overflowBy: scrollWidth - clientWidth });
     }
   }
 
-  // Contrast/labels/focus don't change by breakpoint, so one axe pass per route is enough.
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });
-  await page.evaluate(AXE_SOURCE);
-  const results = await page.evaluate(async () => await window.axe.run());
-
-  for (const violation of results.violations) {
-    a11yIssues.push({
-      route,
-      id: violation.id,
-      impact: violation.impact,
-      help: violation.help,
-      nodes: violation.nodes.map((n) => ({ target: n.target.join(" "), html: n.html })),
-    });
+  // Mobile and desktop expose different controls. Check both in each theme.
+  for (const width of [375, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await visit(route);
+    await page.evaluate(AXE_SOURCE);
+    const results = await page.evaluate(async () => await window.axe.run({ exclude: ["nextjs-portal"] }));
+    for (const violation of results.violations) {
+      a11yIssues.push({ theme, route, width, id: violation.id, impact: violation.impact, help: violation.help,
+        nodes: violation.nodes.map((n) => ({ target: n.target.join(" "), html: n.html, failure: n.failureSummary })),
+      });
+    }
   }
+}
+
 }
 
 await browser.close();
 
 console.log("=== HORIZONTAL OVERFLOW ===");
 if (overflowIssues.length === 0) {
-  console.log(`None found across ${ROUTES.length} routes x ${WIDTHS.length} widths.`);
+  console.log(`None found across ${ROUTES.length} routes x ${WIDTHS.length} widths x 2 themes.`);
 } else {
   for (const issue of overflowIssues) console.log(JSON.stringify(issue));
 }

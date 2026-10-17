@@ -25,7 +25,7 @@ function storeFor(ownerId: string) {
 
 export class DemoFinancialEventStore implements FinancialEventStore {
   async listEvents(ownerId: string) {
-    return storeFor(ownerId);
+    return storeFor(ownerId).map((event) => ({ ...event }));
   }
 
   async createEvent(ownerId: string, input: NewFinancialEvent) {

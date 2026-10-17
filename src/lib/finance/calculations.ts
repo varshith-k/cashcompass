@@ -1,3 +1,4 @@
+import { dateKey, nextMonthlyDate } from "./dates";
 import type {
   FinancialEvent,
   ForecastPoint,
@@ -21,6 +22,11 @@ export function computeSafeToSpend(input: SafeToSpendInput): SafeToSpendResult {
   return { safeToSpend, breakdown: input };
 }
 
+/** Posted events affect today's available funds; planned income never does. */
+export function computeAvailableBalance(openingBalance: number, events: FinancialEvent[], asOf = dateKey()): number {
+  return Math.round((openingBalance + events.filter((event) => event.record === "actual" && dateKey(event.date) <= asOf).reduce((sum, event) => sum + (event.direction === "income" ? event.amount : -event.amount), 0)) * 100) / 100;
+}
+
 /**
  * Deterministic day-by-day balance projection from a starting balance and
  * a set of dated events. Low-balance risk is flagged against a buffer
@@ -31,29 +37,64 @@ export function computeForecast(
   events: FinancialEvent[],
   options: { days: number; startDate?: Date; lowBalanceThreshold: number },
 ): ForecastPoint[] {
-  const start = options.startDate ?? new Date();
-  start.setHours(0, 0, 0, 0);
-
+  const start = new Date(`${dateKey(options.startDate ?? new Date())}T00:00:00.000Z`);
+  const startKey = dateKey(start);
+  const today = dateKey();
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + options.days - 1);
+  const endKey = dateKey(end);
   const byDate = new Map<string, number>();
+  const uncertainByDate = new Map<string, number>();
+  let runningBalance = startingBalance;
+
   for (const event of events) {
     const signedAmount = event.direction === "income" ? event.amount : -event.amount;
-    const key = event.date.slice(0, 10);
-    byDate.set(key, (byDate.get(key) ?? 0) + signedAmount);
+    let key = dateKey(event.date);
+    // Include all recorded history, even when it predates the chart window.
+    // Overdue obligations remain payable; overdue expected income is not cash.
+    if (event.record === "planned" && key < today) {
+      if (event.direction === "income") continue;
+      key = today;
+    }
+    if (key < startKey) {
+      if (event.record === "actual") runningBalance += signedAmount;
+      continue;
+    }
+    const dates = [key];
+    // Bills configured as monthly repeat through the visible horizon.
+    if (event.record === "planned" && event.recurrence === "recurring" &&
+        event.direction === "expense" && !["Savings", "Repayment"].includes(event.category)) {
+      const originalDate = new Date(event.date);
+      const todayDate = new Date(`${today}T00:00:00Z`);
+      const firstMonth = Math.max(1, (todayDate.getUTCFullYear() - originalDate.getUTCFullYear()) * 12 + todayDate.getUTCMonth() - originalDate.getUTCMonth());
+      for (let month = firstMonth; month <= firstMonth + Math.ceil(options.days / 28) + 1; month++) {
+        const next = dateKey(nextMonthlyDate(event.date, month));
+        if (next > endKey) break;
+        if (next > today) dates.push(next);
+      }
+    }
+    for (const date of dates) {
+      byDate.set(date, (byDate.get(date) ?? 0) + signedAmount);
+      if (event.certainty === "uncertain" && event.direction === "income") {
+        uncertainByDate.set(date, (uncertainByDate.get(date) ?? 0) + event.amount);
+      }
+    }
   }
 
   const points: ForecastPoint[] = [];
-  let runningBalance = startingBalance;
-
+  let uncertainIncome = 0;
   for (let i = 0; i < options.days; i++) {
     const date = new Date(start);
-    date.setDate(date.getDate() + i);
-    const key = date.toISOString().slice(0, 10);
+    date.setUTCDate(date.getUTCDate() + i);
+    const key = dateKey(date);
     runningBalance += byDate.get(key) ?? 0;
-
+    uncertainIncome += uncertainByDate.get(key) ?? 0;
+    const conservativeBalance = Math.round((runningBalance - uncertainIncome) * 100) / 100;
     points.push({
       date: key,
       projectedBalance: Math.round(runningBalance * 100) / 100,
-      isLowBalanceRisk: runningBalance < options.lowBalanceThreshold,
+      conservativeBalance,
+      isLowBalanceRisk: conservativeBalance < options.lowBalanceThreshold,
     });
   }
 
@@ -75,7 +116,8 @@ export function selectUpcomingBills(events: FinancialEvent[]) {
       (event) =>
         event.direction === "expense" &&
         event.record === "planned" &&
-        event.category !== "Savings",
+        event.category !== "Savings" &&
+        event.category !== "Repayment",
     )
     .sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -112,7 +154,7 @@ export function summarizeForecast(points: ForecastPoint[]): ForecastSummary {
 /** Of a set of bills, how many fall on a day the forecast flags as low-balance risk. */
 export function countBillsAtRisk(bills: FinancialEvent[], points: ForecastPoint[]) {
   const riskByDate = new Map(points.map((point) => [point.date, point.isLowBalanceRisk]));
-  return bills.filter((bill) => riskByDate.get(bill.date.slice(0, 10))).length;
+  return bills.filter((bill) => riskByDate.get(dateKey(bill.date) < dateKey() ? dateKey() : dateKey(bill.date))).length;
 }
 
 /**
@@ -122,7 +164,7 @@ export function countBillsAtRisk(bills: FinancialEvent[], points: ForecastPoint[
  */
 export function savingsProgressForGoal(events: FinancialEvent[], goalName: string): number {
   return events
-    .filter((event) => event.category === "Savings" && event.counterparty === goalName)
+    .filter((event) => event.category === "Savings" && event.record === "actual" && event.counterparty === goalName)
     .reduce((sum, event) => sum + event.amount, 0);
 }
 
@@ -134,8 +176,7 @@ export function recommendedWeeklyContribution(remaining: number, targetDate: str
 }
 
 export function spendByCategoryThisMonth(events: FinancialEvent[]): Map<string, number> {
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthKey = dateKey().slice(0, 7);
   const totals = new Map<string, number>();
 
   for (const event of events) {

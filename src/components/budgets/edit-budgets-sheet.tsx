@@ -18,6 +18,7 @@ import type { BudgetAllocation } from "@/lib/finance/budgets";
 export function EditBudgetsSheet({ budgets }: { budgets: BudgetAllocation[] }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState(false);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -36,9 +37,12 @@ export function EditBudgetsSheet({ budgets }: { budgets: BudgetAllocation[] }) {
         <form
           action={async (formData) => {
             setPending(true);
+            setError(false);
             try {
               await updateBudgetLimits(formData);
               setOpen(false);
+            } catch {
+              setError(true);
             } finally {
               setPending(false);
             }
@@ -58,6 +62,7 @@ export function EditBudgetsSheet({ budgets }: { budgets: BudgetAllocation[] }) {
               />
             </div>
           ))}
+          {error && <p role="alert" className="text-sm text-critical">Unable to save. Check the details and try again.</p>}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Saving…" : "Save budgets"}
           </Button>

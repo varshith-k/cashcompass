@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Plus } from "lucide-react";
+import { useId, useRef, useState } from "react";
+import { Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -19,15 +19,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createTransaction } from "@/lib/finance/actions";
+import { createTransaction, updateTransaction } from "@/lib/finance/actions";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/finance/categories";
-import type { EventDirection } from "@/lib/finance/types";
+import type { EventDirection, FinancialEvent } from "@/lib/finance/types";
 
-export function AddTransactionSheet() {
+export function AddTransactionSheet({ transaction }: { transaction?: FinancialEvent } = {}) {
+  const formId = useId();
   const [open, setOpen] = useState(false);
-  const [direction, setDirection] = useState<EventDirection>("expense");
-  const [category, setCategory] = useState<string>(EXPENSE_CATEGORIES[0]);
+  const [direction, setDirection] = useState<EventDirection>(transaction?.direction ?? "expense");
+  const [category, setCategory] = useState<string>(transaction?.category ?? EXPENSE_CATEGORIES[0]);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   const categories = direction === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
@@ -41,30 +43,34 @@ export function AddTransactionSheet() {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         render={
-          <Button size="sm">
-            <Plus className="size-4" />
-            Add transaction
+          <Button size={transaction ? "icon-sm" : "sm"} variant={transaction ? "ghost" : "default"} aria-label={transaction ? `Edit transaction with ${transaction.counterparty}` : undefined}>
+            {transaction ? <Pencil className="size-3.5" /> : <Plus className="size-4" />}
+            {!transaction && "Add transaction"}
           </Button>
         }
       />
       <SheetContent side="right" className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Add transaction</SheetTitle>
+          <SheetTitle>{transaction ? "Edit transaction" : "Add transaction"}</SheetTitle>
         </SheetHeader>
         <form
           ref={formRef}
           action={async (formData) => {
             setPending(true);
+            setError(null);
             try {
-              await createTransaction(formData);
+              await (transaction ? updateTransaction : createTransaction)(formData);
               formRef.current?.reset();
               setOpen(false);
+            } catch {
+              setError("Unable to save the transaction. Check the fields and try again.");
             } finally {
               setPending(false);
             }
           }}
           className="flex-1 overflow-y-auto px-4 pb-6 space-y-4"
         >
+          {transaction && <input type="hidden" name="id" value={transaction.id} />}
           <input type="hidden" name="direction" value={direction} />
 
           <div className="grid grid-cols-2 gap-2">
@@ -85,39 +91,39 @@ export function AddTransactionSheet() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="counterparty">Merchant / counterparty</Label>
-            <Input id="counterparty" name="counterparty" required placeholder="Trader Joe's" />
+            <Label htmlFor={`${formId}-counterparty`}>Merchant / counterparty</Label>
+            <Input id={`${formId}-counterparty`} name="counterparty" required defaultValue={transaction?.counterparty} placeholder="Trader Joe's" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="amount">Amount</Label>
-              <Input id="amount" name="amount" type="number" step="0.01" min="0.01" required placeholder="0.00" />
+              <Label htmlFor={`${formId}-amount`}>Amount</Label>
+              <Input id={`${formId}-amount`} name="amount" type="number" step="0.01" min="0.01" required defaultValue={transaction?.amount} placeholder="0.00" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor={`${formId}-date`}>Date</Label>
               <Input
-                id="date"
+                id={`${formId}-date`}
                 name="date"
                 type="date"
                 required
-                defaultValue={new Date().toISOString().slice(0, 10)}
+                defaultValue={(transaction?.date ?? new Date().toISOString()).slice(0, 10)}
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor={`${formId}-category`}>Category</Label>
             <Select
               name="category"
               value={category}
               onValueChange={(value) => setCategory(value ?? categories[0])}
             >
-              <SelectTrigger id="category" className="w-full">
+              <SelectTrigger id={`${formId}-category`} className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((option) => (
+                {Array.from(new Set([category, ...categories])).map((option) => (
                   <SelectItem key={option} value={option}>
                     {option}
                   </SelectItem>
@@ -126,8 +132,9 @@ export function AddTransactionSheet() {
             </Select>
           </div>
 
+          {error && <p role="alert" className="text-sm text-critical">{error}</p>}
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "Adding…" : "Add transaction"}
+            {pending ? "Saving…" : transaction ? "Save changes" : "Add transaction"}
           </Button>
         </form>
       </SheetContent>

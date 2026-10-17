@@ -23,6 +23,7 @@ export interface NessieDeposit {
   amount: number;
   transaction_date: string;
   description: string;
+  status?: string;
 }
 
 export interface NessieWithdrawal {
@@ -30,6 +31,7 @@ export interface NessieWithdrawal {
   amount: number;
   transaction_date: string;
   description: string;
+  status?: string;
 }
 
 export interface NessieBill {
@@ -57,8 +59,8 @@ function requireApiKey(): string {
 
 async function get<T>(path: string): Promise<T> {
   const key = requireApiKey();
-  const url = `${BASE_URL}${path}${path.includes("?") ? "&" : "?"}key=${key}`;
-  const response = await fetch(url);
+  const url = `${BASE_URL}${path}${path.includes("?") ? "&" : "?"}key=${encodeURIComponent(key)}`;
+  const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15000) });
   if (!response.ok) {
     throw new NessieError(`Nessie request failed: ${response.status} ${path}`);
   }
@@ -71,6 +73,10 @@ export function isNessieConfigured(): boolean {
 
 export function getAccountsForCustomer(customerId: string) {
   return get<NessieAccount[]>(`/customers/${customerId}/accounts`);
+}
+
+export function getAccount(accountId: string) {
+  return get<NessieAccount>(`/accounts/${encodeURIComponent(accountId)}`);
 }
 
 export function getAccountPurchases(accountId: string) {

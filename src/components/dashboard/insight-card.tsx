@@ -21,8 +21,9 @@ export function InsightCard({ message, ctaLabel, ctaHref }: InsightCardProps) {
           <Button
             render={<Link href={ctaHref}>{ctaLabel} →</Link>}
             nativeButton={false}
+                  role="link"
             variant="link"
-            className="h-auto p-0 mt-1.5 text-brand-navy"
+            className="h-auto p-0 mt-1.5 text-brand-navy dark:text-primary"
           />
         </div>
       </CardContent>

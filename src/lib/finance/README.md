@@ -29,32 +29,22 @@ Auth0.
    rather than "Postgres with extra steps") and a `monthly_category_spend`
    continuous aggregate for the Budgets module and the dashboard's
    "monthly expenses" metric.
-3. Seed it with data — either adapt `demo-data.ts`'s templates into `INSERT`
-   statements, or load real Nessie-sourced records once Phase 3 lands.
-4. Set `DATABASE_URL` in `.env.local` (see `.env.example`). That's it —
-   `getFinancialEventRepository()` picks `tiger-repository.ts` automatically.
+3. Set `DATABASE_URL` in `.env.local`. `getFinancialEventRepository()` selects the database automatically.
+4. Load events through the manual workflows or Nessie sync. Database mode does not auto-seed the in-memory demo events.
 
-## Extending the interface
+Rerunning the schema safely adds `counterparty_phone`, `source_record_id`, and the Solana receipt table to an existing installation. Keep `types.ts`, the SQL schema, and the row mappings in sync when extending financial events.
 
-`FinancialEventRepository` only has `listEvents()` today because that's all
-the Overview dashboard needs. Phase 3 (transactions/bills) and Phase 5
-(budgets/wishlist/ledger) will need more — a category/month aggregate read
-(backed by `monthly_category_spend`), and a write path for quick-add and
-manual entries. Add those methods to the interface in `repository.ts` first,
-then implement them in both `demo-repository.ts` and `tiger-repository.ts` —
-keeping both in sync is what lets the app run with or without a live Tiger
-Data connection.
+## Repository and planning data
 
-One exception: `counterpartyPhone` (the ledger's WhatsApp-reminder number)
-is deliberately *not* in `db/schema.sql` or `tiger-repository.ts`'s row
-mapping — it's UI convenience, not time-series analytics data. The demo
-repository keeps it; Tiger Data drops it on write. If that ever needs to
-change, add the column and extend the row mapping the same way as any
-other field.
+The repository supports `listEvents`, `createEvent`, `updateEvent`, and `deleteEvent` in both stores. External record IDs support Nessie import/update protection; counterparty phone numbers persist in both backends. The in-memory repository returns copies so synchronization cannot accidentally mutate or double-append stored events.
 
-If `FinancialEvent` in `types.ts` ever changes, update `db/schema.sql` and
-the row mapping in `tiger-repository.ts` to match — they're hand-kept in
-sync, not generated from each other.
+Budget allocations and wishlist goal definitions remain per-user memory stores even when events use TimescaleDB. Goal savings schedules and contributions are financial events and therefore use the chosen event backend. These distinctions are visible demo limitations, not durable production planning storage.
+
+## Forecast assumptions
+
+The opening balance is seeded. Posted events across the recorded history determine current modeled funds; planned income is excluded from that current amount. Forecasts include monthly planned bills and dated income/savings/repayments. Uncertain incoming repayments also have a conservative path in which they never arrive. Overdue expenses remain obligations; overdue planned income is not treated as received cash.
+
+Goal progress includes confirmed reserves only. Contributions replace scheduled reserve amounts to avoid counting the same funds twice. AutoSave does not move money. All date buckets use UTC calendar days. See [project status](../../../docs/PROJECT_STATUS.md) for the full assumptions and deployment limits.
 
 ## Per-user data (Auth0)
 

@@ -14,7 +14,7 @@ Tiger Data seams the same way those two are isolated from each other.
   price feed, so the rate is explicit and labeled in the UI as demo-only.
 - `provider.tsx` — `SolanaProvider`, a client component wrapping
   `@solana/wallet-adapter-react`'s connection/wallet providers, configured
-  for devnet with Phantom and Solflare adapters.
+  for devnet with individually imported Phantom and Solflare adapters. The catch-all wallet bundle is removed.
 - `verify.ts` — `verifySolanaTransfer()`, server-only. Re-derives the
   transfer (recipient, lamports, confirmation) from the chain by signature;
   never trusts amounts the client reports.
@@ -55,3 +55,9 @@ generated default in `config.ts`.
 
 Nothing outside this directory and `pay-with-solana-dialog.tsx` should need
 to change for any of the above.
+
+## Verification and receipts
+
+Settlement checks a session-owned, outstanding payable ledger entry before network access. On-chain verification requires a confirmed/finalized, successful transaction and a matching system transfer for the expected amount and recipient. A transaction signature can be claimed only once across users. `receipts.ts` uses a database primary key when `DATABASE_URL` is set and process memory otherwise. Run the updated `db/schema.sql` before using database settlement.
+
+Mocked tests cover confirmation, failed transactions, amount/recipient mismatch, multi-transfer transactions, and duplicate claims. No wallet authorization or live devnet broadcast was performed during local verification. Receipt claims and ledger mutations are separate operations; production needs atomic settlement/reconciliation for process crashes. This remains an explicit devnet demo with a fixed rate and recipient.

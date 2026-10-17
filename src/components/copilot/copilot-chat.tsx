@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { askCopilot } from "@/lib/copilot/actions";
 import type { CopilotResult } from "@/lib/copilot/types";
+import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const SUGGESTED_PROMPTS = [
@@ -18,7 +19,7 @@ const SUGGESTED_PROMPTS = [
   "Can I save $200 without risking my upcoming bills?",
 ];
 
-const PROGRESSION = ["Analyzing your request", "Checking upcoming obligations", "Simulating scenarios", "Preparing recommendation"];
+
 
 interface Turn {
   role: "user" | "assistant";
@@ -30,30 +31,23 @@ export function CopilotChat() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
-  const [stepIndex, setStepIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }, [turns, pending]);
 
-  useEffect(() => {
-    if (!pending) return;
-    const interval = setInterval(() => {
-      setStepIndex((i) => Math.min(i + 1, PROGRESSION.length - 1));
-    }, 450);
-    return () => clearInterval(interval);
-  }, [pending]);
 
   async function send(message: string) {
     if (!message.trim() || pending) return;
     setTurns((prev) => [...prev, { role: "user", content: message }]);
     setInput("");
-    setStepIndex(0);
     setPending(true);
     try {
       const result = await askCopilot(message);
       setTurns((prev) => [...prev, { role: "assistant", content: result.reply, result }]);
+    } catch {
+      setTurns((prev) => [...prev, { role: "assistant", content: "Unable to check your financial data. Please try again." }]);
     } finally {
       setPending(false);
     }
@@ -61,7 +55,7 @@ export function CopilotChat() {
 
   return (
     <Card className="flex flex-col h-[70vh]">
-      <CardContent className="flex-1 overflow-y-auto space-y-4" ref={scrollRef}>
+      <CardContent role="log" aria-label="Copilot conversation" aria-live="polite" className="flex-1 overflow-y-auto space-y-4" ref={scrollRef}>
         {turns.length === 0 && (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Try asking:</p>
@@ -90,10 +84,20 @@ export function CopilotChat() {
             <div
               className={cn(
                 "rounded-xl px-3.5 py-2.5 text-sm max-w-[85%]",
-                turn.role === "user" ? "bg-interactive text-white" : "bg-accent",
+                turn.role === "user" ? "bg-primary text-primary-foreground" : "bg-accent",
               )}
             >
+              {turn.result?.engine && <p className="text-xs text-muted-foreground mb-1">{turn.result.engine === "gemini" ? "Gemini · verified calculations" : turn.result.engine === "fallback" ? "Gemini unavailable · local calculation fallback" : "Local calculation mode · Gemini not connected"}</p>}
               <p className="leading-relaxed">{turn.content}</p>
+              {turn.result?.comparison && <div className="grid sm:grid-cols-2 gap-2 mt-3">
+                {turn.result.comparison.map((item) => <div key={item.label} className="rounded-lg border border-border bg-card p-3 text-xs space-y-1">
+                  <p className="font-semibold">{item.label}</p>
+                  <p>Expected minimum: {formatCurrency(item.minBalance, { cents: true })}</p>
+                  <p>Without uncertain income: {formatCurrency(item.conservativeMinBalance, { cents: true })}</p>
+                  <p>{item.billsAtRisk}/{item.totalBills} bills at risk · {formatCurrency(item.bufferThreshold)} buffer</p>
+                  <p className={item.affordable ? "text-positive" : "text-caution"}>{item.affordable ? "Within buffer" : "Review spending"}</p>
+                </div>)}
+              </div>}
               {turn.result && turn.result.assumptions.length > 0 && (
                 <ul className="mt-2 text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
                   {turn.result.assumptions.map((a) => (
@@ -110,8 +114,9 @@ export function CopilotChat() {
                     </Link>
                   }
                   nativeButton={false}
+                  role="link"
                   variant="link"
-                  className="h-auto p-0 mt-1.5 text-brand-navy"
+                  className="h-auto p-0 mt-1.5 text-brand-navy dark:text-primary"
                 />
               )}
             </div>
@@ -124,9 +129,9 @@ export function CopilotChat() {
         ))}
 
         {pending && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="size-3.5 animate-spin" />
-            {PROGRESSION[stepIndex]}…
+            Checking your request against recorded financial data…
           </div>
         )}
       </CardContent>

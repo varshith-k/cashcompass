@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -43,28 +44,35 @@ export function Topbar() {
       </div>
 
       <div className="hidden md:flex flex-1 max-w-sm ml-4">
-        <div className="relative w-full">
+        <form action="/transactions" className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="Search transactions, bills, goals…"
+            name="q"
+            type="search"
+            placeholder="Search transactions…"
             className="pl-9 bg-secondary/60 border-transparent"
             aria-label="Search"
           />
-        </div>
+        </form>
       </div>
 
       <div className="flex-1" />
 
       <Badge
         variant="outline"
-        className="hidden sm:inline-flex border-interactive/30 text-brand-navy bg-interactive/10"
+        className="hidden sm:inline-flex border-interactive/30 text-brand-navy dark:text-primary bg-interactive/10"
       >
         Capital One Nessie demo data
       </Badge>
 
-      <Button variant="ghost" size="icon" aria-label="Notifications">
-        <Bell className="size-4" />
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label="Notifications"><Bell className="size-4" /></Button>} />
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Financial reminders</DropdownMenuLabel>
+          <DropdownMenuItem render={<Link href="/bills">Review upcoming bills</Link>} />
+          <DropdownMenuItem render={<Link href="/ledger">Check expected repayments</Link>} />
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <ThemeToggle />
 

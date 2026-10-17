@@ -25,6 +25,8 @@ interface FinancialEventRow {
   category: string;
   counterparty: string;
   scenario_id: string | null;
+  counterparty_phone: string | null;
+  source_record_id: string | null;
 }
 
 function toFinancialEvent(row: FinancialEventRow): FinancialEvent {
@@ -40,6 +42,8 @@ function toFinancialEvent(row: FinancialEventRow): FinancialEvent {
     category: row.category,
     counterparty: row.counterparty,
     scenarioId: row.scenario_id ?? undefined,
+    counterpartyPhone: row.counterparty_phone ?? undefined,
+    sourceRecordId: row.source_record_id ?? undefined,
   };
 }
 
@@ -67,7 +71,7 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
     return this.withClient(async (client) => {
       const result = await client.query<FinancialEventRow>(
         `SELECT id, event_date, amount, direction, record, certainty,
-                recurrence, source, category, counterparty, scenario_id
+                recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id
          FROM financial_events
          WHERE owner_id = $1
          ORDER BY event_date`,
@@ -82,8 +86,8 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
       const result = await client.query<FinancialEventRow>(
         `INSERT INTO financial_events
            (id, owner_id, event_date, amount, direction, record, certainty,
-            recurrence, source, category, counterparty, scenario_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          RETURNING *`,
         [
           randomUUID(),
@@ -98,6 +102,8 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
           input.category,
           input.counterparty,
           input.scenarioId ?? null,
+          input.counterpartyPhone ?? null,
+          input.sourceRecordId ?? null,
         ],
       );
       return toFinancialEvent(result.rows[0]);
@@ -106,10 +112,6 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
 
   async updateEvent(ownerId: string, id: string, patch: FinancialEventUpdate): Promise<FinancialEvent> {
     return this.withClient(async (client) => {
-      // Deliberately partial: counterpartyPhone is ledger/WhatsApp-reminder
-      // UI convenience, not time-series analytics data, so it isn't part
-      // of the hypertable schema. A patch containing it just drops that
-      // one field for this backend rather than erroring.
       const columns: Partial<Record<keyof FinancialEventUpdate, string>> = {
         date: "event_date",
         amount: "amount",
@@ -121,6 +123,8 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
         category: "category",
         counterparty: "counterparty",
         scenarioId: "scenario_id",
+        counterpartyPhone: "counterparty_phone",
+        sourceRecordId: "source_record_id",
       };
 
       const entries = Object.entries(patch).filter(

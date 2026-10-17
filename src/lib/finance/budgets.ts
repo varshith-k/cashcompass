@@ -7,8 +7,8 @@ export interface BudgetAllocation {
 
 /**
  * Per user (keyed by Auth0 `sub`). In-memory for now, same caveat as demo-repository.ts: persists for the
- * server process's lifetime, not durably. A real budgets table is a
- * Phase 5 addition once Tiger Data is live — see src/lib/finance/README.md.
+ * server process's lifetime, not durably. Durable budget storage is a
+ * production extension even when financial events use Tiger Data — see src/lib/finance/README.md.
  */
 const DEFAULT_BUDGETS: BudgetAllocation[] = [
   { category: "Housing", monthlyLimit: 1300 },

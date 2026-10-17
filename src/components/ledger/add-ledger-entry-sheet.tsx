@@ -19,6 +19,7 @@ export function AddLedgerEntrySheet() {
   const [open, setOpen] = useState(false);
   const [direction, setDirection] = useState<EventDirection>("income");
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
@@ -39,10 +40,13 @@ export function AddLedgerEntrySheet() {
           ref={formRef}
           action={async (formData) => {
             setPending(true);
+            setError(false);
             try {
               await createLedgerEntry(formData);
               formRef.current?.reset();
               setOpen(false);
+            } catch {
+              setError(true);
             } finally {
               setPending(false);
             }
@@ -94,6 +98,7 @@ export function AddLedgerEntrySheet() {
             </div>
           </div>
 
+          {error && <p role="alert" className="text-sm text-critical">Unable to save. Check the details and try again.</p>}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Adding…" : "Add entry"}
           </Button>

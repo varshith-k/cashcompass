@@ -27,18 +27,19 @@ export interface ForecastContext {
   bufferThreshold: number;
   forecastDays: number;
   historyDays: number;
-  nextPaydayDate: string;
+  nextPaydayDate: string | null;
 }
 
 function startDateFor(historyDays: number) {
   const d = new Date();
-  d.setDate(d.getDate() - historyDays);
+  d.setUTCDate(d.getUTCDate() - historyDays);
   return d;
 }
 
 export interface AffordabilityResult {
   affordable: boolean;
   minBalance: number;
+  conservativeMinBalance: number;
   bufferThreshold: number;
   billsAtRisk: number;
   totalBills: number;
@@ -49,16 +50,18 @@ export function checkAffordability(
   ctx: ForecastContext,
   purchase: { amount: number; label: string; date: string },
 ): AffordabilityResult {
+  if (!Number.isFinite(purchase.amount) || purchase.amount <= 0) throw new Error("Purchase amount must be positive");
   const purchaseEvent = buildPurchaseEvent(purchase);
   const points = computeForecast(ctx.openingBalance, ctx.events.concat(purchaseEvent), {
     days: ctx.forecastDays,
     startDate: startDateFor(ctx.historyDays),
     lowBalanceThreshold: ctx.bufferThreshold,
   });
-  const summary = summarizeForecast(points);
+  const summary = summarizeForecast(points.slice(ctx.historyDays));
   const bills = selectUpcomingBills(ctx.events);
   return {
-    affordable: summary.minBalance >= ctx.bufferThreshold,
+    affordable: points.slice(ctx.historyDays).every((point) => point.conservativeBalance >= ctx.bufferThreshold),
+    conservativeMinBalance: Math.min(...points.slice(ctx.historyDays).map((p) => p.conservativeBalance)),
     minBalance: summary.minBalance,
     bufferThreshold: ctx.bufferThreshold,
     billsAtRisk: countBillsAtRisk(bills, points),
@@ -70,7 +73,7 @@ export function checkAffordability(
 export function compareBuyTimings(ctx: ForecastContext, purchase: { amount: number; label: string }) {
   return {
     now: checkAffordability(ctx, { ...purchase, date: new Date().toISOString() }),
-    afterPayday: checkAffordability(ctx, { ...purchase, date: ctx.nextPaydayDate }),
+    afterPayday: ctx.nextPaydayDate ? checkAffordability(ctx, { ...purchase, date: ctx.nextPaydayDate }) : null,
   };
 }
 
@@ -89,7 +92,7 @@ export function checkRepaymentDelay(
   ctx: ForecastContext,
   match: { counterpartyContains?: string; delayDays: number },
 ): RepaymentDelayResult {
-  const repayments = ctx.events.filter((e) => e.certainty === "uncertain" && e.category === "Repayment");
+  const repayments = ctx.events.filter((e) => e.record === "planned" && e.direction === "income" && e.certainty === "uncertain" && e.category === "Repayment");
   const original = match.counterpartyContains
     ? repayments.find((r) => r.counterparty.toLowerCase().includes(match.counterpartyContains!.toLowerCase()))
     : repayments[0];
@@ -105,7 +108,7 @@ export function checkRepaymentDelay(
     startDate: startDateFor(ctx.historyDays),
     lowBalanceThreshold: ctx.bufferThreshold,
   });
-  const summary = summarizeForecast(points);
+  const summary = summarizeForecast(points.slice(ctx.historyDays));
   const bills = selectUpcomingBills(ctx.events);
 
   return {

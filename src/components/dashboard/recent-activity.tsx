@@ -12,7 +12,8 @@ export function RecentTransactionsCard({ transactions }: { transactions: Financi
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base font-heading">Recent transactions</CardTitle>
-        <Button render={<Link href="/transactions">View all</Link>} nativeButton={false} variant="ghost" size="sm" />
+        <Button render={<Link href="/transactions">View all</Link>} nativeButton={false}
+                  role="link" variant="ghost" size="sm" />
       </CardHeader>
       <CardContent className="px-0">
         {transactions.length === 0 ? (
@@ -65,7 +66,8 @@ export function UpcomingBillsCard({ bills }: { bills: FinancialEvent[] }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base font-heading">Upcoming bills</CardTitle>
-        <Button render={<Link href="/bills">View all</Link>} nativeButton={false} variant="ghost" size="sm" />
+        <Button render={<Link href="/bills">View all</Link>} nativeButton={false}
+                  role="link" variant="ghost" size="sm" />
       </CardHeader>
       <CardContent className="px-0">
         {bills.length === 0 ? (

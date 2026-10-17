@@ -1,3 +1,4 @@
+import { ActionForm } from "@/components/ui/action-form";
 import { HandCoins, MessageCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,18 +66,20 @@ export function LedgerList({
                     </a>
                   }
                   nativeButton={false}
+                  role="link"
                   variant="outline"
                   size="sm"
                   className="shrink-0 text-positive border-positive/30 hover:bg-positive/10"
                 />
               )}
 
-              <form action={logLedgerPayment} className="flex items-center gap-2 shrink-0">
+              <ActionForm action={logLedgerPayment} className="flex items-center gap-2 shrink-0">
                 <input type="hidden" name="id" value={entry.id} />
                 <Input
                   name="amountPaid"
                   type="number"
                   min="0.01"
+                  max={entry.amount}
                   step="0.01"
                   defaultValue={entry.amount}
                   className="h-8 w-24"
@@ -85,7 +88,7 @@ export function LedgerList({
                 <Button type="submit" size="sm" variant="outline">
                   Log payment
                 </Button>
-              </form>
+              </ActionForm>
 
               {allowSolanaSettlement && (
                 <PayWithSolanaDialog
@@ -95,7 +98,7 @@ export function LedgerList({
                 />
               )}
 
-              <form action={deleteLedgerEntry}>
+              <ActionForm action={deleteLedgerEntry}>
                 <input type="hidden" name="id" value={entry.id} />
                 <Button
                   type="submit"
@@ -106,7 +109,7 @@ export function LedgerList({
                 >
                   <Trash2 className="size-3.5" />
                 </Button>
-              </form>
+              </ActionForm>
             </li>
           ))}
         </ul>

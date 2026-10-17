@@ -4,6 +4,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Line,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -21,7 +22,7 @@ interface ForecastChartProps {
 }
 
 export function ForecastChart({ points, bufferThreshold, todayIndex }: ForecastChartProps) {
-  const riskDates = points.filter((p) => p.isLowBalanceRisk);
+  const riskDates = points.slice(todayIndex).filter((p) => p.isLowBalanceRisk);
 
   return (
     <div>
@@ -30,8 +31,8 @@ export function ForecastChart({ points, bufferThreshold, todayIndex }: ForecastC
           <AreaChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="balanceFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#0276B1" stopOpacity={0.1} />
-                <stop offset="100%" stopColor="#0276B1" stopOpacity={0} />
+                <stop offset="0%" stopColor="var(--interactive)" stopOpacity={0.1} />
+                <stop offset="100%" stopColor="var(--interactive)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="var(--border)" strokeWidth={1} />
@@ -72,19 +73,30 @@ export function ForecastChart({ points, bufferThreshold, todayIndex }: ForecastC
               }}
             />
             <Tooltip content={<ForecastTooltip todayIndex={todayIndex} points={points} />} />
+            <Line type="monotone" dataKey="conservativeBalance" name="Without uncertain income" stroke="var(--caution)" strokeDasharray="5 5" dot={false} />
             <Area
               type="monotone"
               dataKey="projectedBalance"
-              stroke="#0276B1"
+              stroke="var(--interactive)"
               strokeWidth={2}
               fill="url(#balanceFill)"
               dot={false}
-              activeDot={{ r: 4, fill: "#0276B1", stroke: "var(--card)", strokeWidth: 2 }}
+              activeDot={{ r: 4, fill: "var(--interactive)", stroke: "var(--card)", strokeWidth: 2 }}
             />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
+      <details className="mt-3 text-xs text-muted-foreground">
+        <summary className="cursor-pointer">Forecast assumptions and daily balances</summary>
+        <p className="my-2">Blue: expected balance. Dashed: balance without uncertain incoming repayments. Monthly bills repeat; other unrecorded activity is excluded. Projections are estimates.</p>
+        <div className="max-h-56 overflow-auto">
+          <table className="w-full text-left tabular-nums"><caption className="sr-only">Daily cash-flow forecast</caption>
+            <thead><tr><th scope="col">Date</th><th scope="col">Expected</th><th scope="col">Without uncertain income</th></tr></thead>
+            <tbody>{points.map((point) => <tr key={point.date}><th scope="row">{formatShortDate(point.date)}</th><td>{formatCurrency(point.projectedBalance, { cents: true })}</td><td>{formatCurrency(point.conservativeBalance, { cents: true })}{point.isLowBalanceRisk ? " · Below buffer" : ""}</td></tr>)}</tbody>
+          </table>
+        </div>
+      </details>
       {riskDates.length > 0 && (
         <div className="mt-3 flex items-start gap-2 rounded-lg bg-caution/10 text-caution px-3 py-2 text-sm">
           <AlertTriangle className="size-4 mt-0.5 shrink-0" />
@@ -114,7 +126,7 @@ function ForecastTooltip({
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   const index = points.findIndex((p) => p.date === point.date);
-  const isProjected = index > todayIndex;
+  const isProjected = index >= todayIndex;
 
   return (
     <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-md text-sm">

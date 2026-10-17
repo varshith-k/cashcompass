@@ -1,8 +1,7 @@
 import "server-only";
 import { EXPENSE_CATEGORIES } from "@/lib/finance/categories";
 
-const MODEL = "gemini-2.0-flash";
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+import { geminiApiUrl } from "@/lib/gemini-config";
 
 export interface ExtractedBill {
   counterparty?: string;
@@ -39,9 +38,10 @@ Category must be exactly one of: ${EXPENSE_CATEGORIES.join(", ")}.
 Respond with only this JSON shape, no other text: {"counterparty": string, "amount": number, "date": "YYYY-MM-DD", "category": string}.
 If a field truly cannot be read from the image, omit it rather than guessing.`;
 
-    const response = await fetch(`${API_URL}?key=${apiKey}`, {
+    const response = await fetch(geminiApiUrl(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      signal: AbortSignal.timeout(20000),
       body: JSON.stringify({
         contents: [
           {
@@ -68,7 +68,7 @@ If a field truly cannot be read from the image, omit it rather than guessing.`;
     if (typeof parsed.amount === "number" && Number.isFinite(parsed.amount) && parsed.amount > 0) {
       result.amount = Math.round(parsed.amount * 100) / 100;
     }
-    if (typeof parsed.date === "string" && !Number.isNaN(new Date(parsed.date).getTime())) {
+    if (typeof parsed.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) && !Number.isNaN(new Date(parsed.date).getTime()) && new Date(parsed.date).toISOString().slice(0, 10) === parsed.date) {
       result.date = parsed.date;
     }
     if (typeof parsed.category === "string" && (EXPENSE_CATEGORIES as readonly string[]).includes(parsed.category)) {

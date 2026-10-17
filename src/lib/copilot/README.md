@@ -1,35 +1,13 @@
-# AI Copilot boundary
+# Copilot boundary
 
-The chat UI never computes a number — it calls `askCopilot()`, which runs
-one deterministic tool from `tools.ts` (the same forecast/scenario math the
-dashboard and cash-flow simulator use) and only ever explains that tool's
-result. This is what keeps the "never invent a balance or projection"
-requirement true by construction rather than by prompting.
+The UI calls `askCopilot()`, which loads only the signed-in user's financial events, goals, and budgets. All calculations reuse `calculations.ts` and `scenarios.ts`.
 
-## Current state (demo mode)
+- `tools.ts`: affordability/timing comparisons, late repayments, savings schedules, and spending breakdowns.
+- `respond-offline.ts`: local intent matching and deterministic formatting of tool results, cards, assumptions, and simulator links.
+- `gemini-client.ts`: Gemini selects one allowlisted function. The server validates its arguments and renders the same grounded result. Unvalidated model prose is never shown as financial guidance.
+- `respond.ts`: chooses Gemini if configured; failures return the same local tools with a visible fallback label.
+- `../gemini-config.ts`: shared model endpoint for chat and bill photos. Set `GEMINI_API_KEY` and optionally `GEMINI_MODEL`; the default model is `gemini-3.6-flash`.
 
-- `tools.ts` — four tools: `checkAffordability`, `checkRepaymentDelay`,
-  `suggestSavingsPlan`, `spendingBreakdown`. Each wraps existing
-  `calculations.ts`/`scenarios.ts` functions.
-- `respond-offline.ts` — a small keyword classifier that picks one tool
-  from the message and builds the reply entirely from its return value.
-  This is what runs today, with no API key, and it's fully tested (see the
-  prompts in `copilot-chat.tsx`'s suggestion chips).
-- `gemini-client.ts` — a real Gemini function-calling implementation
-  (two-turn: ask Gemini to pick a tool, run it ourselves, send the result
-  back for Gemini to explain in prose). Activates automatically once
-  `GEMINI_API_KEY` is set. **Untested against the live API** — written
-  against the stable `generateContent` REST contract, but not run. On any
-  failure (bad key, network, unexpected response shape) it falls back to
-  `respond-offline.ts` rather than erroring, so a broken key degrades to a
-  still-correct answer instead of a broken page.
-- `respond.ts` — picks Gemini vs. offline based on whether the key is set.
+Tests mock Gemini to verify tool validation, result preservation, unsupported output, and failure handling. Live Gemini calls require credentials and have not been verified in this environment. Chat history is local to the mounted view; token streaming and durable conversations are not implemented.
 
-## Extending it
-
-Adding a fifth capability means: write the pure calculation in
-`calculations.ts`/`scenarios.ts` if it doesn't exist yet, add a tool in
-`tools.ts` that wraps it, add a branch in `respond-offline.ts`'s
-classifier, and add a `functionDeclarations` entry + `runTool` case in
-`gemini-client.ts`. Keep both the offline and Gemini surfaces for a tool in
-sync — the offline one is what's actually demoed until a key is set.
+New tools must update their calculation, deterministic renderer, offline intent matching, Gemini declaration, and argument validation together.

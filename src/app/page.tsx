@@ -48,6 +48,7 @@ export default async function Home() {
           variant="ghost"
           className="min-h-11 px-4"
           nativeButton={false}
+                  role="link"
           render={<a href={loginHref()}>Log in</a>}
         />
       </header>
@@ -70,6 +71,7 @@ export default async function Home() {
                 size="lg"
                 className="min-h-11 px-6 text-base"
                 nativeButton={false}
+                  role="link"
                 render={<a href={signupHref()}>Get started — it&apos;s free</a>}
               />
               <Button
@@ -77,6 +79,7 @@ export default async function Home() {
                 variant="outline"
                 className="min-h-11 px-6 text-base"
                 nativeButton={false}
+                  role="link"
                 render={<a href={loginHref()}>Log in</a>}
               />
             </div>

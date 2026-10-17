@@ -13,9 +13,12 @@ const FORECAST_TOTAL_DAYS = 35;
 
 export async function askCopilot(message: string): Promise<CopilotResult> {
   const ownerId = await requireOwnerId();
+  if (typeof message !== "string" || !message.trim() || message.length > 4000) {
+    return { reply: "Enter a question of up to 4,000 characters.", assumptions: [] };
+  }
   const events = await getFinancialEventRepository().listEvents();
   const nextPayday = events
-    .filter((e) => e.category === "Payroll" && e.record === "planned")
+    .filter((e) => e.category === "Payroll" && e.record === "planned" && e.date.slice(0, 10) >= new Date().toISOString().slice(0, 10))
     .sort((a, b) => a.date.localeCompare(b.date))[0];
 
   return getCopilotResponse(message, {
@@ -26,6 +29,6 @@ export async function askCopilot(message: string): Promise<CopilotResult> {
     bufferThreshold: DEMO_PREFERRED_BUFFER,
     forecastDays: FORECAST_TOTAL_DAYS,
     historyDays: FORECAST_HISTORY_DAYS,
-    nextPaydayDate: nextPayday?.date ?? new Date().toISOString(),
+    nextPaydayDate: nextPayday?.date ?? null,
   });
 }

@@ -17,6 +17,7 @@ import { createWishlistGoal } from "@/lib/finance/actions";
 export function AddGoalSheet() {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
@@ -37,10 +38,13 @@ export function AddGoalSheet() {
           ref={formRef}
           action={async (formData) => {
             setPending(true);
+            setError(false);
             try {
               await createWishlistGoal(formData);
               formRef.current?.reset();
               setOpen(false);
+            } catch {
+              setError(true);
             } finally {
               setPending(false);
             }
@@ -61,6 +65,7 @@ export function AddGoalSheet() {
               <Input id="targetDate" name="targetDate" type="date" required />
             </div>
           </div>
+          {error && <p role="alert" className="text-sm text-critical">Unable to save. Check the details and try again.</p>}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Adding…" : "Add goal"}
           </Button>

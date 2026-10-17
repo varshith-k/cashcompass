@@ -14,8 +14,8 @@ import {
 import type { ForecastPoint } from "@/lib/finance/types";
 import { formatCurrency, formatShortDate } from "@/lib/format";
 
-const BASELINE_COLOR = "#0276B1";
-const SCENARIO_COLOR = "#7C3AED";
+const BASELINE_COLOR = "var(--interactive)";
+const SCENARIO_COLOR = "var(--chart-3)";
 
 interface ScenarioChartProps {
   baseline: ForecastPoint[];
@@ -97,6 +97,14 @@ export function ScenarioChart({
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+      <details className="mt-3 text-xs text-muted-foreground">
+        <summary className="cursor-pointer">Compare daily balances in a table</summary>
+        <div className="max-h-56 overflow-auto mt-2">
+          <table className="w-full text-left tabular-nums"><caption className="sr-only">Baseline versus scenario daily forecast</caption><thead><tr><th scope="col">Date</th><th scope="col">Baseline</th><th scope="col">Scenario</th></tr></thead>
+            <tbody>{data.map((point) => <tr key={point.date}><th scope="row">{formatShortDate(point.date)}</th><td>{formatCurrency(point.baselineBalance, { cents: true })}</td><td>{formatCurrency(point.scenarioBalance, { cents: true })}</td></tr>)}</tbody>
+          </table>
+        </div>
+      </details>
     </div>
   );
 }

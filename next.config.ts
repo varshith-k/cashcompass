@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    serverActions: { bodySizeLimit: "6mb" },
+  },
   // CashCompass has no static/public content — every route is personalized,
   // request-time financial data behind the auth boundary. Cache Components
   // (and the partial prefetching it enables) is built for mixed static/

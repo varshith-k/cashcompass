@@ -2,8 +2,8 @@ import type { FinancialEvent } from "./types";
 
 function isoDaysFromToday(offset: number) {
   const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + offset);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() + offset);
   return date.toISOString();
 }
 

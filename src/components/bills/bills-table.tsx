@@ -1,13 +1,15 @@
+import { ActionForm } from "@/components/ui/action-form";
 import { CalendarClock, CheckCircle2, Repeat, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { deleteBill, markBillPaid } from "@/lib/finance/actions";
 import type { FinancialEvent } from "@/lib/finance/types";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
+import { daysUntil } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function urgencyOf(iso: string) {
-  const diffDays = Math.floor((new Date(iso).getTime() - Date.now()) / 86_400_000);
+  const diffDays = daysUntil(iso);
   if (diffDays < 0) return "overdue" as const;
   if (diffDays <= 3) return "urgent" as const;
   return "normal" as const;
@@ -28,7 +30,7 @@ export function BillsTable({ bills }: { bills: FinancialEvent[] }) {
       {bills.map((bill) => {
         const urgency = urgencyOf(bill.date);
         return (
-          <li key={bill.id} className="flex items-center gap-3 px-4 py-3">
+          <li key={bill.id} className="flex flex-wrap sm:flex-nowrap items-center gap-3 px-4 py-3">
             <div className="rounded-full p-2 bg-muted text-muted-foreground shrink-0">
               <CalendarClock className="size-4" />
             </div>
@@ -63,15 +65,15 @@ export function BillsTable({ bills }: { bills: FinancialEvent[] }) {
               </Badge>
             </div>
 
-            <form action={markBillPaid}>
+            <ActionForm action={markBillPaid}>
               <input type="hidden" name="id" value={bill.id} />
               <Button type="submit" variant="outline" size="sm" className="gap-1.5 shrink-0">
                 <CheckCircle2 className="size-3.5" />
                 Mark paid
               </Button>
-            </form>
+            </ActionForm>
 
-            <form action={deleteBill}>
+            <ActionForm action={deleteBill}>
               <input type="hidden" name="id" value={bill.id} />
               <Button
                 type="submit"
@@ -82,7 +84,7 @@ export function BillsTable({ bills }: { bills: FinancialEvent[] }) {
               >
                 <Trash2 className="size-3.5" />
               </Button>
-            </form>
+            </ActionForm>
           </li>
         );
       })}

@@ -17,19 +17,18 @@ export function formatShortDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
 export function daysUntil(iso: string) {
-  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
+  const target = Date.parse(`${iso.slice(0, 10)}T00:00:00.000Z`);
+  const today = Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+  return Math.round((target - today) / 86_400_000);
 }
 
 export function formatRelativeDay(iso: string) {
-  const target = new Date(iso);
-  target.setHours(0, 0, 0, 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((target.getTime() - today.getTime()) / 86_400_000);
+  const diffDays = daysUntil(iso);
 
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Tomorrow";

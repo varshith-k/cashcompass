@@ -1,5 +1,6 @@
 "use client";
 
+import { ActionForm } from "@/components/ui/action-form";
 import { useMemo, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Receipt, Search, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AddTransactionSheet } from "./add-transaction-sheet";
 import { deleteTransaction } from "@/lib/finance/actions";
 import { ALL_CATEGORIES } from "@/lib/finance/categories";
 import type { EventDirection, FinancialEvent } from "@/lib/finance/types";
@@ -20,8 +22,8 @@ import { cn } from "@/lib/utils";
 
 type DirectionFilter = "all" | EventDirection;
 
-export function TransactionsTable({ transactions }: { transactions: FinancialEvent[] }) {
-  const [search, setSearch] = useState("");
+export function TransactionsTable({ transactions, initialSearch = "" }: { transactions: FinancialEvent[]; initialSearch?: string }) {
+  const [search, setSearch] = useState(initialSearch);
   const [direction, setDirection] = useState<DirectionFilter>("all");
   const [category, setCategory] = useState<string>("all");
 
@@ -93,7 +95,7 @@ export function TransactionsTable({ transactions }: { transactions: FinancialEve
       ) : (
         <ul className="divide-y divide-border rounded-xl border border-border bg-card">
           {filtered.map((t) => (
-            <li key={t.id} className="flex items-center gap-3 px-4 py-3">
+            <li key={t.id} className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 px-4 py-3">
               <div
                 className={cn(
                   "rounded-full p-2 shrink-0",
@@ -108,12 +110,12 @@ export function TransactionsTable({ transactions }: { transactions: FinancialEve
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{t.counterparty}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                     {t.category}
                   </Badge>
                   {t.source === "nessie" && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-interactive/30 text-brand-navy">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-interactive/30 text-brand-navy dark:text-primary">
                       Nessie
                     </Badge>
                   )}
@@ -129,7 +131,8 @@ export function TransactionsTable({ transactions }: { transactions: FinancialEve
                 {t.direction === "income" ? "+" : "-"}
                 {formatCurrency(t.amount, { cents: true })}
               </p>
-              <form action={deleteTransaction}>
+              <AddTransactionSheet transaction={t} />
+              <ActionForm action={deleteTransaction}>
                 <input type="hidden" name="id" value={t.id} />
                 <Button
                   type="submit"
@@ -140,7 +143,7 @@ export function TransactionsTable({ transactions }: { transactions: FinancialEve
                 >
                   <Trash2 className="size-3.5" />
                 </Button>
-              </form>
+              </ActionForm>
             </li>
           ))}
         </ul>

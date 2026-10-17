@@ -19,7 +19,7 @@ export function BudgetsGrid({ budgets }: { budgets: BudgetWithSpend[] }) {
   return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {budgets.map((budget) => {
-        const pct = budget.monthlyLimit > 0 ? (budget.spent / budget.monthlyLimit) * 100 : 0;
+        const pct = budget.monthlyLimit > 0 ? (budget.spent / budget.monthlyLimit) * 100 : budget.spent > 0 ? 100 : 0;
         const tone = toneOf(pct);
         const remaining = budget.monthlyLimit - budget.spent;
 

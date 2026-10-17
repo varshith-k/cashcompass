@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { AccountCard } from "@/components/settings/account-card";
 import { NessieCard } from "@/components/settings/nessie-card";
 import { isNessieConfigured } from "@/lib/nessie/client";
+import { listDemoAccounts } from "@/lib/nessie/accounts";
 import { getSyncStatus } from "@/lib/nessie/status";
 import { requireSession } from "@/lib/auth/session";
 import { isProfileEditingEnabled } from "@/lib/auth/management";
@@ -13,6 +14,7 @@ export default async function SettingsPage() {
   await connection();
   const session = await requireSession();
   const ownerId = session.user.id;
+  const { accounts, error } = await listDemoAccounts();
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -33,7 +35,7 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
-      <NessieCard isConfigured={isNessieConfigured()} initialStatus={getSyncStatus(ownerId)} />
+      <NessieCard accounts={accounts} accountError={error} isConfigured={isNessieConfigured()} initialStatus={getSyncStatus(ownerId)} />
     </div>
   );
 }

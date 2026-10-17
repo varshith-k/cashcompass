@@ -9,8 +9,8 @@ const SCENARIO_ID = "what-if";
 
 function isoAtDaysFromNow(days: number) {
   const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + days);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString();
 }
 
@@ -37,7 +37,7 @@ export function buildPurchaseEvent(input: {
 /** Shifts an existing event's date later — used for "delay a bill" and "repayment arrives late". */
 export function buildShiftedEvent(original: FinancialEvent, delayDays: number): FinancialEvent {
   const shifted = new Date(original.date);
-  shifted.setDate(shifted.getDate() + delayDays);
+  shifted.setUTCDate(shifted.getUTCDate() + delayDays);
   return {
     ...original,
     id: `${SCENARIO_ID}-shift-${original.id}`,

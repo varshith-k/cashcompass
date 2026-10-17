@@ -1,3 +1,4 @@
+import "server-only";
 import { Connection, type ParsedInstruction } from "@solana/web3.js";
 import { SOLANA_RPC_ENDPOINT, explorerUrl } from "./config";
 import type { SolanaPaymentVerification } from "./types";
@@ -21,23 +22,26 @@ export async function verifySolanaTransfer(
     explorerUrl: explorerUrl(signature),
   };
 
+  if (!Number.isSafeInteger(expectedLamports) || expectedLamports <= 0 || !/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signature)) return { ...base, verified: false, slot: 0, reason: "Invalid transaction signature or amount" };
+
   const status = await connection.getSignatureStatus(signature, {
     searchTransactionHistory: true,
   });
-  if (!status.value || status.value.err) {
+  if (!status.value || status.value.err || !["confirmed", "finalized"].includes(status.value.confirmationStatus ?? "")) {
     return { ...base, verified: false, slot: 0, reason: "Transaction not found or failed on-chain" };
   }
 
   const tx = await connection.getParsedTransaction(signature, {
     maxSupportedTransactionVersion: 0,
   });
-  if (!tx) {
+  if (!tx || !tx.meta || tx.meta.err) {
     return { ...base, verified: false, slot: status.value.slot, reason: "Transaction details unavailable" };
   }
 
   const transferIx = tx.transaction.message.instructions.find(
     (ix): ix is ParsedInstruction =>
-      "parsed" in ix && ix.program === "system" && ix.parsed?.type === "transfer",
+      "parsed" in ix && ix.program === "system" && ix.parsed?.type === "transfer" &&
+      ix.parsed.info?.destination === expectedRecipient && Number.isSafeInteger(ix.parsed.info?.lamports) && ix.parsed.info.lamports >= expectedLamports,
   );
 
   if (!transferIx) {

@@ -18,6 +18,8 @@ export interface FinancialEvent {
   certainty: EventCertainty;
   recurrence: EventRecurrence;
   source: EventSource;
+  /** Stable external key for idempotent Nessie synchronization. */
+  sourceRecordId?: string;
   category: string;
   counterparty: string;
   /** Baseline events feed the real forecast; a what-if event is reversible and scoped to a simulation only. */
@@ -44,5 +46,7 @@ export interface SafeToSpendResult {
 export interface ForecastPoint {
   date: string;
   projectedBalance: number;
+  /** Balance if uncertain incoming repayments never arrive. */
+  conservativeBalance: number;
   isLowBalanceRisk: boolean;
 }

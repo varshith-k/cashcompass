@@ -10,6 +10,7 @@ import {
 } from "@/components/dashboard/recent-activity";
 import {
   computeForecast,
+  computeAvailableBalance,
   computeSafeToSpend,
   savingsProgressForGoal,
   selectRecentTransactions,
@@ -34,7 +35,7 @@ export default async function OverviewPage() {
   const recentTransactions = selectRecentTransactions(events);
 
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - FORECAST_HISTORY_DAYS);
+  startDate.setUTCDate(startDate.getUTCDate() - FORECAST_HISTORY_DAYS);
 
   const forecast = computeForecast(DEMO_STARTING_BALANCE, events, {
     days: FORECAST_TOTAL_DAYS,
@@ -43,10 +44,10 @@ export default async function OverviewPage() {
   });
 
   const todayIndex = FORECAST_HISTORY_DAYS;
-  const currentBalance = forecast[todayIndex].projectedBalance;
+  const currentBalance = computeAvailableBalance(DEMO_STARTING_BALANCE, events);
 
   const upcomingBillsTotal = upcomingBills.reduce((sum, bill) => sum + bill.amount, 0);
-  const savingsEarmarks = events.filter((e) => e.category === "Savings").reduce(
+  const savingsEarmarks = events.filter((e) => e.category === "Savings" && e.record === "planned").reduce(
     (sum, e) => sum + e.amount,
     0,
   );
@@ -59,15 +60,15 @@ export default async function OverviewPage() {
   });
 
   const nextPayday = events.filter(
-    (e) => e.category === "Payroll" && e.record === "planned",
+    (e) => e.category === "Payroll" && e.record === "planned" && e.date.slice(0, 10) >= new Date().toISOString().slice(0, 10),
   ).sort((a, b) => a.date.localeCompare(b.date))[0];
 
   const monthlyIncome = sumByDirection(
-    events.filter((e) => e.record === "actual" || e.record === "planned"),
+    events.filter((e) => e.record === "actual" && e.date.startsWith(new Date().toISOString().slice(0, 7))),
     "income",
   );
   const monthlyExpenses = sumByDirection(
-    events.filter((e) => e.category !== "Savings"),
+    events.filter((e) => e.record === "actual" && e.category !== "Savings" && e.date.startsWith(new Date().toISOString().slice(0, 7))),
     "expense",
   );
 
@@ -83,9 +84,11 @@ export default async function OverviewPage() {
         availableBalance={currentBalance}
         safeToSpend={safeToSpend}
         reservedForBills={upcomingBillsTotal}
-        nextPaydayDate={nextPayday?.date ?? new Date().toISOString()}
+        nextPaydayDate={nextPayday?.date ?? null}
         nextPaydayAmount={nextPayday?.amount ?? 0}
-        outlook={forecast.some((p) => p.isLowBalanceRisk) ? "tight" : "on-track"}
+        savingsEarmarks={savingsEarmarks}
+        preferredBuffer={DEMO_PREFERRED_BUFFER}
+        outlook={forecast.slice(todayIndex).some((p) => p.isLowBalanceRisk) ? "tight" : "on-track"}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -114,6 +117,8 @@ export default async function OverviewPage() {
           sublabel={primaryGoal?.name ?? "No goal set"}
         />
       </div>
+
+      <p className="text-xs text-muted-foreground">Demo forecast: starts with a seeded opening balance and recorded events. Monthly bills repeat; unlisted everyday spending is excluded. The conservative balance excludes uncertain repayments. Savings contributions reserve funds here; no money is transferred.</p>
 
       <Card>
         <CardHeader>

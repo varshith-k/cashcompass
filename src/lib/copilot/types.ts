@@ -5,6 +5,8 @@ export interface ChatMessage {
 
 export interface CopilotResult {
   reply: string;
+  engine?: "gemini" | "offline" | "fallback";
+  comparison?: { label: string; minBalance: number; conservativeMinBalance: number; billsAtRisk: number; totalBills: number; bufferThreshold: number; affordable: boolean; purchaseDate: string }[];
   assumptions: string[];
   actionLabel?: string;
   actionHref?: string;

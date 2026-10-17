@@ -1,46 +1,15 @@
-# Capital One Nessie boundary
+# Capital One Nessie demo data
 
-Nessie only ever feeds data **into** `FinancialEventRepository` — it's not
-a parallel data source the UI reads from directly. Every page that shows
-transactions, bills, or the forecast already works whether those events
-came from Nessie, Tiger Data, or a manual entry; `source: "nessie"` is
-just a label on the event.
+Nessie is an optional source for the signed-in user's `FinancialEventRepository`. All banking records are simulated. No real bank credentials are requested.
 
-## Current state (not connected)
+1. Create a sandbox customer/account with records and obtain a Nessie key.
+2. Set `NESSIE_API_KEY` and either `NESSIE_CUSTOMER_ID` (account chooser) or `NESSIE_ACCOUNT_ID` (fixed account). `NESSIE_API_BASE_URL` is optional.
+3. Open Settings, select a configured sandbox account, and synchronize.
 
-- `client.ts` — real REST calls against the standard Nessie endpoints
-  (`/customers/{id}/accounts`, `/accounts/{id}/{purchases,deposits,
-  withdrawals,bills}`, `/merchants/{id}`). `isNessieConfigured()` is false
-  until `NESSIE_API_KEY` is set.
-- `sync.ts` — `syncNessieAccount(accountId)` maps Nessie's records onto
-  `FinancialEvent` (purchases/withdrawals → expenses, deposits → income,
-  bills → planned expenses) and writes them through the same repository
-  everything else uses. Duplicate protection is a natural-key check
-  (source + date + amount + counterparty), not an id lookup, so re-syncing
-  never doubles a transaction up.
-- `actions.ts` — `syncNessie()` Server Action, called from Settings. Without
-  a key it returns a truthful "not connected" message rather than
-  pretending to sync — see `/settings`.
-- The demo data in `src/lib/finance/demo-data.ts` already tags several
-  events `source: "nessie"`, standing in for a completed sync so the UI's
-  Nessie badges have something to show today.
+Settings displays sandbox account balances for reference. Forecasts still use the disclosed seeded opening balance plus recorded activity; imports do not reconcile it to the account's balance. Each user imports the shared sandbox records into their own scoped repository.
 
-## Wiring up a real sync
+`sync.ts` uses account/type/remote-record IDs to preserve identical purchases and avoid duplicate imports. Re-sync updates existing records, including pending → completed transitions. Cancelled/failed records are not imported. Natural keys support old imports that predate external IDs. Manual edits to imported records can be overwritten by later syncs.
 
-1. Get a Nessie API key (Capital One's hackathon sandbox) and create a
-   customer + account with some seed purchases/deposits/bills through
-   Nessie's own API or UI.
-2. Set `NESSIE_API_KEY` and `NESSIE_ACCOUNT_ID` in `.env.local`.
-3. Click "Sync Nessie data" on the Settings page, or call `syncNessie()`.
+`accounts.ts` restricts selectable IDs to the server-configured customer/account. `actions.ts` authenticates before access, exposes failures, records sync counts, and refreshes dependent routes. Requests have timeouts and bypass the fetch cache.
 
-**Untested against the live API** — written against Nessie's long-stable
-REST shape, but not run against a real key. If a field name has drifted,
-the fix is isolated to the mapping loops in `sync.ts`; nothing downstream
-needs to change since they only ever see a `FinancialEvent`.
-
-## Extending it
-
-"Demo account selection" (letting the user pick among several Nessie
-customers/accounts rather than one fixed `NESSIE_ACCOUNT_ID`) is the
-obvious next step once a key exists to test it against — `client.ts`
-already has `getAccountsForCustomer()` for that.
+The local tests mock Nessie contracts. Live sync remains unverified without sandbox credentials. Import batches and multi-record changes are not a database transaction; concurrent or interrupted imports need stronger transactional guarantees for production. Remote deletions/cancellations of previously imported records are not currently reconciled automatically.

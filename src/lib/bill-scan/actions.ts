@@ -16,6 +16,9 @@ export async function scanBillImage(formData: FormData): Promise<ScanBillResult>
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, message: "No photo received." };
   }
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+    return { ok: false, message: "Use a JPEG, PNG, or WebP photo under 5 MB, or enter the details manually." };
+  }
   if (!process.env.GEMINI_API_KEY) {
     return { ok: false, message: "Add GEMINI_API_KEY to scan bills automatically — fill in the form manually for now." };
   }

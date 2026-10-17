@@ -10,7 +10,9 @@ interface HeroOverviewProps {
   availableBalance: number;
   safeToSpend: number;
   reservedForBills: number;
-  nextPaydayDate: string;
+  savingsEarmarks: number;
+  preferredBuffer: number;
+  nextPaydayDate: string | null;
   nextPaydayAmount: number;
   outlook: "on-track" | "tight" | "at-risk";
 }
@@ -25,6 +27,8 @@ export function HeroOverview({
   availableBalance,
   safeToSpend,
   reservedForBills,
+  savingsEarmarks,
+  preferredBuffer,
   nextPaydayDate,
   nextPaydayAmount,
   outlook,
@@ -42,13 +46,13 @@ export function HeroOverview({
           label="Safe to Spend"
           value={formatCurrency(safeToSpend)}
           highlight
-          tooltip="Safe to Spend is your available balance minus upcoming bills, savings earmarks, and your preferred buffer. It is not the same as your account balance."
+          tooltip={`${formatCurrency(availableBalance, { cents: true })} available − ${formatCurrency(reservedForBills, { cents: true })} upcoming bills − ${formatCurrency(savingsEarmarks, { cents: true })} planned savings − ${formatCurrency(preferredBuffer)} buffer = ${formatCurrency(safeToSpend, { cents: true })} Safe to Spend (minimum $0). Expected income is excluded.`}
         />
         <Stat label="Reserved for bills" value={formatCurrency(reservedForBills)} />
         <Stat
           label="Next payday"
-          value={formatCurrency(nextPaydayAmount)}
-          sublabel={formatShortDate(nextPaydayDate)}
+          value={nextPaydayDate ? formatCurrency(nextPaydayAmount) : "Not scheduled"}
+          sublabel={nextPaydayDate ? formatShortDate(nextPaydayDate) : undefined}
         />
       </div>
     </section>
