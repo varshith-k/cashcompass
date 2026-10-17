@@ -1,40 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CashCompass
 
-## Getting Started
+Your money. Your direction. A personal-finance demo built with Next.js 16, React 19, TypeScript, Tailwind, Base UI, and Recharts.
 
-First, run the development server:
+## Run locally
 
-```bash
+Use Node.js 22 or newer (required by current wallet dependencies) and npm.
+
+```sh
+npm ci --legacy-peer-deps
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000/overview>. With Auth0 unset, development uses an isolated, seeded demo user. Demo authentication is disabled in production: configure Auth0 before serving a production build.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## What works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Dashboard, explained Safe to Spend, expected and conservative cash-flow forecasts.
+- Transaction search, filters, creation, editing, and deletion.
+- Bills, monthly renewals, and user-confirmed Gemini photo extraction.
+- Reversible scenarios and a financial copilot with deterministic result cards.
+- Editable budgets, wishlist goals, weekly reserve schedules, and partial repayments.
+- Grounded WhatsApp reminder links and verified Solana **devnet** settlement.
+- Optional Capital One Nessie simulated account selection and idempotent imports.
 
-## Learn More
+## Integrations
 
-To learn more about Next.js, take a look at the following resources:
+All credentials stay server-side. `.env.example` lists the supported variables.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Auth0 setup](docs/AUTH0_SETUP.md)
+- [Financial storage and TimescaleDB](src/lib/finance/README.md)
+- [Gemini copilot](src/lib/copilot/README.md)
+- [Capital One Nessie sandbox](src/lib/nessie/README.md)
+- [Solana devnet](src/lib/solana/README.md)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Run `db/schema.sql` on your TimescaleDB service before setting `DATABASE_URL`. It also upgrades existing installations with phone numbers, external record IDs, and settlement receipts. Budget and goal definitions remain process-local, even with a database configured.
+
+## Verify
+
+```sh
+npm test
+npm run lint
+npm run typecheck
+npm run build
+# With the development server running:
+npm run audit:ui
+npm run test:demo
+```
+
+The UI audit checks nine routes at four widths in both themes, with accessibility scans at mobile and desktop widths. The browser demo checks connected mutations and removes its uniquely named records. It assumes the local keyless demo environment.
+
+See [phase status, verification, and limitations](docs/PROJECT_STATUS.md) and the original [product handoff](PROJECT_HANDOFF.md). Forecasts use a disclosed seeded opening balance, not a reconciled banking balance. Savings reserve funds in the model; they do not transfer money. Nessie records are simulated and do not imply Capital One endorsement.
 
 ## Contributors
 
 Built by the CashCompass team for SwampHacks.
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
