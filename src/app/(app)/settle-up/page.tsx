@@ -95,7 +95,7 @@ export default async function SettleUpPage({ searchParams }: { searchParams: Pro
         title="Settle Up"
         description="Track who owes whom with your friends, send reminders, and settle up. Money friends owe you is shown in your forecast but never counted as cash you can spend until they pay."
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <SplitBillSheet
               receipts={receiptOptions}
               friends={friends.map((f) => ({ id: f.id, name: f.name, hasEmail: Boolean(f.email) }))}
@@ -135,7 +135,7 @@ export default async function SettleUpPage({ searchParams }: { searchParams: Pro
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex flex-wrap items-center gap-2">
             <Users className="size-4" aria-hidden="true" />
             Friends
           </CardTitle>

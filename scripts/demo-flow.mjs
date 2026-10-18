@@ -45,6 +45,7 @@ try {
   await dialog.getByLabel("Amount", { exact: true }).fill("20.25");
   await dialog.getByRole("button", { name: "Save changes", exact: true }).click();
   await saved();
+  await page.waitForFunction((tag) => [...document.querySelectorAll("main li")].some((li) => li.textContent.includes(tag) && li.textContent.includes("20.25")), tag);
   assert((await row(tag).innerText()).includes("20.25"));
   await page.getByRole("searchbox", { name: "Search", exact: true }).fill(tag);
   await page.getByRole("searchbox", { name: "Search", exact: true }).press("Enter");
@@ -57,7 +58,7 @@ try {
   await page.getByRole("button", { name: "Add bill", exact: true }).click();
   dialog = page.getByRole("dialog");
   await dialog.locator('input[type="file"]').first().setInputFiles({ name: "bill.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XcAAAAASUVORK5CYII=", "base64") });
-  await dialog.getByText(/fill in the form manually/).waitFor();
+  await dialog.getByText(/manually/i).waitFor();
   await dialog.getByLabel("Biller", { exact: true }).fill(tag);
   await dialog.getByLabel("Amount", { exact: true }).fill("15");
   await dialog.getByLabel("Due date", { exact: true }).fill(date(1));
@@ -97,13 +98,14 @@ try {
   console.log("PASS goal creation → weekly reserves → contribution → cleanup");
 
   await visit("/ledger");
-  await page.getByRole("button", { name: "Add entry", exact: true }).click();
+  await page.getByRole("button", { name: "Add balance", exact: true }).click();
   dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Friend", { exact: true }).selectOption("");
   await dialog.getByLabel("Who", { exact: true }).fill(tag);
   await dialog.getByLabel("Their phone (optional)").fill("+15555550123");
   await dialog.getByLabel("Amount", { exact: true }).fill("50");
-  await dialog.getByLabel("Expected date", { exact: true }).fill(date(5));
-  await dialog.getByRole("button", { name: "Add entry", exact: true }).click();
+  await dialog.getByLabel("Expected by", { exact: true }).fill(date(5));
+  await dialog.getByRole("button", { name: "Add balance", exact: true }).click();
   await saved();
   assert((await row(tag).getByRole("link", { name: "Remind" }).getAttribute("href")).startsWith("https://wa.me/"));
   await row(tag).getByLabel(`Amount settled for ${tag}`).fill("20");
