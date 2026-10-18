@@ -8,7 +8,7 @@ import { compressImage } from "@/lib/bill-scan/compress-image";
 type UploadState = { status: "idle" | "uploading" | "done" | "error"; message?: string };
 
 /** Phone side of "scan with your phone": take or pick one photo and send it to the laptop session. */
-export function PhoneScanUploader({ token }: { token: string }) {
+export function PhoneScanUploader({ token, noun = "bill" }: { token: string; noun?: "bill" | "receipt" }) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<UploadState>({ status: "idle" });
@@ -62,7 +62,7 @@ export function PhoneScanUploader({ token }: { token: string }) {
       {input(pickerRef, false)}
       <Button className="w-full min-h-14 text-base" disabled={state.status === "uploading"} onClick={() => cameraRef.current?.click()}>
         {state.status === "uploading" ? <Loader2 className="size-5 animate-spin" /> : <Camera className="size-5" />}
-        {state.status === "uploading" ? "Reading your bill…" : "Take photo of bill"}
+        {state.status === "uploading" ? `Reading your ${noun}…` : `Take photo of ${noun}`}
       </Button>
       <Button variant="outline" className="w-full min-h-12" disabled={state.status === "uploading"} onClick={() => pickerRef.current?.click()}>
         <ImageUp className="size-4" />

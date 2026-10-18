@@ -6,6 +6,7 @@ import { CalendarClock, CheckCircle2, Repeat, Trash2, Undo2, X } from "lucide-re
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { deleteBill, markBillPaid, undoMarkBillPaid, type BillPaidUndo } from "@/lib/finance/actions";
+import { BillReminderControl, type ReminderSetting } from "./bill-reminder-control";
 import type { FinancialEvent } from "@/lib/finance/types";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
 import { daysUntil } from "@/lib/format";
@@ -18,7 +19,7 @@ function urgencyOf(iso: string) {
   return "normal" as const;
 }
 
-export function BillsTable({ bills }: { bills: FinancialEvent[] }) {
+export function BillsTable({ bills, reminders = {} }: { bills: FinancialEvent[]; reminders?: Record<string, ReminderSetting> }) {
   const [lastPaid, setLastPaid] = useState<BillPaidUndo | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -83,7 +84,7 @@ export function BillsTable({ bills }: { bills: FinancialEvent[] }) {
       {bills.map((bill) => {
         const urgency = urgencyOf(bill.date);
         return (
-          <li key={bill.id} className="flex flex-wrap sm:flex-nowrap items-center gap-3 px-4 py-3">
+          <li key={bill.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
             <div className="rounded-full p-2 bg-muted text-muted-foreground shrink-0">
               <CalendarClock className="size-4" />
             </div>
@@ -100,6 +101,12 @@ export function BillsTable({ bills }: { bills: FinancialEvent[] }) {
                   </Badge>
                 )}
               </div>
+              {bill.category === "Credit card" && bill.minimumPayment ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Minimum {formatCurrency(bill.minimumPayment, { cents: true })} · paying only the minimum leaves{" "}
+                  {formatCurrency(bill.amount - bill.minimumPayment, { cents: true })} that may collect interest
+                </p>
+              ) : null}
             </div>
 
             <div className="text-right shrink-0">
@@ -135,6 +142,7 @@ export function BillsTable({ bills }: { bills: FinancialEvent[] }) {
                 <Trash2 className="size-3.5" />
               </Button>
             </ActionForm>
+            <BillReminderControl billId={bill.id} current={reminders[bill.id]} />
           </li>
         );
       })}

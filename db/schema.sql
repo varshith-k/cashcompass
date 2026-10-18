@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS financial_events (
   scenario_id text,
   counterparty_phone text,
   friend_id text,
+  notes text,
+  is_receipt boolean NOT NULL DEFAULT false,
+  minimum_payment numeric(12, 2),
   source_record_id text,
   PRIMARY KEY (id, event_date)
 );
@@ -34,6 +37,9 @@ CREATE TABLE IF NOT EXISTS financial_events (
 -- Safe upgrades for existing installations.
 ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS counterparty_phone text;
 ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS friend_id text;
+ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS is_receipt boolean NOT NULL DEFAULT false;
+ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS minimum_payment numeric(12, 2);
 ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS source_record_id text;
 
 -- Hypertable on event_date is what makes this a competitive Tiger Data
@@ -84,4 +90,20 @@ CREATE TABLE IF NOT EXISTS solana_settlement_receipts (
   owner_id text NOT NULL,
   entry_id text NOT NULL,
   claimed_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Bill email reminders ("Remind me" on Bills & Payments). One per bill per
+-- user; moved to the next occurrence when a recurring bill is paid.
+-- last_sent_key prevents sending twice for the same due date.
+CREATE TABLE IF NOT EXISTS bill_reminders (
+  id text PRIMARY KEY,
+  owner_id text NOT NULL,
+  bill_id text NOT NULL,
+  email text NOT NULL,
+  days_before integer NOT NULL CHECK (days_before BETWEEN 0 AND 30),
+  hour integer NOT NULL CHECK (hour BETWEEN 0 AND 23),
+  time_zone text NOT NULL,
+  last_sent_key text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (owner_id, bill_id)
 );

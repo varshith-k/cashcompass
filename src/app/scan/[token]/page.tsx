@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Compass } from "lucide-react";
 import { PhoneScanUploader } from "@/components/bills/phone-scan-uploader";
-import { isPhoneScanOpen } from "@/lib/bill-scan/phone-sessions";
+import { phoneScanKind } from "@/lib/bill-scan/phone-sessions";
 
 export const metadata: Metadata = {
   title: "Scan a bill · CashCompass",
@@ -15,7 +15,9 @@ export const metadata: Metadata = {
  */
 export default async function PhoneScanPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const open = /^[A-Za-z0-9_-]{32}$/.test(token) && isPhoneScanOpen(token);
+  const kind = /^[A-Za-z0-9_-]{32}$/.test(token) ? phoneScanKind(token) : null;
+  const open = kind !== null;
+  const noun = kind === "receipt" ? "receipt" : "bill";
 
   return (
     <main className="flex min-h-dvh flex-col bg-background px-5 py-8">
@@ -27,12 +29,12 @@ export default async function PhoneScanPage({ params }: { params: Promise<{ toke
         {open ? (
           <>
             <div>
-              <h1 className="font-heading text-2xl font-bold">Scan a bill</h1>
+              <h1 className="font-heading text-2xl font-bold">Scan a {noun}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                Take a clear photo of the bill. It goes straight to the form open on your laptop, where you check it and save.
+                Take a clear photo of the {noun}. It goes straight to the form open on your laptop, where you check it and save.
               </p>
             </div>
-            <PhoneScanUploader token={token} />
+            <PhoneScanUploader token={token} noun={noun} />
             <p className="text-xs text-muted-foreground">This link works once and expires 10 minutes after it was created.</p>
           </>
         ) : (

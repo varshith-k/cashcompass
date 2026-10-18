@@ -86,3 +86,21 @@ FORCE_DEPLOY=1 /opt/cashcompass-deploy/deploy.sh
 
 The generated secret is stored only on the server. Never commit production
 environment files or paste their values into chat.
+
+## Bill email reminders
+
+Bills & Payments lets users turn on "Remind me by email" per bill (days before + time, in their own time zone). An hourly job sends the due ones through Resend.
+
+1. Add to `/root/cashcompass/.env.production.local` (alongside `RESEND_API_KEY` and `EMAIL_FROM`), then redeploy with `FORCE_DEPLOY=1 /opt/cashcompass-deploy/deploy.sh`:
+   ```
+   CRON_SECRET=<output of: openssl rand -hex 32>
+   ```
+2. Install the timer:
+   ```sh
+   cp scripts/cashcompass-reminders.service scripts/cashcompass-reminders.timer /etc/systemd/system/
+   systemctl daemon-reload
+   systemctl enable --now cashcompass-reminders.timer
+   ```
+3. Check it: `systemctl start cashcompass-reminders.service && journalctl -u cashcompass-reminders.service -n 5`. The response shows `{"checked":…,"sent":…}`.
+
+Reminders go to each user's own login email. While Resend uses the test sender (no verified domain), only the Resend account owner's address receives them. With a database (`DATABASE_URL`), run `db/schema.sql` again to create the `bill_reminders` table; without one, reminders are kept in memory and reset on redeploy.

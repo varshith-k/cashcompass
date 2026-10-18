@@ -1,0 +1,10 @@
+[Unit]
+Description=Send due CashCompass bill reminders every hour
+
+[Timer]
+OnCalendar=*-*-* *:00:00
+Persistent=true
+Unit=cashcompass-reminders.service
+
+[Install]
+WantedBy=timers.target

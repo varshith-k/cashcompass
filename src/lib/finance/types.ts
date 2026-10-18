@@ -28,6 +28,12 @@ export interface FinancialEvent {
   counterpartyPhone?: string;
   /** Settle Up entries only: the friend this balance is with (see friends.ts), for email notifications. */
   friendId?: string;
+  /** Optional free-text note (receipts: "team lunch, split with Sam"). */
+  notes?: string;
+  /** An already-paid purchase logged from a receipt (Bills & Payments → Receipts). */
+  isReceipt?: boolean;
+  /** Credit card bills: the minimum payment due (amount holds the statement balance). */
+  minimumPayment?: number;
 }
 
 export type NewFinancialEvent = Omit<FinancialEvent, "id">;

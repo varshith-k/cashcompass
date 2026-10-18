@@ -34,7 +34,7 @@ export function findNextPayday(events: FinancialEvent[], asOf = dateKey()): Fina
 
 // Bills, savings and ledger entries are dated events; everything else spent
 // is "everyday" spending the forecast has to estimate.
-const NON_EVERYDAY_CATEGORIES = new Set(["Housing", "Utilities", "Subscriptions", "Savings", "Repayment"]);
+const NON_EVERYDAY_CATEGORIES = new Set(["Housing", "Utilities", "Subscriptions", "Credit card", "Savings", "Repayment"]);
 const DAILY_SPEND_LOOKBACK_DAYS = 30;
 const DAILY_SPEND_MIN_DAYS = 7;
 

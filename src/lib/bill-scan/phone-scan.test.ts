@@ -21,8 +21,8 @@ describe("phone scan sessions", () => {
     const { token } = createPhoneScanSession("auth0|laptop");
     expect(token).toMatch(/^[A-Za-z0-9_-]{32}$/);
     expect(isPhoneScanOpen(token)).toBe(true);
-    expect(claimPhoneScan(token)).toBe(true);
-    expect(claimPhoneScan(token)).toBe(false);
+    expect(claimPhoneScan(token)).toBe("bill");
+    expect(claimPhoneScan(token)).toBeNull();
   });
 
   it("only lets the user who started it read the result", () => {

@@ -6,6 +6,7 @@ import { requireOwnerId } from "@/lib/auth/session";
 import { getFinancialEventRepository } from "./repository";
 import { settleLedgerAmount } from "./ledger";
 import { findOrAddFriend, getFriend, isValidEmail } from "./friends";
+import { getReminderStore } from "./bill-reminders";
 import { notifyFriend, type NotifyResult } from "@/lib/email/notify-friend";
 import { getBudgets, setBudgetLimits } from "./budgets";
 import { getWishlistGoals, addWishlistGoal, deleteWishlistGoal as removeWishlistGoal } from "./wishlist-goals";
@@ -94,16 +95,26 @@ export async function deleteTransaction(formData: FormData) {
 }
 
 export async function createBill(formData: FormData) {
+  const amount = parseAmount(formData.get("amount"));
+  const category = String(formData.get("category") || "Other");
+  // Credit card bills: amount is the statement balance; the minimum payment is optional.
+  const rawMinimum = String(formData.get("minimumPayment") ?? "").trim();
+  let minimumPayment: number | undefined;
+  if (category === "Credit card" && rawMinimum) {
+    minimumPayment = parseAmount(rawMinimum);
+    if (minimumPayment > amount) throw new Error("Minimum payment can't exceed the statement balance");
+  }
   const input: NewFinancialEvent = {
     date: parseDate(formData.get("date")),
-    amount: parseAmount(formData.get("amount")),
+    amount,
     direction: "expense",
     record: "planned",
     certainty: "certain",
     recurrence: formData.get("recurring") === "on" ? "recurring" : "one-time",
     source: "manual",
-    category: String(formData.get("category") || "Other"),
+    category,
     counterparty: String(formData.get("counterparty") || "").trim() || "Unknown",
+    ...(minimumPayment ? { minimumPayment } : {}),
   };
 
   await getFinancialEventRepository().createEvent(input);
@@ -116,6 +127,30 @@ export async function deleteBill(formData: FormData) {
     (e) => e.record === "planned" && e.direction === "expense" && !["Savings", "Repayment"].includes(e.category),
     "Bill not found",
   );
+  await getReminderStore().remove(await requireOwnerId(), String(formData.get("id")));
+}
+
+/** Logs an already-paid purchase from a receipt (Bills & Payments → Receipts). */
+export async function createReceipt(formData: FormData) {
+  const notes = String(formData.get("notes") ?? "").trim().slice(0, 500);
+  await getFinancialEventRepository().createEvent({
+    date: parseDate(formData.get("date")),
+    amount: parseAmount(formData.get("amount")),
+    direction: "expense",
+    record: "actual",
+    certainty: "certain",
+    recurrence: "one-time",
+    source: "manual",
+    category: String(formData.get("category") || "Other"),
+    counterparty: String(formData.get("counterparty") || "").trim().slice(0, 80) || "Unknown",
+    isReceipt: true,
+    ...(notes ? { notes } : {}),
+  });
+  revalidatePath("/", "layout");
+}
+
+export async function deleteReceipt(formData: FormData) {
+  await deleteMatching(formData, (e) => e.isReceipt === true && e.record === "actual", "Receipt not found");
 }
 
 export async function markBillPaid(formData: FormData): Promise<BillPaidUndo> {
@@ -131,6 +166,8 @@ export async function markBillPaid(formData: FormData): Promise<BillPaidUndo> {
     const { id: previousId, ...next } = original;
     void previousId;
     nextId = (await repo.createEvent({ ...next, source: "manual", sourceRecordId: undefined, date: nextMonthlyDate(original.date) })).id;
+    // The reminder follows the bill to its next occurrence.
+    await getReminderStore().move(await requireOwnerId(), id, nextId);
   }
   revalidatePath("/", "layout");
   return { id, counterparty: original.counterparty, originalDate: original.date, originalCertainty: original.certainty, nextId };
@@ -160,6 +197,7 @@ export async function undoMarkBillPaid(undo: BillPaidUndo) {
   const next = undo.nextId ? events.find((event) => event.id === undo.nextId) : undefined;
   if (next && next.record === "planned" && next.counterparty === paid.counterparty && next.recurrence === "recurring") {
     await repo.deleteEvent(next.id);
+    await getReminderStore().move(await requireOwnerId(), next.id, paid.id);
   }
   revalidatePath("/", "layout");
 }

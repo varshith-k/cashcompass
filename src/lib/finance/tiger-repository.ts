@@ -17,6 +17,11 @@ function getPool() {
   return pool;
 }
 
+/** Shared connection pool, also used by the bill-reminder store. */
+export function getTigerPool(): Pool {
+  return getPool();
+}
+
 interface FinancialEventRow {
   id: string;
   event_date: Date;
@@ -32,6 +37,9 @@ interface FinancialEventRow {
   counterparty_phone: string | null;
   friend_id: string | null;
   source_record_id: string | null;
+  notes: string | null;
+  is_receipt: boolean | null;
+  minimum_payment: string | null;
 }
 
 function toFinancialEvent(row: FinancialEventRow): FinancialEvent {
@@ -50,6 +58,9 @@ function toFinancialEvent(row: FinancialEventRow): FinancialEvent {
     counterpartyPhone: row.counterparty_phone ?? undefined,
     friendId: row.friend_id ?? undefined,
     sourceRecordId: row.source_record_id ?? undefined,
+    notes: row.notes ?? undefined,
+    isReceipt: row.is_receipt ? true : undefined,
+    minimumPayment: row.minimum_payment === null || row.minimum_payment === undefined ? undefined : Number(row.minimum_payment),
   };
 }
 
@@ -77,7 +88,8 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
     return this.withClient(async (client) => {
       const result = await client.query<FinancialEventRow>(
         `SELECT id, event_date, amount, direction, record, certainty,
-                recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id, friend_id
+                recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id, friend_id,
+                notes, is_receipt, minimum_payment
          FROM financial_events
          WHERE owner_id = $1
          ORDER BY event_date`,
@@ -92,8 +104,9 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
       const result = await client.query<FinancialEventRow>(
         `INSERT INTO financial_events
            (id, owner_id, event_date, amount, direction, record, certainty,
-            recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id, friend_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id, friend_id,
+            notes, is_receipt, minimum_payment)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
          RETURNING *`,
         [
           randomUUID(),
@@ -111,6 +124,9 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
           input.counterpartyPhone ?? null,
           input.sourceRecordId ?? null,
           input.friendId ?? null,
+          input.notes ?? null,
+          input.isReceipt ?? false,
+          input.minimumPayment ?? null,
         ],
       );
       return toFinancialEvent(result.rows[0]);
@@ -133,6 +149,9 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
         counterpartyPhone: "counterparty_phone",
         friendId: "friend_id",
         sourceRecordId: "source_record_id",
+        notes: "notes",
+        isReceipt: "is_receipt",
+        minimumPayment: "minimum_payment",
       };
 
       const entries = Object.entries(patch).filter(
