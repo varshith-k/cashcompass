@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
+import { CashCompassMark } from "@/components/brand/cash-compass-mark";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -34,7 +35,7 @@ export function MobileNavTrigger() {
       />
       <SheetContent side="left" className="w-72 bg-sidebar text-sidebar-foreground border-sidebar-border p-0">
         <SheetHeader className="h-16 flex-row items-center px-6">
-          <Compass className="size-6" strokeWidth={1.75} />
+          <CashCompassMark size={28} />
           <SheetTitle className="font-heading text-lg text-sidebar-foreground">
             CashCompass
           </SheetTitle>

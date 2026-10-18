@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass } from "lucide-react";
+import { CashCompassMark } from "@/components/brand/cash-compass-mark";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, SETTINGS_ITEM } from "./nav-items";
 
@@ -12,7 +12,7 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-2 px-6 h-16 shrink-0">
-        <Compass className="size-6 text-sidebar-primary-foreground" strokeWidth={1.75} />
+        <CashCompassMark size={28} />
         <span className="font-heading text-lg font-semibold tracking-tight">
           CashCompass
         </span>
