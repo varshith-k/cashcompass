@@ -7,7 +7,7 @@ import { getFinancialEventRepository } from "./repository";
 import { settleLedgerAmount } from "./ledger";
 import { getBudgets, setBudgetLimits } from "./budgets";
 import { getWishlistGoals, addWishlistGoal, deleteWishlistGoal as removeWishlistGoal } from "./wishlist-goals";
-import type { EventCertainty, EventDirection, NewFinancialEvent } from "./types";
+import type { EventCertainty, EventDirection, FinancialEvent, NewFinancialEvent } from "./types";
 
 /** Everything needed to reverse a "Mark paid" (returned to the Bills list for its Undo button). */
 export interface BillPaidUndo {
@@ -73,10 +73,22 @@ export async function updateTransaction(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
-export async function deleteTransaction(formData: FormData) {
+/**
+ * Deletes only a record of the expected kind, so one form can't remove a
+ * different type of record by id (the repository already limits this to
+ * the signed-in user's own records).
+ */
+async function deleteMatching(formData: FormData, matches: (event: FinancialEvent) => boolean, notFound: string) {
   const id = String(formData.get("id"));
-  await getFinancialEventRepository().deleteEvent(id);
+  const repo = getFinancialEventRepository();
+  const event = (await repo.listEvents()).find((e) => e.id === id);
+  if (!event || !matches(event)) throw new Error(notFound);
+  await repo.deleteEvent(id);
   revalidatePath("/", "layout");
+}
+
+export async function deleteTransaction(formData: FormData) {
+  await deleteMatching(formData, (e) => e.record === "actual", "Transaction not found");
 }
 
 export async function createBill(formData: FormData) {
@@ -97,9 +109,11 @@ export async function createBill(formData: FormData) {
 }
 
 export async function deleteBill(formData: FormData) {
-  const id = String(formData.get("id"));
-  await getFinancialEventRepository().deleteEvent(id);
-  revalidatePath("/", "layout");
+  await deleteMatching(
+    formData,
+    (e) => e.record === "planned" && e.direction === "expense" && !["Savings", "Repayment"].includes(e.category),
+    "Bill not found",
+  );
 }
 
 export async function markBillPaid(formData: FormData): Promise<BillPaidUndo> {
@@ -208,9 +222,7 @@ export async function createLedgerEntry(formData: FormData) {
 }
 
 export async function deleteLedgerEntry(formData: FormData) {
-  const id = String(formData.get("id"));
-  await getFinancialEventRepository().deleteEvent(id);
-  revalidatePath("/", "layout");
+  await deleteMatching(formData, (e) => e.category === "Repayment" && e.record === "planned", "Ledger entry not found");
 }
 
 export async function logLedgerPayment(formData: FormData) {

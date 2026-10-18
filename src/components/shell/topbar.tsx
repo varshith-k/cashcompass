@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { NAV_ITEMS, SETTINGS_ITEM } from "./nav-items";
 import { MobileNavTrigger } from "./mobile-nav";
 
-export function Topbar({ reminders = [] }: { reminders?: Reminder[] }) {
+export function Topbar({ reminders = [], nessieConnected = false }: { reminders?: Reminder[]; nessieConnected?: boolean }) {
   const pathname = usePathname();
   const { user, source, logoutHref } = useAuth();
   const current = [...NAV_ITEMS, SETTINGS_ITEM].find(
@@ -65,7 +65,8 @@ export function Topbar({ reminders = [] }: { reminders?: Reminder[] }) {
         variant="outline"
         className="hidden sm:inline-flex border-interactive/30 text-brand-navy dark:text-primary bg-interactive/10"
       >
-        Capital One Nessie demo data
+        {/* Only claim Nessie when it is actually configured. */}
+        {nessieConnected ? "Capital One Nessie demo data" : "Demo data"}
       </Badge>
 
       <DropdownMenu>

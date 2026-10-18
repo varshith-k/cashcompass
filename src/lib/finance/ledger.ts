@@ -42,6 +42,8 @@ export async function settleLedgerAmount(
       source: "manual",
       category: "Repayment",
       counterparty,
+      // Links each partial payment to the ledger entry it reduces.
+      sourceRecordId: `ledger/${original.id}`,
     });
     await repo.updateEvent(id, { amount: Math.round((remaining - amountPaid) * 100) / 100 });
   }

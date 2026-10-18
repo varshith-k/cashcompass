@@ -8,8 +8,9 @@ import type {
 
 /**
  * Safe to Spend is deliberately not the same number as the account
- * balance: it subtracts money already committed to upcoming bills and
- * savings earmarks, then holds back the user's preferred buffer.
+ * balance: it subtracts what has to come out before the next paycheck
+ * (bills, planned savings, debts owed, estimated everyday spending), then
+ * holds back the user's preferred buffer. See safeToSpendWindow().
  */
 export function computeSafeToSpend(input: SafeToSpendInput): SafeToSpendResult {
   const safeToSpend = Math.max(
@@ -17,9 +18,68 @@ export function computeSafeToSpend(input: SafeToSpendInput): SafeToSpendResult {
     input.availableBalance -
       input.upcomingBills -
       input.savingsEarmarks -
+      (input.debtsOwed ?? 0) -
+      (input.everydaySpending ?? 0) -
       input.preferredBuffer,
   );
-  return { safeToSpend, breakdown: input };
+  return { safeToSpend: Math.round(safeToSpend * 100) / 100, breakdown: input };
+}
+
+/** The next planned paycheck on or after today, if any. */
+export function findNextPayday(events: FinancialEvent[], asOf = dateKey()): FinancialEvent | undefined {
+  return events
+    .filter((e) => e.category === "Payroll" && e.direction === "income" && e.record === "planned" && dateKey(e.date) >= asOf)
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
+}
+
+// Bills, savings and ledger entries are dated events; everything else spent
+// is "everyday" spending the forecast has to estimate.
+const NON_EVERYDAY_CATEGORIES = new Set(["Housing", "Utilities", "Subscriptions", "Savings", "Repayment"]);
+const DAILY_SPEND_LOOKBACK_DAYS = 30;
+const DAILY_SPEND_MIN_DAYS = 7;
+
+/**
+ * Average everyday spending per day (groceries, dining, transport, other)
+ * from actual transactions in the last 30 days. Divides by at least 7 days
+ * so a single recent purchase can't produce a huge daily rate.
+ */
+export function estimateDailySpend(events: FinancialEvent[], asOf = dateKey()): number {
+  const from = new Date(`${asOf}T00:00:00.000Z`);
+  from.setUTCDate(from.getUTCDate() - (DAILY_SPEND_LOOKBACK_DAYS - 1));
+  const fromKey = dateKey(from);
+  const everyday = events.filter(
+    (e) => e.record === "actual" && e.direction === "expense" && !NON_EVERYDAY_CATEGORIES.has(e.category) &&
+      dateKey(e.date) >= fromKey && dateKey(e.date) <= asOf,
+  );
+  if (everyday.length === 0) return 0;
+  const earliest = everyday.reduce((min, e) => (dateKey(e.date) < min ? dateKey(e.date) : min), asOf);
+  const spanDays = Math.round((Date.parse(`${asOf}T00:00:00Z`) - Date.parse(`${earliest}T00:00:00Z`)) / 86_400_000) + 1;
+  const days = Math.min(DAILY_SPEND_LOOKBACK_DAYS, Math.max(DAILY_SPEND_MIN_DAYS, spanDays));
+  const total = everyday.reduce((sum, e) => sum + e.amount, 0);
+  return Math.round((total / days) * 100) / 100;
+}
+
+/**
+ * What Safe to Spend has to hold back until the next paycheck (or the next
+ * 30 days when no paycheck is scheduled): bills, planned savings and debts
+ * owed falling in that window, plus estimated everyday spending.
+ */
+export function safeToSpendWindow(events: FinancialEvent[], dailySpend: number, asOf = dateKey()) {
+  const payday = findNextPayday(events, asOf);
+  const fallbackEnd = new Date(`${asOf}T00:00:00.000Z`);
+  fallbackEnd.setUTCDate(fallbackEnd.getUTCDate() + 30);
+  const endKey = payday ? dateKey(payday.date) : dateKey(fallbackEnd);
+  // Overdue items are still owed today, so anything dated before the window end counts.
+  const dueBefore = (e: FinancialEvent) => e.record === "planned" && e.direction === "expense" && dateKey(e.date) < endKey;
+  const sum = (list: FinancialEvent[]) => Math.round(list.reduce((total, e) => total + e.amount, 0) * 100) / 100;
+  const daysUntilEnd = Math.max(0, Math.round((Date.parse(`${endKey}T00:00:00Z`) - Date.parse(`${asOf}T00:00:00Z`)) / 86_400_000));
+  return {
+    endDate: endKey,
+    bills: sum(selectUpcomingBills(events).filter(dueBefore)),
+    savings: sum(events.filter((e) => e.category === "Savings" && dueBefore(e))),
+    debtsOwed: sum(events.filter((e) => e.category === "Repayment" && dueBefore(e))),
+    everydaySpending: Math.round(dailySpend * daysUntilEnd * 100) / 100,
+  };
 }
 
 /** Posted events affect today's available funds; planned income never does. */
@@ -35,7 +95,13 @@ export function computeAvailableBalance(openingBalance: number, events: Financia
 export function computeForecast(
   startingBalance: number,
   events: FinancialEvent[],
-  options: { days: number; startDate?: Date; lowBalanceThreshold: number },
+  options: {
+    days: number;
+    startDate?: Date;
+    lowBalanceThreshold: number;
+    /** Estimated everyday spending, subtracted on each future day (see estimateDailySpend). */
+    dailySpend?: number;
+  },
 ): ForecastPoint[] {
   const start = new Date(`${dateKey(options.startDate ?? new Date())}T00:00:00.000Z`);
   const startKey = dateKey(start);
@@ -61,9 +127,8 @@ export function computeForecast(
       continue;
     }
     const dates = [key];
-    // Bills configured as monthly repeat through the visible horizon.
-    if (event.record === "planned" && event.recurrence === "recurring" &&
-        event.direction === "expense" && !["Savings", "Repayment"].includes(event.category)) {
+    // Monthly bills and paychecks repeat through the visible horizon.
+    if (event.record === "planned" && event.recurrence === "recurring" && !["Savings", "Repayment"].includes(event.category)) {
       const originalDate = new Date(event.date);
       const todayDate = new Date(`${today}T00:00:00Z`);
       const firstMonth = Math.max(1, (todayDate.getUTCFullYear() - originalDate.getUTCFullYear()) * 12 + todayDate.getUTCMonth() - originalDate.getUTCMonth());
@@ -88,6 +153,7 @@ export function computeForecast(
     date.setUTCDate(date.getUTCDate() + i);
     const key = dateKey(date);
     runningBalance += byDate.get(key) ?? 0;
+    if (key > today) runningBalance -= options.dailySpend ?? 0;
     uncertainIncome += uncertainByDate.get(key) ?? 0;
     const conservativeBalance = Math.round((runningBalance - uncertainIncome) * 100) / 100;
     points.push({
