@@ -51,23 +51,23 @@ describe("financial events are isolated per user", () => {
 });
 
 describe("budgets, goals and sync status are isolated per user", () => {
-  it("budgets", () => {
-    setBudgetLimits(ALICE, { Dining: 999 });
-    expect(getBudgets(ALICE).find((b) => b.category === "Dining")?.monthlyLimit).toBe(999);
-    expect(getBudgets(BOB).find((b) => b.category === "Dining")?.monthlyLimit).toBe(150);
+  it("budgets", async () => {
+    await setBudgetLimits(ALICE, { Dining: 999 });
+    expect((await getBudgets(ALICE)).find((b) => b.category === "Dining")?.monthlyLimit).toBe(999);
+    expect((await getBudgets(BOB)).find((b) => b.category === "Dining")?.monthlyLimit).toBe(150);
   });
 
-  it("wishlist goals", () => {
-    const goal = addWishlistGoal(ALICE, { name: "Alice's bike", targetAmount: 500, targetDate: new Date().toISOString() });
-    expect(getWishlistGoals(BOB).some((g) => g.id === goal.id)).toBe(false);
+  it("wishlist goals", async () => {
+    const goal = await addWishlistGoal(ALICE, { name: "Alice's bike", targetAmount: 500, targetDate: new Date().toISOString() });
+    expect((await getWishlistGoals(BOB)).some((g) => g.id === goal.id)).toBe(false);
 
-    deleteWishlistGoal(BOB, goal.id);
-    expect(getWishlistGoals(ALICE).some((g) => g.id === goal.id)).toBe(true);
+    await deleteWishlistGoal(BOB, goal.id);
+    expect((await getWishlistGoals(ALICE)).some((g) => g.id === goal.id)).toBe(true);
   });
 
-  it("Nessie sync status", () => {
-    recordSyncStatus(ALICE, { added: 3, skipped: 0 });
-    expect(getSyncStatus(ALICE)?.added).toBe(3);
-    expect(getSyncStatus(BOB)).toBeNull();
+  it("Nessie sync status", async () => {
+    await recordSyncStatus(ALICE, { added: 3, skipped: 0 });
+    expect((await getSyncStatus(ALICE))?.added).toBe(3);
+    expect(await getSyncStatus(BOB)).toBeNull();
   });
 });

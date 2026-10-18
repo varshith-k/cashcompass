@@ -3,7 +3,8 @@ import type { FinancialEvent, NewFinancialEvent } from "./types";
 const state = vi.hoisted(() => ({ events: [] as FinancialEvent[] }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/session", () => ({ requireOwnerId: async () => "test-owner", requireSession: async () => ({ user: { id: "test-owner", name: "Test Owner", email: "owner@example.com" } }) }));
-vi.mock("./repository", () => ({ getFinancialEventRepository: () => ({
+vi.mock("./repository", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./repository")>(), getFinancialEventRepository: () => ({
   listEvents: async () => state.events.map((e) => ({ ...e })),
   createEvent: async (input: NewFinancialEvent) => { const event = { ...input, id: crypto.randomUUID() }; state.events.push(event); return event; },
   updateEvent: async (id: string, patch: Partial<FinancialEvent>) => { const i = state.events.findIndex((e) => e.id === id); if (i < 0) throw new Error("not found"); return state.events[i] = { ...state.events[i], ...patch }; },
@@ -90,7 +91,7 @@ describe("connected financial actions", () => {
   });
   it("creates a capped savings schedule and consumes planned reserves when contributing", async () => {
     const target = new Date(); target.setUTCDate(target.getUTCDate() + 14);
-    const goal = addWishlistGoal("test-owner", { name: "Test trip", targetAmount: 100, targetDate: target.toISOString() });
+    const goal = await addWishlistGoal("test-owner", { name: "Test trip", targetAmount: 100, targetDate: target.toISOString() });
     await planWishlistSavings(form({ goalId: goal.id, weeklyAmount: "60" }));
     expect(state.events.map((e) => e.amount)).toEqual([60, 40]);
     await addWishlistContribution(form({ goalName: goal.name, amount: "25" }));

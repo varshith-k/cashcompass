@@ -8,13 +8,15 @@ import { getBudgets } from "@/lib/finance/budgets";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { formatCurrency } from "@/lib/format";
 
+export const metadata = { title: "Budgets" };
+
 export default async function BudgetsPage() {
   await connection();
 
   // Reads the Tiger Data continuous aggregate directly in DB mode, instead
   // of fetching every event and summing in JS - see repository.ts.
   const spendByCategory = await getFinancialEventRepository().getMonthlyCategorySpend();
-  const budgets = getBudgets(await requireOwnerId());
+  const budgets = await getBudgets(await requireOwnerId());
 
   const budgetsWithSpend = budgets.map((budget) => ({
     ...budget,

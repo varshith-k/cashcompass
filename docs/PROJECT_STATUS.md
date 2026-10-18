@@ -1,5 +1,17 @@
 # CashCompass implementation status
 
+## Consolidated release — October 18, 2026
+
+Combines the remaining production-readiness, per-user Nessie, and Tiger operations branches while retaining the latest Gemini guidance, paycheck entry, shared balances, MoneyQuest, and Solana payment recovery.
+
+- Budgets, goals, balance checkpoints, imported account snapshots, and sync state persist in `planning_profiles`. Existing process-memory planning cannot be recovered after a restart.
+- Auth0 users create their own $0 Nessie sandbox account from the setup banner or Settings. Legacy shared-account environment values no longer grant access to a shared bank account. Existing imported records are retained; new sync/P2P operations use the user's mapping.
+- Financial mutations serialize per owner; event, planning, and Solana receipt writes share one transaction. Shared-payment mirroring and payment emails run after commit. Mirroring remains best-effort.
+- `/api/public/health` checks authentication configuration and required database tables without returning credentials. Updated deploy tooling runs migrations and checks readiness before switching PM2; installed server scripts require an explicit update.
+- Validation: 231 unit tests; 8 persistence/concurrency tests; 8 Timescale payment/Nessie mapping integration tests; 13 operational tests; lint, typecheck, production dependency audit (zero high/critical), and Docker production build passed. Local browser verification is recorded in the release PR.
+- Historical Tiger PITR evidence remains distinct from the owner's later report of successful testing in another session. No new cloud recovery or wallet transfer is performed by this release.
+
+
 Updated October 18, 2026. The original phase delivery was checked October 17; newer teammate features and the MoneyQuest companion are recorded below. [`PROJECT_HANDOFF.md`](../PROJECT_HANDOFF.md) preserves the requirements and now includes the current feature handoff.
 
 ## Solana settlement recording fix — October 18, 2026
@@ -15,6 +27,33 @@ Verification: 195 default unit tests pass; three opt-in local Timescale tests re
 The screenshot's “Gemini unavailable” label also appeared when Gemini returned a greeting or unsupported reply without a financial tool call. Added a validated guidance tool for greetings, capabilities, missing purchase amounts, and off-topic messages; financial answers still come from deterministic calculations. Gemini guidance and financial results have separate labels, and fallback wording no longer assumes an outage. Ambiguous multiple calls and invalid guidance reasons are rejected.
 
 The `/api/auth/me` handler now supplies Next.js’s generated `RouteContext<"/api/auth/me">` to `withSession`, correcting the production build type mismatch without changing session validation. Based on current main through `8d652b9`. Verification: 195 unit tests passed (six live tests skipped in the default suite), lint passed, and the Webpack production build passed including TypeScript. All six opt-in Gemini live checks previously passed locally: affordability, savings, spending, greeting, off-topic handling, and synthetic bill-photo extraction. Turbopack encountered a local worker-port permission failure; Webpack was used for the completed build check. The owner authorized merge/deployment; rollout confirmation awaits server evidence, and the available SSH authentication is denied.
+
+## Per-user Nessie accounts — October 18, 2026
+
+Implemented on `feature/nessie-per-user-accounts`, including newer main through `9c23514`; **not deployed or independently verified against live Nessie**.
+
+- Authenticated app visits automatically prepare a separate fictional Nessie customer and $0 checking account after hydration. Existing users are included. Auth0 login is unchanged and does not wait for Nessie; server rendering/prefetch does not create accounts.
+- Durable `nessie_user_accounts` mapping/checkpoints, unique remote IDs, per-owner PostgreSQL advisory locks, and marker-based recovery prevent shared-account fallback and blind duplicate creation. Uncertain outcomes stop for review if no unique matching object can be found.
+- Settings displays the user's own account/reference balance, shareable sandbox account ID, sync, and setup/recovery feedback. Sync validates ownership; transfers use only the mapped payer, ignoring legacy global IDs and stale sync status. New accounts are empty and unfunded.
+- Additive migration: `db/migrations/20261018_nessie_user_accounts.sql` (also included in `db/schema.sql`). First setup can initialize the table if permitted; otherwise an operator must migrate it before enabling the feature. Existing financial records/shared imports are preserved.
+- Requires Auth0, `NESSIE_API_KEY`, and `DATABASE_URL`. After the owner updated the private local environment, all required Auth0/Nessie/database/Gemini variables are present. Read-only checks passed for Auth0 discovery, authenticated Nessie customer listing, Gemini model access (configured model listed), and the Timescale-enabled database/existing application tables. The new mapping table is absent; the DB role can create it automatically on first authenticated app setup. Actual Auth0 sign-in, per-user provider creation, and production configuration remain unverified. No values were printed or live provider objects created.
+- Isolated browser verification uses a fake authenticated session and fake Nessie API with real disposable Postgres: separate users/accounts, automatic setup after hydration, render-only non-creation, reload reuse, empty-account sync, failed-POST recovery without duplicate creation, eight viewport/theme combinations, four axe scans, and no browser runtime errors. This does not verify live Auth0/Nessie.
+- Local verification: lint, typecheck, and production build pass; 215 passing tests plus 4 intentionally skipped live Gemini tests, including actual disposable PostgreSQL DDL/constraints, concurrent locking, committed checkpoint recovery, per-user account selection, malicious selections, stale payer state, and failure cleanup. See [Nessie setup and operational limits](../src/lib/nessie/README.md).
+
+## Tiger Data operations — October 18, 2026
+
+Implemented separately on `feature/tiger-data-operations`, based on main `1536748`, incorporating `2336853`; the shared IDE checkout is left untouched by this task. No Vultr deployment, subscription change, or original-database schema/data mutation was performed. The owner-approved isolated cloud recovery attempt is recorded below; both temporary copies were deleted.
+
+- Live read-only database checks passed: financial hypertable/compression, real-time monthly aggregate, scheduled refresh/compression jobs (successful last runs, no recorded job failures), core schema, and connection pressure. WAL archiving is active with no failures in its observed counters; this does **not** establish backup coverage.
+- Tiger CLI 0.26.0 is authenticated and the matching service is ready. Live 15-minute primary CPU/memory/disk metric reads passed. Sanitized dated reports are in `docs/operations/evidence/`; no credentials, endpoints, or financial records are included.
+- Added `tiger:health`, `tiger:metrics`, eight Prometheus alert rules/template plus synthetic rule checks, and `tiger:recovery:check` for isolated timestamp recovery validation. Monitoring templates are prepared; no recurring collector, exporter, or notification routing was installed.
+- Recovery verification rejects the protected database as a drill target, enforces read-only transactions, checks before/after markers bracketing the requested UTC target, and compares schema/bounded content fingerprints. Local unit/SQL fixtures test the verifier; they are not a live cloud PITR success.
+- **Live attempt incomplete:** within the approved $1 trial-credit cap, a free source clone became ready and received isolated checkpoints. The 0.5 CPU / 2 GiB timestamp recovery fork remained QUEUED until the 25-minute overall deadline. Both copies were deleted and absence confirmed at 09:36:29Z; the original remained READY and unchanged. Estimated cost below $0.10, actual billing unverified. See [attempt evidence](operations/evidence/tiger-pitr-2026-10-18.json).
+- Owner screenshots confirm a Performance trial with a free Shared DEV service ($0/hour, 750 MiB) and no Backup and restore menu. Provider documentation supports free-service forks and describes 24-hour PITR; actual recoverable timestamps remain unverified. The two-free-service quota was accommodated by using a temporary standard recovered fork; the original stayed free and no subscription conversion occurred.
+- **Pending:** service-specific backup history/retention and recoverable UTC range; plan/provider exporter availability; provider provisioning investigation and an approved retry for actual cloud PITR proof. A cloud service's generic capabilities are not evidence of this account's configured protection.
+- Verification: 13 operations tests pass including disposable PostgreSQL SQL/read-only enforcement; eight Prometheus rules and configuration syntax validate, and synthetic exporter/CPU alert tests pass. Existing main suite passes 178 tests with four live-service tests skipped; lint passes.
+- Runbook, backup coverage boundaries, private CLI setup and step-by-step isolated drill: [Tiger Data operations](operations/TIGER_DATA.md). Existing process-local state and external providers are not restored by a database backup.
+
 
 ## MoneyQuest main integration — October 18, 2026
 
@@ -40,7 +79,8 @@ The MoneyQuest branch includes GitHub `main` through `56a72d1`, including the ne
 | Phone scanning | Camera/upload controls and laptop-to-phone QR flow; user confirms extracted data before saving. | One-time scan sessions are process-local and expire after ten minutes; live phone/Gemini check pending in this pass. |
 | Bill email reminders | Per-bill scheduling with days-before, local hour/time zone, occurrence tracking, Resend templates, secret-protected cron route, systemd service/timer templates. | Requires email/cron configuration, current schema for durable reminders, and explicit scheduler installation; no live email sent here. |
 | Settle Up and bill splitting | Friends/guest emails, partial repayments, optional email and WhatsApp reminders, equal/custom/Gemini-suggested shares, receipt links, exact-cent validation, and linked receivables. | Confirmation required; optional email requires configuration. New split flows have unit coverage; live Gemini/notification checks are separate. |
-| Nessie sandbox | Account sync/category mapping, account references, P2P transfers, UUID IDs, empty/new-account compatibility. | User reports prior live sync/P2P. Not independently repeated in this pass. |
+| Live Split Room | Settle Up entry point to the separate DeepSpace collaborative draft-splitting app, with configurable URL/default destination. | Incorporated from teammate main `9c23514`; external room behavior was not independently exercised. |
+| Nessie sandbox | Per-user persisted sandbox customer/$0 checking account provisioning, setup/recovery, owned-account sync and payer validation, categories, P2P, UUID/empty-account compatibility. | Per-user changes are on the feature branch; require Auth0 + Nessie key + DB and live deployment verification. Historical shared-account sync/P2P was user-reported. |
 | Goals and copilot | Weekly reservations/contributions, forecast effects, validated Gemini financial tools/cards, model/offline fallback, purchase links and image extraction. | Planned AutoSave is not a transfer; service quota/configuration affects live AI features. |
 | Tiger Data | Financial-event/reminder/Solana receipt schema, monthly continuous aggregate, and compression of chunks older than 30 days segmented by owner. | Latest schema application, actual database jobs, and durable live behavior require server evidence. Pool currently disables TLS certificate validation while encrypting traffic. |
 | Solana | Devnet wallet adapter, fixed demo rate/recipient, successful confirmed transfer verification, signature claims and ledger settlement. | Real payment proof unresolved: latest user attempt never showed Phantom approval. Do not mark live end-to-end payment complete. |

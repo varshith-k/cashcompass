@@ -1,22 +1,12 @@
 import "server-only";
-
+import { getPlanningProfile, updatePlanningProfile } from "@/lib/storage/profile";
 export interface SyncStatus {
-  timestamp: string;
-  added: number;
-  skipped: number;
-  updated?: number;
-  accountId?: string;
-  accountName?: string;
-  accountBalance?: number;
+  timestamp: string; added: number; skipped: number; updated?: number;
+  accountId?: string; accountName?: string; accountBalance?: number;
 }
-
-/** Last sync per user (keyed by Auth0 `sub`). */
-const lastStatus = new Map<string, SyncStatus>();
-
-export function recordSyncStatus(ownerId: string, result: Omit<SyncStatus, "timestamp">) {
-  lastStatus.set(ownerId, { timestamp: new Date().toISOString(), ...result });
+export async function recordSyncStatus(ownerId: string, result: Omit<SyncStatus, "timestamp">) {
+  await updatePlanningProfile(ownerId, (profile) => { profile.syncStatus = { timestamp: new Date().toISOString(), ...result }; });
 }
-
-export function getSyncStatus(ownerId: string): SyncStatus | null {
-  return lastStatus.get(ownerId) ?? null;
+export async function getSyncStatus(ownerId: string): Promise<SyncStatus | null> {
+  return (await getPlanningProfile(ownerId)).syncStatus;
 }

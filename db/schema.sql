@@ -81,7 +81,8 @@ SELECT
   sum(amount) AS total
 FROM financial_events
 WHERE record = 'actual'
-GROUP BY owner_id, month, category, direction;
+GROUP BY owner_id, month, category, direction
+WITH NO DATA;
 
 -- Safe to re-run: fixes an existing installation created before this
 -- setting was added above (IF NOT EXISTS skips the CREATE either way).
@@ -153,3 +154,24 @@ CREATE TABLE IF NOT EXISTS shared_balances (
   UNIQUE (from_owner_id, from_event_id)
 );
 CREATE INDEX IF NOT EXISTS shared_balances_to_email_idx ON shared_balances (to_email, status);
+
+-- Durable per-user planning, balance checkpoints, and synchronization state.
+CREATE TABLE IF NOT EXISTS planning_profiles (
+  owner_id text PRIMARY KEY,
+  data jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Additive migration; preserves all existing accounts and financial events.
+CREATE TABLE IF NOT EXISTS nessie_user_accounts (
+  owner_id text PRIMARY KEY,
+  provisioning_token text NOT NULL UNIQUE,
+  customer_id text UNIQUE,
+  account_id text UNIQUE,
+  customer_attempted boolean NOT NULL DEFAULT false,
+  account_attempted boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CHECK (account_id IS NULL OR customer_id IS NOT NULL),
+  CHECK (NOT account_attempted OR customer_id IS NOT NULL)
+);

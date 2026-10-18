@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FinancialEvent, NewFinancialEvent } from "@/lib/finance/types";
 const state = vi.hoisted(() => ({ events: [] as FinancialEvent[] }));
-vi.mock("@/lib/finance/repository", () => ({ getFinancialEventRepository: () => ({
+vi.mock("@/lib/finance/repository", () => ({ withFinancialTransaction: async (work: (ownerId: string) => Promise<unknown>) => work("test-sync"), getFinancialEventRepository: () => ({
   listEvents: async () => state.events.map((e) => ({ ...e })),
   createEvent: async (input: NewFinancialEvent) => { const event = { ...input, id: crypto.randomUUID() }; state.events.push(event); return event; },
+  deleteEvent: async (id: string) => { state.events = state.events.filter((e) => e.id !== id); },
   updateEvent: async (id: string, patch: NewFinancialEvent) => { const index = state.events.findIndex((e) => e.id === id); return state.events[index] = { ...state.events[index], ...patch }; },
 }) }));
 vi.mock("./client", () => ({
@@ -33,6 +34,12 @@ describe("Nessie synchronization", () => {
     await syncNessieAccount("account");
     expect(state.events).toHaveLength(1);
     expect(state.events[0].record).toBe("actual");
+  });
+  it("removes a previously imported purchase when it is cancelled", async () => {
+    await syncNessieAccount("account");
+    vi.mocked(getAccountPurchases).mockResolvedValue([{ ...purchase, status: "cancelled" }]);
+    expect((await syncNessieAccount("account")).updated).toBe(1);
+    expect(state.events).toHaveLength(0);
   });
   it("does not import cancelled purchases", async () => {
     vi.mocked(getAccountPurchases).mockResolvedValue([{ ...purchase, status: "cancelled" }]);

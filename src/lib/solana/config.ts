@@ -1,7 +1,7 @@
 export const SOLANA_NETWORK = "devnet" as const;
 
 export const SOLANA_RPC_ENDPOINT =
-  process.env.SOLANA_RPC_ENDPOINT || "https://api.devnet.solana.com";
+  "https://api.devnet.solana.com";
 
 /**
  * Where a "Pay with Solana" transfer lands. CashCompass has no per-user
@@ -11,7 +11,6 @@ export const SOLANA_RPC_ENDPOINT =
  * control so the balance and Explorer history are visibly real.
  */
 export const SOLANA_DEMO_RECIPIENT =
-  process.env.SOLANA_DEMO_RECIPIENT_ADDRESS ||
   "CSScTCPyQ5MCbXKfT6kdaWaUhksCky8YNd9MA53AJ9JV";
 
 /**

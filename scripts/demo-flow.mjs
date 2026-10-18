@@ -18,8 +18,8 @@ try {
   await page.getByRole("button", { name: /User menu/ }).click();
   await page.getByRole("menuitem", { name: "Settings", exact: true }).waitFor();
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Notifications", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Review upcoming bills", exact: true }).waitFor();
+  await page.getByRole("button", { name: /^Notifications/ }).click();
+  await page.getByRole("menuitem", { name: "All bills & payments", exact: true }).waitFor();
   await page.keyboard.press("Escape");
   console.log("PASS account and reminder menus");
   await visit("/copilot");
@@ -29,7 +29,7 @@ try {
   await page.getByLabel("Amount", { exact: true }).waitFor();
   assert.equal(await page.getByLabel("Amount", { exact: true }).inputValue(), "1200");
   await page.getByRole("button", { name: "Buy after payday", exact: true }).click();
-  await page.getByText("Scenario minimum without uncertain repayments:", { exact: false }).waitFor();
+  await page.getByText("Scenario minimum without money owed to you:", { exact: false }).waitFor();
   console.log("PASS dashboard → copilot → reversible purchase comparison");
 
   await visit("/transactions");
@@ -45,6 +45,7 @@ try {
   await dialog.getByLabel("Amount", { exact: true }).fill("20.25");
   await dialog.getByRole("button", { name: "Save changes", exact: true }).click();
   await saved();
+  await page.waitForFunction((tag) => [...document.querySelectorAll("main li")].some((li) => li.textContent.includes(tag) && li.textContent.includes("20.25")), tag);
   assert((await row(tag).innerText()).includes("20.25"));
   await page.getByRole("searchbox", { name: "Search", exact: true }).fill(tag);
   await page.getByRole("searchbox", { name: "Search", exact: true }).press("Enter");
@@ -56,13 +57,16 @@ try {
   await visit("/bills");
   await page.getByRole("button", { name: "Add bill", exact: true }).click();
   dialog = page.getByRole("dialog");
-  await dialog.locator('input[type="file"]').setInputFiles({ name: "bill.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XcAAAAASUVORK5CYII=", "base64") });
-  await dialog.getByText(/fill in the form manually/).waitFor();
+  await dialog.locator('input[type="file"]').first().setInputFiles({ name: "bill.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XcAAAAASUVORK5CYII=", "base64") });
+  await dialog.getByText(/manually/i).waitFor();
   await dialog.getByLabel("Biller", { exact: true }).fill(tag);
   await dialog.getByLabel("Amount", { exact: true }).fill("15");
   await dialog.getByLabel("Due date", { exact: true }).fill(date(1));
   await dialog.getByRole("button", { name: "Add bill", exact: true }).click();
   await saved();
+  await row(tag).getByRole("button", { name: "Mark paid", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.waitForFunction((tag) => [...document.querySelectorAll("main li")].some((li) => li.textContent.includes(tag) && li.textContent.includes("Tomorrow")), tag);
   await row(tag).getByRole("button", { name: "Mark paid", exact: true }).click();
   await page.waitForFunction((tag) => [...document.querySelectorAll("main li")].some((li) => li.textContent.includes(tag) && !li.textContent.includes("Tomorrow")), tag);
   await row(tag).getByRole("button", { name: `Delete bill from ${tag}`, exact: true }).click();
@@ -70,7 +74,7 @@ try {
   await visit("/transactions");
   await row(tag).getByRole("button", { name: `Delete transaction with ${tag}`, exact: true }).click();
   await row(tag).waitFor({ state: "hidden" });
-  console.log("PASS bill scan fallback → manual confirmation → pay → monthly renewal");
+  console.log("PASS bill scan fallback → manual confirmation → pay → undo → monthly renewal");
 
   await visit("/wishlist");
   await page.getByRole("button", { name: "Add goal", exact: true }).click();
@@ -94,13 +98,14 @@ try {
   console.log("PASS goal creation → weekly reserves → contribution → cleanup");
 
   await visit("/ledger");
-  await page.getByRole("button", { name: "Add entry", exact: true }).click();
+  await page.getByRole("button", { name: "Add balance", exact: true }).click();
   dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Friend", { exact: true }).selectOption("");
   await dialog.getByLabel("Who", { exact: true }).fill(tag);
   await dialog.getByLabel("Their phone (optional)").fill("+15555550123");
   await dialog.getByLabel("Amount", { exact: true }).fill("50");
-  await dialog.getByLabel("Expected date", { exact: true }).fill(date(5));
-  await dialog.getByRole("button", { name: "Add entry", exact: true }).click();
+  await dialog.getByLabel("Expected by", { exact: true }).fill(date(5));
+  await dialog.getByRole("button", { name: "Add balance", exact: true }).click();
   await saved();
   assert((await row(tag).getByRole("link", { name: "Remind" }).getAttribute("href")).startsWith("https://wa.me/"));
   await row(tag).getByLabel(`Amount settled for ${tag}`).fill("20");

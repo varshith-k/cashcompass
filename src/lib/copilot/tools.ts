@@ -24,6 +24,7 @@ export interface ForecastContext {
   budgets: BudgetAllocation[];
   wishlistGoals: WishlistGoal[];
   openingBalance: number;
+  balanceDescription?: string;
   bufferThreshold: number;
   forecastDays: number;
   historyDays: number;

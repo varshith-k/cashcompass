@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: process.env.CASHCOMPASS_OUTPUT === "standalone" ? "standalone" : undefined,
   // Dev only: lets a phone on the same Wi-Fi open the dev server by the
   // laptop's private IP (used by "scan a bill with your phone").
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.*.*.*"],

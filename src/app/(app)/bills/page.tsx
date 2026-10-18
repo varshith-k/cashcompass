@@ -17,6 +17,8 @@ const TABS = [
   { id: "receipts", label: "Receipts" },
 ] as const;
 
+export const metadata = { title: "Bills & Payments" };
+
 export default async function BillsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   await connection();
 
@@ -56,7 +58,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
             aria-current={active === t.id ? "page" : undefined}
             className={cn(
               "rounded-md px-3 py-1.5 text-sm font-medium transition-colors min-h-9 inline-flex items-center",
-              active === t.id ? "bg-interactive text-white" : "text-muted-foreground hover:text-foreground",
+              active === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {t.label}

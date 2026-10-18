@@ -1,0 +1,39 @@
+{
+  "temporaryConnectionPolicy": "Matches existing app TLS policy: encrypted transport, certificate verification not required; CLI-generated sslmode removed only in memory for owned test services.",
+  "runId": "1ea1c6df-d750-46e8-8fba-213460cb1e10",
+  "startedAt": "2026-10-18T09:11:25.842Z",
+  "approval": {
+    "trialCreditCapUSD": 1,
+    "temporaryStandardCPU": 0.5,
+    "temporaryStandardMemoryGiB": 2,
+    "maxLifetimeAfterReadyMinutes": 30
+  },
+  "pricing": {
+    "source": "https://www.tigerdata.com/pricing",
+    "region": "us-east-1",
+    "computeUSDPerHour": 0.0412,
+    "estimatedTotalBelowUSD": 0.1,
+    "actualBillingVerified": false
+  },
+  "cloudDrillPassed": false,
+  "cleanupConfirmed": true,
+  "targetTime": "2026-10-18T09:12:30.483Z",
+  "failedStage": "wait_recovery",
+  "errorCode": "APPROVED_DEADLINE",
+  "completedAt": "2026-10-18T09:36:29.596Z",
+  "totalElapsedSeconds": 1504,
+  "status": "incomplete",
+  "resumedAfterTransientApiFailure": true,
+  "originalServiceReady": true,
+  "originalServiceIdentityUnchanged": true,
+  "privateEnvUnchangedDuringResume": true,
+  "savedCliReadOnlyUnchanged": true,
+  "temporaryCopiesCreated": 2,
+  "savedCliDefaultServiceConfigured": false,
+  "forkCommandsUsedNoSetDefault": true,
+  "sourceCloneReadySeconds": 62,
+  "sourceMarkersCommitted": true,
+  "lastObservedRecoveryStatus": "QUEUED",
+  "recoveredDataChecked": false,
+  "interruption": "Transient CLI/API failure interrupted the first observer; a resumed observer tracked the same copies until the original deadline and confirmed cleanup."
+}

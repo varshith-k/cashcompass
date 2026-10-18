@@ -1,5 +1,7 @@
 # Automatic deployment on Vultr
 
+> The October 18 consolidated release is authorized for deployment. Production uses the existing nginx/PM2/systemd timer. Its installed deploy script remains separate from the repository copy; install updates explicitly to enable schema migrations and database readiness checks. The public `/api/public/health` endpoint reports readiness and the deployed revision (full SHA with the updated installer, release-directory SHA prefix with the existing installer).
+
 ## Active server setup
 
 CashCompass runs at https://cashcompass.club on Vultr instance 66.42.81.135.
@@ -49,15 +51,15 @@ Environment files stay on the server and are copied with mode 600 into each
 new release. To change settings, edit the files in `/root/cashcompass` and
 deploy again. Existing releases are retained for recovery: monitor disk space
 and remove obsolete releases only after checking the current/previous links.
-The HTTP health check verifies server startup, not sign-in or finance workflows.
-In-memory budgets, goals, and other process-local data reset on deployment.
+The updated repository script checks database readiness; the previously installed script checks HTTP startup. Neither verifies a complete signed-in workflow.
+The production-readiness release persists budgets, goals, checkpoints, account snapshots and sync state in `planning_profiles` alongside financial events and receipts. It requires `DATABASE_URL` and the updated schema. Earlier process-local data resets on deployment and has no durable migration source after a restart.
 
 Changes to the deployment scripts in GitHub do not install themselves into
 systemd: upload revised scripts/units explicitly and reload systemd.
 
 ## Production configuration
 
-Commit `671a5b5718e31744ed2b731b39f78a17fe60939c` is deployed. The HTTPS
+User-provided server logs confirmed `3fa93059a6560d637c2efd784bd78f3d6de36c85` before this consolidated release. Check `/api/public/health` for the new revision after rollout. The HTTPS
 homepage returns 200, signed-out `/api/auth/me` returns 401, and `/overview`
 redirects signed-out visitors to login.
 
@@ -66,8 +68,7 @@ Gemini settings, APP_BASE_URL, and a server-generated AUTH0_SECRET. Local
 development settings are in the git-ignored `.env.local`; local and production
 cookie secrets are separate.
 
-The remaining login blocker is an Auth0 callback URL mismatch. In the Auth0
-application settings, allow these URLs (preserve any existing entries):
+An earlier report identified an Auth0 callback URL mismatch. The October 17 follow-up public probe now reaches Universal Login with the expected production callback and no detected mismatch error. Full sign-in/callback/logout verification still needs a user-controlled test session. If a mismatch recurs, check these Auth0 application URLs (preserve any existing entries):
 
 | Setting | URLs |
 | --- | --- |
@@ -141,3 +142,7 @@ Auto Backups (scheduled, billed) and the pre-deploy snapshot script above (on-de
 ### Monitoring (already included, no setup)
 
 Every Vultr instance ships with CPU, disk, and network graphs at no extra cost — **instance → Overview** in the dashboard already shows them. Nothing in this repo needs to change for that; there's no monitoring API integration here because there's nothing to integrate against the app itself (it's infrastructure-level, not app-level, metrics).
+
+## External database recovery
+
+Vultr disk snapshots/backups cover the server, not an external Tiger Cloud database. Database health checks, managed backup coverage, and isolated point-in-time recovery tests are documented in [Tiger Data operations](operations/TIGER_DATA.md). Neither a successful Vultr snapshot request nor a successful SQL connection proves the database has a tested recovery path.

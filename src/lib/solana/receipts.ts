@@ -1,23 +1,22 @@
 import "server-only";
-import { Pool } from "pg";
+import { onTransactionRollback, withDatabaseClient } from "@/lib/storage/transaction";
+const claimed = new Map<string, string>();
 
-const claimed = new Set<string>();
-let pool: Pool | undefined;
-
-/** Reserve a signature once across users. Database mode survives process restarts. */
+/** Uses the ledger transaction's database client, so receipt and repayment commit together. */
 export async function claimSettlement(signature: string, ownerId: string, entryId: string): Promise<boolean> {
   if (process.env.DATABASE_URL) {
-    pool ??= new Pool({ connectionString: process.env.DATABASE_URL });
-    const result = await pool.query("INSERT INTO solana_settlement_receipts (signature, owner_id, entry_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING signature", [signature, ownerId, entryId]);
-    return result.rowCount === 1;
+    return withDatabaseClient(async (client) => {
+      const result = await client.query("INSERT INTO solana_settlement_receipts (signature, owner_id, entry_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING signature", [signature, ownerId, entryId]);
+      return result.rowCount === 1;
+    });
   }
   if (claimed.has(signature)) return false;
-  claimed.add(signature);
+  claimed.set(signature, ownerId);
+  onTransactionRollback(() => { if (claimed.get(signature) === ownerId) claimed.delete(signature); });
   return true;
 }
-
 export async function releaseSettlement(signature: string, ownerId: string) {
   if (process.env.DATABASE_URL) {
-    await pool?.query("DELETE FROM solana_settlement_receipts WHERE signature = $1 AND owner_id = $2", [signature, ownerId]);
-  } else claimed.delete(signature);
+    await withDatabaseClient((client) => client.query("DELETE FROM solana_settlement_receipts WHERE signature = $1 AND owner_id = $2", [signature, ownerId]));
+  } else if (claimed.get(signature) === ownerId) claimed.delete(signature);
 }

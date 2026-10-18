@@ -1,6 +1,8 @@
 import { PageHeader } from "@/components/shell/page-header";
 import { CopilotChat } from "@/components/copilot/copilot-chat";
 
+export const metadata = { title: "Financial Copilot" };
+
 export default function CopilotPage() {
   return (
     <div>

@@ -19,7 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { settleLedgerWithSolana } from "@/lib/solana/actions";
-import { explorerUrl as transactionUrl, SOLANA_DEMO_RECIPIENT, SOLANA_DEMO_USD_PER_SOL } from "@/lib/solana/config";
+import { explorerUrl as transactionUrl, SOLANA_DEMO_USD_PER_SOL } from "@/lib/solana/config";
 import { formatCurrency } from "@/lib/format";
 
 type Step = "idle" | "preparing" | "sending" | "verifying" | "success" | "error";
@@ -28,10 +28,12 @@ export function PayWithSolanaDialog({
   ledgerEntryId,
   counterparty,
   amountUsd,
+  recipientAddress,
 }: {
   ledgerEntryId: string;
   counterparty: string;
   amountUsd: number;
+  recipientAddress: string;
 }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("idle");
@@ -102,7 +104,7 @@ export function PayWithSolanaDialog({
     setError(null);
 
     try {
-      const recipient = new PublicKey(SOLANA_DEMO_RECIPIENT);
+      const recipient = new PublicKey(recipientAddress);
       const lamports = Math.round(demoSol * 1_000_000_000);
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();

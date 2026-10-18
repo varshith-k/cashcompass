@@ -8,7 +8,7 @@ export function PageHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 mb-6">
+    <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
       <div>
         <h1 className="font-heading text-xl font-semibold">{title}</h1>
         {description && (

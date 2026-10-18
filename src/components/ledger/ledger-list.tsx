@@ -6,6 +6,7 @@ import { deleteLedgerEntry, logLedgerPayment } from "@/lib/finance/actions";
 import type { FinancialEvent } from "@/lib/finance/types";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
 import { buildWhatsAppReminderLink } from "@/lib/whatsapp";
+import { settlementRecipient } from "@/lib/solana/server-config";
 import { PayWithSolanaDialog } from "./pay-with-solana-dialog";
 import { SendReminderButton } from "./send-reminder-button";
 import { PayWithNessieButton } from "./pay-with-nessie-button";
@@ -105,6 +106,7 @@ export function LedgerList({
 
               {allowSolanaSettlement && (
                 <PayWithSolanaDialog
+                  recipientAddress={settlementRecipient()}
                   ledgerEntryId={entry.id}
                   counterparty={entry.counterparty}
                   amountUsd={entry.amount}

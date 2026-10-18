@@ -37,6 +37,7 @@ const SCENARIOS: { value: ScenarioKind; label: string }[] = [
 interface WhatIfSimulatorProps {
   events: FinancialEvent[];
   openingBalance: number;
+  balanceDescription?: string;
   bufferThreshold: number;
   forecastDays: number;
   historyDays: number;
@@ -50,6 +51,7 @@ interface WhatIfSimulatorProps {
 export function WhatIfSimulator({
   events,
   openingBalance,
+  balanceDescription = "Forecast from your opening balance and recorded events.",
   bufferThreshold,
   forecastDays,
   historyDays,
@@ -183,7 +185,7 @@ export function WhatIfSimulator({
         <CardTitle>What-if simulator</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        <p className="text-xs text-muted-foreground">Forecast from your opening balance and recorded events. Monthly bills and paychecks repeat; everyday spending is estimated at {formatCurrency(dailySpend, { cents: true })}/day from your last 30 days. Money friends owe you may not arrive on time. Results cover the visible forecast only.</p>
+        <p className="text-xs text-muted-foreground">{balanceDescription} Monthly bills and paychecks repeat; everyday spending is estimated at {formatCurrency(dailySpend, { cents: true })}/day from your last 30 days. Money friends owe you may not arrive on time. Results cover the visible forecast only.</p>
         <div className="flex flex-wrap gap-1.5">
           {SCENARIOS.map((s) => (
             <Button
