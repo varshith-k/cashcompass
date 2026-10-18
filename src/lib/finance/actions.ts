@@ -5,7 +5,7 @@ import { nextMonthlyDate } from "./dates";
 import { requireOwnerId } from "@/lib/auth/session";
 import { getFinancialEventRepository } from "./repository";
 import { settleLedgerAmount } from "./ledger";
-import { getFriend } from "./friends";
+import { findOrAddFriend, getFriend, isValidEmail } from "./friends";
 import { notifyFriend, type NotifyResult } from "@/lib/email/notify-friend";
 import { getBudgets, setBudgetLimits } from "./budgets";
 import { getWishlistGoals, addWishlistGoal, deleteWishlistGoal as removeWishlistGoal } from "./wishlist-goals";
@@ -208,7 +208,16 @@ export async function createLedgerEntry(formData: FormData): Promise<NotifyResul
   const ownerId = await requireOwnerId();
   const direction = parseDirection(formData.get("direction"));
   // A saved friend supplies the name, phone and email; otherwise a typed name.
-  const friend = getFriend(ownerId, String(formData.get("friendId") || "") || undefined);
+  let friend = getFriend(ownerId, String(formData.get("friendId") || "") || undefined);
+  const typedName = String(formData.get("counterparty") || "").trim().replace(/\s+/g, " ").slice(0, 60);
+  const typedEmail = String(formData.get("email") || "").trim().toLowerCase();
+  const typedPhone = String(formData.get("phone") || "").trim();
+  if (!friend && typedEmail) {
+    // Someone else with an email: save them as a friend so they can be emailed now and later.
+    if (!isValidEmail(typedEmail)) throw new Error("Invalid email address");
+    if (!typedName) throw new Error("Enter who this balance is with");
+    friend = findOrAddFriend(ownerId, { name: typedName, email: typedEmail, phone: typedPhone || undefined });
+  }
   const created = await getFinancialEventRepository().createEvent({
     date: parseDate(formData.get("date")),
     amount: parseAmount(formData.get("amount")),
@@ -220,8 +229,8 @@ export async function createLedgerEntry(formData: FormData): Promise<NotifyResul
     recurrence: "one-time",
     source: "manual",
     category: "Repayment",
-    counterparty: friend?.name ?? (String(formData.get("counterparty") || "").trim().slice(0, 60) || "Unknown"),
-    counterpartyPhone: friend?.phone ?? (String(formData.get("phone") || "").trim() || undefined),
+    counterparty: friend?.name ?? (typedName || "Unknown"),
+    counterpartyPhone: friend?.phone ?? (typedPhone || undefined),
     friendId: friend?.id,
   });
   revalidatePath("/", "layout");
