@@ -12,7 +12,7 @@ The numbered sections below preserve the original product requirements. **Do not
 
 ### Delivered feature inventory
 
-Gemini follow-up (October 18): a validated guidance tool now handles greetings, capability questions, missing purchase amounts, and off-topic requests; successful guidance is no longer labeled as an API outage. Financial tools remain deterministic. Six local live Gemini checks passed, including the screenshot's two conversational messages and synthetic bill-photo extraction; 192 unit tests and lint passed. Deployment is pending. Build validation encountered a Turbopack worker-port permission failure, then an existing `/api/auth/me` route context type error under Webpack; neither is claimed as a successful production build for this follow-up. See [copilot boundary](src/lib/copilot/README.md).
+Gemini follow-up (October 18): a validated guidance tool now handles greetings, capability questions, missing purchase amounts, and off-topic requests; successful guidance is no longer labeled as an API outage. Financial tools remain deterministic. Six local live Gemini checks passed, including the screenshot's two conversational messages and synthetic bill-photo extraction; The Auth0 `/api/auth/me` handler now passes its generated Next.js route-context type to `withSession`, preserving runtime session checks. With main through `8d652b9`, 195 unit tests, lint, and the Webpack production build pass. Turbopack remains blocked by a local worker-port permission error. The owner authorized merge/deployment; server rollout still needs confirmation because available SSH authentication is denied. See [copilot boundary](src/lib/copilot/README.md).
 
 | Area | Implemented behavior | Verification / operational boundary |
 | --- | --- | --- |
