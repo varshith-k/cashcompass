@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { nextMonthlyDate } from "./dates";
-import { requireOwnerId } from "@/lib/auth/session";
+import { requireOwnerId, requireSession } from "@/lib/auth/session";
 import { getFinancialEventRepository } from "./repository";
 import { settleLedgerAmount } from "./ledger";
+import { shareBalance, unshareEvent } from "./shared-balances";
 import { findOrAddFriend, getFriend, isValidEmail } from "./friends";
 import { getReminderStore } from "./bill-reminders";
 import { notifyFriend, type NotifyResult } from "@/lib/email/notify-friend";
@@ -243,10 +244,11 @@ export async function deleteWishlistGoal(formData: FormData) {
 }
 
 export async function createLedgerEntry(formData: FormData): Promise<NotifyResult | null> {
-  const ownerId = await requireOwnerId();
+  const session = await requireSession();
+  const ownerId = session.user.id;
   const direction = parseDirection(formData.get("direction"));
   // A saved friend supplies the name, phone and email; otherwise a typed name.
-  let friend = getFriend(ownerId, String(formData.get("friendId") || "") || undefined);
+  let friend = await getFriend(ownerId, String(formData.get("friendId") || "") || undefined);
   const typedName = String(formData.get("counterparty") || "").trim().replace(/\s+/g, " ").slice(0, 60);
   const typedEmail = String(formData.get("email") || "").trim().toLowerCase();
   const typedPhone = String(formData.get("phone") || "").trim();
@@ -254,7 +256,7 @@ export async function createLedgerEntry(formData: FormData): Promise<NotifyResul
     // Someone else with an email: save them as a friend so they can be emailed now and later.
     if (!isValidEmail(typedEmail)) throw new Error("Invalid email address");
     if (!typedName) throw new Error("Enter who this balance is with");
-    friend = findOrAddFriend(ownerId, { name: typedName, email: typedEmail, phone: typedPhone || undefined });
+    friend = await findOrAddFriend(ownerId, { name: typedName, email: typedEmail, phone: typedPhone || undefined });
   }
   const created = await getFinancialEventRepository().createEvent({
     date: parseDate(formData.get("date")),
@@ -271,6 +273,8 @@ export async function createLedgerEntry(formData: FormData): Promise<NotifyResul
     counterpartyPhone: friend?.phone ?? (typedPhone || undefined),
     friendId: friend?.id,
   });
+  // They see it in their own Settle Up (to accept) if they use CashCompass with that email.
+  await shareBalance(session.user, friend?.email, created, "");
   revalidatePath("/", "layout");
   if (!friend || formData.get("notify") !== "on") return null;
   try {
@@ -283,6 +287,7 @@ export async function createLedgerEntry(formData: FormData): Promise<NotifyResul
 
 export async function deleteLedgerEntry(formData: FormData) {
   await deleteMatching(formData, (e) => e.category === "Repayment" && e.record === "planned", "Ledger entry not found");
+  await unshareEvent(await requireOwnerId(), String(formData.get("id")));
 }
 
 export async function logLedgerPayment(formData: FormData) {

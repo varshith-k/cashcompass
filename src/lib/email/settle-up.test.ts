@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FinancialEvent } from "@/lib/finance/types";
 
 const session = vi.hoisted(() => ({ value: { user: { id: "auth0|ana", name: "Ana Lopez", email: "ana@example.com" }, expiresAt: "", source: "auth0" } as unknown }));
-vi.mock("@/lib/auth/session", () => ({ getSession: async () => session.value, requireOwnerId: async () => "auth0|ana" }));
+vi.mock("@/lib/auth/session", () => ({ getSession: async () => session.value, requireOwnerId: async () => "auth0|ana", requireSession: async () => ({ user: { id: "auth0|ana", name: "Ana", email: "ana@example.com" } }) }));
 
 import { notifyFriend } from "./notify-friend";
 import { mailtoLink, settleUpEmail } from "./settle-up-templates";
@@ -88,7 +88,7 @@ describe("notifyFriend", () => {
   it("never emails anyone who isn't a saved friend with an email", async () => {
     expect((await notifyFriend("added", entry({ friendId: undefined }))).status).toBe("no-email");
     expect((await notifyFriend("added", entry({ friendId: "someone-elses-friend" }))).status).toBe("no-email");
-    const noEmail = addFriend("auth0|ana", { name: "No Email Nia" });
+    const noEmail = await addFriend("auth0|ana", { name: "No Email Nia" });
     expect((await notifyFriend("added", entry({ friendId: noEmail.id }))).status).toBe("no-email");
     expect(fetchMock).not.toHaveBeenCalled();
   });

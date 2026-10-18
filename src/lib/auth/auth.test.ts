@@ -14,7 +14,7 @@ describe("toAuthUser", () => {
   it("maps sub to id, picture to avatarUrl, and drops other claims", () => {
     expect(
       toAuthUser({ sub: "auth0|1", name: "Ada", email: "a@x.io", picture: "https://p/x.png", email_verified: true } as never),
-    ).toEqual({ id: "auth0|1", name: "Ada", email: "a@x.io", avatarUrl: "https://p/x.png" });
+    ).toEqual({ id: "auth0|1", name: "Ada", email: "a@x.io", avatarUrl: "https://p/x.png", emailVerified: true });
   });
 
   it("fills required display fields when the IdP omits them", () => {

@@ -25,7 +25,7 @@ export async function addFriendAction(_previous: FriendFormState, formData: Form
   if (nessieAccountId && !isNessieId(nessieAccountId)) return { status: "error", message: "That doesn't look like a Nessie account ID (24 hex characters, or a UUID)." };
 
   try {
-    addFriend(ownerId, { name, email: email || undefined, phone: phone || undefined, nessieAccountId: nessieAccountId || undefined });
+    await addFriend(ownerId, { name, email: email || undefined, phone: phone || undefined, nessieAccountId: nessieAccountId || undefined });
   } catch (error) {
     return { status: "error", message: error instanceof Error ? error.message : "Couldn't add that friend." };
   }
@@ -35,7 +35,7 @@ export async function addFriendAction(_previous: FriendFormState, formData: Form
 
 export async function removeFriendAction(formData: FormData) {
   const ownerId = await requireOwnerId();
-  removeFriend(ownerId, String(formData.get("id") ?? ""));
+  await removeFriend(ownerId, String(formData.get("id") ?? ""));
   revalidatePath("/settle-up");
 }
 
@@ -64,7 +64,7 @@ export async function payWithNessieTransfer(entryId: string): Promise<TransferRe
     (event) => event.id === entryId && event.category === "Repayment" && event.record === "planned" && event.direction === "expense",
   );
   if (!entry) return { ok: false, message: "That balance is no longer open." };
-  const friend = getFriend(ownerId, entry.friendId);
+  const friend = await getFriend(ownerId, entry.friendId);
   if (!friend?.nessieAccountId) return { ok: false, message: "Add this friend's Nessie account ID first." };
 
   const { accounts, error } = await listDemoAccounts();

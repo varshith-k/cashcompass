@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FinancialEvent, NewFinancialEvent } from "./types";
 const state = vi.hoisted(() => ({ events: [] as FinancialEvent[] }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/auth/session", () => ({ requireOwnerId: async () => "test-owner" }));
+vi.mock("@/lib/auth/session", () => ({ requireOwnerId: async () => "test-owner", requireSession: async () => ({ user: { id: "test-owner", name: "Test Owner", email: "owner@example.com" } }) }));
 vi.mock("./repository", () => ({ getFinancialEventRepository: () => ({
   listEvents: async () => state.events.map((e) => ({ ...e })),
   createEvent: async (input: NewFinancialEvent) => { const event = { ...input, id: crypto.randomUUID() }; state.events.push(event); return event; },

@@ -117,3 +117,39 @@ CREATE TABLE IF NOT EXISTS bill_reminders (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (owner_id, bill_id)
 );
+
+-- Settle Up friends, per user. The app also creates this table on first use
+-- (src/lib/finance/app-tables.ts), so older deployments keep working.
+CREATE TABLE IF NOT EXISTS friends (
+  id text PRIMARY KEY,
+  owner_id text NOT NULL,
+  name text NOT NULL,
+  email text,
+  phone text,
+  nessie_account_id text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS friends_owner_name_idx ON friends (owner_id, lower(name));
+
+-- A balance one user shared with another CashCompass user (by email). The
+-- recipient sees it only with that verified email and must accept it; after
+-- that, payments on either side are mirrored to the other.
+CREATE TABLE IF NOT EXISTS shared_balances (
+  id text PRIMARY KEY,
+  from_owner_id text NOT NULL,
+  from_name text NOT NULL,
+  from_email text,
+  to_email text NOT NULL,
+  kind text NOT NULL CHECK (kind IN ('they_owe_sender', 'sender_owes')),
+  amount numeric(12, 2) NOT NULL CHECK (amount > 0),
+  description text NOT NULL,
+  due_date timestamptz NOT NULL,
+  from_event_id text NOT NULL,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'settled', 'cancelled')),
+  to_owner_id text,
+  to_event_id text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (from_owner_id, from_event_id)
+);
+CREATE INDEX IF NOT EXISTS shared_balances_to_email_idx ON shared_balances (to_email, status);

@@ -8,7 +8,10 @@ import { LedgerList } from "@/components/ledger/ledger-list";
 import { ActionForm } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { requireOwnerId } from "@/lib/auth/session";
+import { SharedWithYou, type IncomingShare } from "@/components/ledger/shared-with-you";
+import { requireSession } from "@/lib/auth/session";
+import type { AuthUser } from "@/lib/auth/types";
+import { getSharedBalanceStore } from "@/lib/finance/shared-balances";
 import { isEmailConfigured } from "@/lib/email/resend";
 import { isNessieConfigured } from "@/lib/nessie/client";
 import { selectLedgerEntries } from "@/lib/finance/calculations";
@@ -17,14 +20,56 @@ import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { removeFriendAction } from "@/lib/finance/settle-up-actions";
 import { formatCurrency } from "@/lib/format";
 
+/**
+ * Balances other users shared with you (only for your verified email), and a
+ * status line for each of your balances that's shared. Never breaks the page.
+ */
+async function loadSharing(
+  user: AuthUser,
+  entries: { id: string; counterparty: string; sourceRecordId?: string }[],
+): Promise<{ incoming: IncomingShare[]; notes: Record<string, string> }> {
+  try {
+    const shares = getSharedBalanceStore();
+    const [pending, sent] = await Promise.all([
+      user.emailVerified && user.email ? shares.listPendingFor(user.email.toLowerCase()) : Promise.resolve([]),
+      shares.listSentBy(user.id),
+    ]);
+    const notes: Record<string, string> = {};
+    for (const share of sent) {
+      if (share.status === "pending") notes[share.fromEventId] = `Shared with ${share.toEmail} · waiting for them to accept`;
+      else if (share.status === "accepted") notes[share.fromEventId] = `Linked with ${share.toEmail}'s CashCompass · payments sync both ways`;
+      else if (share.status === "declined") notes[share.fromEventId] = `${share.toEmail} said this isn't theirs`;
+    }
+    for (const entry of entries) {
+      if (entry.sourceRecordId?.startsWith("shared/")) notes[entry.id] = `Linked with ${entry.counterparty}'s CashCompass · payments sync both ways`;
+    }
+    const incoming = pending
+      .filter((share) => share.fromOwnerId !== user.id)
+      .map((share) => ({
+        id: share.id,
+        fromName: share.fromName,
+        fromEmail: share.fromEmail,
+        youOwe: share.kind === "they_owe_sender",
+        amount: share.amount,
+        description: share.description,
+        dueDate: share.dueDate,
+      }));
+    return { incoming, notes };
+  } catch (error) {
+    console.warn("[shared] couldn't load shared balances:", error instanceof Error ? error.message : "unknown error");
+    return { incoming: [], notes: {} };
+  }
+}
+
 export default async function SettleUpPage({ searchParams }: { searchParams: Promise<{ split?: string }> }) {
   const { split: splitReceiptId } = await searchParams;
   await connection();
 
-  const ownerId = await requireOwnerId();
+  const { user } = await requireSession();
+  const ownerId = user.id;
   const events = await getFinancialEventRepository().listEvents();
   const { owedToMe, iOwe } = selectLedgerEntries(events);
-  const friends = getFriends(ownerId);
+  const [friends, sharing] = await Promise.all([getFriends(ownerId), loadSharing(user, [...owedToMe, ...iOwe])]);
   // Receipts that can be split here (newest first); already-split ones are marked.
   const splitKeys = new Set(events.map((e) => e.sourceRecordId).filter((k): k is string => Boolean(k?.startsWith("split/"))));
   const receiptOptions = events
@@ -75,6 +120,8 @@ export default async function SettleUpPage({ searchParams }: { searchParams: Pro
           </div>
         }
       />
+
+      <SharedWithYou shares={sharing.incoming} />
 
       {!emailReady && (
         <p className="rounded-lg bg-accent px-4 py-3 text-sm text-muted-foreground">
@@ -159,12 +206,14 @@ export default async function SettleUpPage({ searchParams }: { searchParams: Pro
       <LedgerList
         title="Owed to you"
         entries={owedToMe}
+        shareNotes={sharing.notes}
         emptyText="Nobody owes you anything right now."
         emailableFriendIds={emailableFriendIds}
       />
       <LedgerList
         title="You owe"
         entries={iOwe}
+        shareNotes={sharing.notes}
         emptyText="You don't owe anyone right now."
         allowSolanaSettlement
         nessieFriendIds={nessieFriendIds}

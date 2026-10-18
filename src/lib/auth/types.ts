@@ -3,6 +3,8 @@ export interface AuthUser {
   name: string;
   email: string;
   avatarUrl?: string;
+  /** True only when Auth0 says the email is verified (always for Google). */
+  emailVerified?: boolean;
 }
 
 export interface AuthSession {

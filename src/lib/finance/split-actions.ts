@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireOwnerId, requireSession } from "@/lib/auth/session";
+import { requireSession } from "@/lib/auth/session";
 import { notifyFriend } from "@/lib/email/notify-friend";
 import { EXPENSE_CATEGORIES } from "./categories";
 import { findOrAddFriend, getFriend, isValidEmail } from "./friends";
 import { getFinancialEventRepository } from "./repository";
+import { shareBalance } from "./shared-balances";
 import { reconcileShares, validateShares } from "./split";
 import { suggestSharesWithGemini, type SplitPerson } from "./split-ai";
 import type { FinancialEvent } from "./types";
@@ -72,7 +73,8 @@ export type CreateSplitResult = { ok: true; created: number; emailed: number; me
  * they must add up to the bill exactly.
  */
 export async function createSplit(input: CreateSplitInput): Promise<CreateSplitResult> {
-  const ownerId = await requireOwnerId();
+  const session = await requireSession();
+  const ownerId = session.user.id;
   const repo = getFinancialEventRepository();
   const events = await repo.listEvents();
 
@@ -85,7 +87,7 @@ export async function createSplit(input: CreateSplitInput): Promise<CreateSplitR
   // Check every person before writing anything, so a bad entry never leaves a half-made split.
   const resolved: { person: SplitParticipantInput; name: string; friendId?: string; email?: string }[] = [];
   for (const person of others) {
-    const friend = person.kind === "friend" ? getFriend(ownerId, person.friendId) : undefined;
+    const friend = person.kind === "friend" ? await getFriend(ownerId, person.friendId) : undefined;
     if (person.kind === "friend" && !friend) return { ok: false, message: `${person.name} isn't in your friends.` };
     const name = friend?.name ?? String(person.name ?? "").trim().replace(/\s+/g, " ").slice(0, 60);
     if (!name) return { ok: false, message: "Every person needs a name." };
@@ -124,7 +126,7 @@ export async function createSplit(input: CreateSplitInput): Promise<CreateSplitR
   let emailed = 0;
   for (const { person, name, friendId, email } of resolved) {
     // One-off people with an email are saved as friends so they can be emailed and reminded.
-    const friend = friendId ? getFriend(ownerId, friendId) : email ? findOrAddFriend(ownerId, { name, email }) : undefined;
+    const friend = friendId ? await getFriend(ownerId, friendId) : email ? await findOrAddFriend(ownerId, { name, email }) : undefined;
 
     const balance = await repo.createEvent({
       date: dueDate,
@@ -141,6 +143,7 @@ export async function createSplit(input: CreateSplitInput): Promise<CreateSplitR
       sourceRecordId: `split/${bill.id}`,
     });
     created++;
+    await shareBalance(session.user, friend?.email, balance, `Share of ${bill.counterparty} (total ${bill.amount.toFixed(2)})`);
     if (input.notify && friend?.email) {
       try {
         const result = await notifyFriend("added", balance);
