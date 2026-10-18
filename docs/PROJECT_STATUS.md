@@ -2,7 +2,7 @@
 
 Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.md` preserves the original requirements.
 
-**Production completion is pending.** Pulled GitHub `main` through `a817ce4`, including Gemini reliability, PR #4 usability fixes and the Vultr deployment guide. This release packages the production-readiness changes on `release/production-readiness` for review before merging into `main`. The new guide reports a PM2/nginx deployment and a systemd timer that polls `main`; those live settings have not been independently inspected from this session. Server credential presence, migrations and release identity still require authenticated access.
+**Production completion is pending.** Pulled GitHub `main` through `a817ce4`, including Gemini reliability, PR #4 usability fixes and the Vultr deployment guide. Committed and pushed the production-readiness changes on `release/production-readiness`, with [draft PR #5](https://github.com/varshith-k/cashcompass/pull/5) for review before merging into `main`. The new guide reports a PM2/nginx deployment and a systemd timer that polls `main`; those live settings have not been independently inspected from this session. Server credential presence, migrations and release identity still require authenticated access.
 
 ## Phase status
 
@@ -15,7 +15,7 @@ Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.
 | 4 — Copilot and simulator | Implemented; live Gemini verification pending | Validated tools, grounded result cards, visible local/fallback mode, reversible scenarios, and purchase inputs carried into the simulator. |
 | 5 — Budgets, goals, ledger | Complete for the demo | Editable allocations, weekly planned reserves, confirmed goal contributions, partial repayments, real WhatsApp links, and shared forecast events. |
 | 6 — Verification | Local checks pass; external checks pending | Unit/database tests, lint, types, production build, responsive/accessibility audit, and connected browser demo. Live integrations require configured access. |
-| 7 — GitHub delivery | Release branch prepared; main merge awaits approval | All three earlier remote feature/fix branches are ancestors of `main`; the current release is isolated because merging can trigger deployment. |
+| 7 — GitHub delivery | Delivered to release branch and draft PR #5 | All three earlier remote feature/fix branches are ancestors of `main`; the current release is pushed separately because merging can trigger deployment and requires approval. |
 | Production release | Pending access, inspection and approval | No working SSH identity is available in this session. No server restart, rebuild, migration or redeployment has been performed here. |
 
 ## Work completed in this pass
@@ -50,6 +50,7 @@ Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.
 - `npm run test:demo`: dashboard → copilot → purchase comparison; dynamic notification/account menus; transaction create/edit/search/delete; bill scan fallback/manual save/payment/undo/renewal; goal scheduling/contribution; WhatsApp link and partial repayment. No browser runtime errors.
 - Full TimescaleDB schema migration and the Node 22 multistage Docker build pass locally. The minimal runtime uses uid 1001; unused `braces`, `stream-json` and the shadcn CLI are excluded from its traced dependency tree. Live service authentication is a separate pending check.
 - A read-only, capability-restricted local runtime returns readiness 200 against the migrated test database, returns 401 for signed-out identity requests, and redirects the protected dashboard to authentication. It used generated test configuration, not real Auth0 credentials.
+- Public HTTPS smoke check: `/` returns 200, `/overview` returns 307, `/api/auth/me` returns 401, and the new `/api/public/health` returns 404 on the existing deployment. This verifies basic reachability/authentication gating, not signed-in workflows or the new release. GitHub verification runs on draft PR #5; consult its checks for the latest result.
 - Automated accessibility checks supplement keyboard interactions and visual inspection; they are not a complete screen-reader certification.
 
 ## Remaining environment and product limits
