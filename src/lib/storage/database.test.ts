@@ -25,7 +25,8 @@ describe.skipIf(!enabled)("PostgreSQL persistence and atomic mutations", () => {
     if (!url) throw new Error("Set TEST_DATABASE_URL to a disposable local verification database");
     const parsed = new URL(url);
     if (!["localhost", "127.0.0.1"].includes(parsed.hostname) || !/verification|test/.test(parsed.pathname)) throw new Error("Database tests only run against a named local test database");
-    vi.stubEnv("DATABASE_URL", url);
+    parsed.searchParams.set("sslmode", "disable");
+    vi.stubEnv("DATABASE_URL", parsed.toString());
     pool = new Pool({ connectionString: url });
     const schema = await readFile("db/schema.sql", "utf8");
     if (process.env.TEST_TIMESCALE === "true") await pool.query(schema);
