@@ -48,6 +48,16 @@ ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS source_record_id text;
 -- chunks instead of scanning the whole table.
 SELECT create_hypertable('financial_events', 'event_date', if_not_exists => TRUE);
 
+-- Compression: chunks older than 30 days compress automatically. Segmented
+-- by owner_id so a per-user query still only decompresses that user's
+-- rows, ordered by event_date since that's how this table is always read.
+ALTER TABLE financial_events SET (
+  timescaledb.compress,
+  timescaledb.compress_segmentby = 'owner_id',
+  timescaledb.compress_orderby = 'event_date DESC'
+);
+SELECT add_compression_policy('financial_events', INTERVAL '30 days', if_not_exists => TRUE);
+
 CREATE INDEX IF NOT EXISTS financial_events_owner_date_idx ON financial_events (owner_id, event_date DESC);
 CREATE INDEX IF NOT EXISTS financial_events_owner_id_idx ON financial_events (owner_id, id);
 CREATE INDEX IF NOT EXISTS financial_events_category_idx ON financial_events (category);
