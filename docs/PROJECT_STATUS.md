@@ -2,6 +2,14 @@
 
 Updated October 18, 2026. The original phase delivery was checked October 17; newer teammate features and the MoneyQuest companion are recorded below. [`PROJECT_HANDOFF.md`](../PROJECT_HANDOFF.md) preserves the requirements and now includes the current feature handoff.
 
+## MoneyQuest main integration — October 18, 2026
+
+The user authorized merging MoneyQuest into `main`. The merge candidate includes current main through `6ec59a5`, preserving the newer sign-in security, login documentation, interface text, and laptop webcam changes. A push/merge to `main` can activate the documented Vultr auto-deploy timer; a GitHub merge is not by itself proof that production finished deploying.
+
+Merge checks: **181 unit tests passed**, four live-service tests skipped; lint, TypeScript production compilation, and the production build passed. The standalone Luau suite still passes **4,261 assertions across 324 complete decision paths**. Earlier MoneyQuest browser/a11y evidence is recorded below; Studio runtime and production rollout are separate checks.
+
+Roblox public release is still blocked by the owner's newly created account eligibility. Until a genuine public game URL is configured, the website must show “Game publishing in progress.” Studio gameplay, public Player access, and an actual Solana payment remain unverified.
+
 ## Current feature inventory — October 18, 2026
 
 The MoneyQuest branch includes GitHub `main` through `56a72d1`, including the newer teammate features below. This is source-level delivery evidence, not a fresh assertion that every external service is live.
@@ -27,7 +35,7 @@ The [current handoff](../PROJECT_HANDOFF.md#current-implementation-handoff--octo
 
 ## MoneyQuest companion — October 18, 2026
 
-Implemented separately on `feature/moneyquest-roblox`; this does not mark the existing integration phases live-verified or deploy a change to main.
+Initially implemented separately on `feature/moneyquest-roblox`; the main integration is now authorized above. This does not mark the existing external-service phases live-verified.
 
 - Added `/moneyquest` and a shared sidebar entry after Cash Flow. Mobile More includes it; the bottom bar retains Overview, Cash Flow, and AI Copilot.
 - Added a validated `NEXT_PUBLIC_ROBLOX_MONEYQUEST_URL` launcher. Missing/invalid configuration displays “Game publishing in progress.” No experience ID or publication is fabricated.
@@ -35,7 +43,7 @@ Implemented separately on `feature/moneyquest-roblox`; this does not mark the ex
 - Added `roblox/moneyquest`: original four-station 3D neighborhood, six financial choices plus final review, server-controlled integer-cents simulation, deterministic scheduled events, 0–100 scoring, results, and replay. No real finance data or credentials cross into Roblox.
 - Rojo 7.7.1 builds `roblox/moneyquest/build/MoneyQuest.rbxlx`. All six Luau source files compile; the pure engine, scorer, request protocol, and tests pass static analysis. Standalone Luau verifies 324 full paths with 4,261 assertions.
 - Website verification: after incorporating main through `56a72d1`, lint, typecheck, and production build pass; **175 unit tests pass**, with four live-service tests skipped. A separate credential-free local preview passes eight responsive/theme combinations, axe accessibility, desktop order, mobile More/bottom-bar checks, and navigation to Cash Flow. The earlier production-mode HTTP check confirmed both routes fail closed without Auth0. No live Auth0 sign-in or Roblox launch was performed in this pass.
-- **Still requires owner action:** Studio runtime/UI/replication playtesting, publishing/releasing with a Roblox account, testing access from Roblox Player, entering the genuine published URL, and approved website deployment. A built place file is not a Studio playtest or prize-eligibility confirmation.
+- **Still requires owner action/evidence:** Studio runtime/UI/replication playtesting, publishing/releasing with a Roblox account, testing access from Roblox Player, entering the genuine published URL, and confirming website deployment. A built place file is not a Studio playtest or prize-eligibility confirmation.
 - Exact import, manual script placement, test paths, publishing, configuration, and limitations: [`roblox/moneyquest/README.md`](../roblox/moneyquest/README.md).
 
 ## Original phase status — October 17, 2026

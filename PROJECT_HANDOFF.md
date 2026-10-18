@@ -60,7 +60,7 @@ The score allocates **35** points to on-time bills, **20** to avoiding negative 
 - Owner is publishing the Roblox game and will supply its genuine public `/games/<place-id>` URL. No publication or Studio runtime result has been received yet. Once supplied, validate/configure `NEXT_PUBLIC_ROBLOX_MONEYQUEST_URL`, rebuild, and verify real Player launch. Never substitute a fabricated ID.
 - Complete an actual Solana devnet payment and retain its signature/Explorer proof; investigate the missing approval before retrying an uncertain send.
 - Verify current database schema/Timescale jobs and the reminder scheduler from the real deployment; code presence is not live verification. Keep DB values, provider keys, session secrets, and SSH credentials out of Git and chat.
-- This delivery pushes the feature branch. Merging to `main` can trigger the documented Vultr deploy timer and remains a separate deployment decision. Existing release/other feature branches are preserved.
+- Initial delivery pushed the feature branch. On October 18 the user authorized merging MoneyQuest into `main`, which can trigger the documented Vultr deploy timer. The merge candidate includes newer main changes through `6ec59a5`; verify production rollout separately. Roblox release/URL configuration remains pending. Existing release/other feature branches are preserved.
 
 ## 1. Product overview
 
