@@ -6,13 +6,11 @@ import { notifyFriend, type NotifyResult } from "@/lib/email/notify-friend";
 import { listDemoAccounts } from "@/lib/nessie/accounts";
 import { createTransfer, isNessieConfigured, isNessieId } from "@/lib/nessie/client";
 import { getSyncStatus } from "@/lib/nessie/status";
-import { addFriend, getFriend, removeFriend } from "./friends";
+import { addFriend, getFriend, isValidEmail, removeFriend } from "./friends";
 import { settleLedgerAmount } from "./ledger";
 import { getFinancialEventRepository } from "./repository";
 
 export type FriendFormState = { status: "idle" | "saved" | "error"; message: string };
-
-const EMAIL_PATTERN = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 
 export async function addFriendAction(_previous: FriendFormState, formData: FormData): Promise<FriendFormState> {
   const ownerId = await requireOwnerId();
@@ -22,7 +20,7 @@ export async function addFriendAction(_previous: FriendFormState, formData: Form
   const nessieAccountId = String(formData.get("nessieAccountId") ?? "").trim().toLowerCase();
 
   if (!name || name.length > 60) return { status: "error", message: "Enter a name (up to 60 characters)." };
-  if (email && (email.length > 254 || !EMAIL_PATTERN.test(email))) return { status: "error", message: "That email address doesn't look right." };
+  if (email && !isValidEmail(email)) return { status: "error", message: "That email address doesn't look right." };
   if (phone && !/^\+?[\d\s().-]{7,20}$/.test(phone)) return { status: "error", message: "That phone number doesn't look right." };
   if (nessieAccountId && !isNessieId(nessieAccountId)) return { status: "error", message: "That doesn't look like a Nessie account ID (24 hex characters, or a UUID)." };
 

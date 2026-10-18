@@ -32,12 +32,18 @@ export function AddLedgerEntrySheet({ friends = [] }: { friends?: FriendOption[]
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
   const [emailResult, setEmailResult] = useState<NotifyResult | null>(null);
+  const [typedEmail, setTypedEmail] = useState("");
+  const [typedName, setTypedName] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const friend = friends.find((f) => f.id === friendId);
 
   function close(next: boolean) {
     setOpen(next);
-    if (!next) setEmailResult(null);
+    if (!next) {
+      setEmailResult(null);
+      setTypedEmail("");
+      setTypedName("");
+    }
   }
 
   return (
@@ -57,7 +63,7 @@ export function AddLedgerEntrySheet({ friends = [] }: { friends?: FriendOption[]
 
         {emailResult ? (
           <div className="px-4 pb-6 space-y-4">
-            <ReminderStatus result={emailResult} friendName={friend?.name ?? "your friend"} />
+            <ReminderStatus result={emailResult} friendName={friend?.name ?? (typedName.trim() || "your friend")} />
             <Button className="w-full" onClick={() => close(false)}>
               Done
             </Button>
@@ -114,13 +120,18 @@ export function AddLedgerEntrySheet({ friends = [] }: { friends?: FriendOption[]
               <>
                 <div className="space-y-1.5">
                   <Label htmlFor="counterparty">Who</Label>
-                  <Input id="counterparty" name="counterparty" required maxLength={60} placeholder="Sam" />
+                  <Input id="counterparty" name="counterparty" required maxLength={60} placeholder="Sam" value={typedName} onChange={(e) => setTypedName(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Their email (optional)</Label>
+                  <Input id="email" name="email" type="email" maxLength={254} autoComplete="off" placeholder="sam@example.com" value={typedEmail} onChange={(e) => setTypedEmail(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">Lets CashCompass email them. They&apos;ll be saved to your friends so reminders work later.</p>
                 </div>
                 {direction === "income" && (
                   <div className="space-y-1.5">
                     <Label htmlFor="phone">Their phone (optional)</Label>
                     <Input id="phone" name="phone" type="tel" placeholder="+1 555 123 4567" />
-                    <p className="text-xs text-muted-foreground">For a one-tap WhatsApp reminder. Add them as a friend to email them too.</p>
+                    <p className="text-xs text-muted-foreground">For a one-tap WhatsApp reminder.</p>
                   </div>
                 )}
               </>
@@ -137,10 +148,10 @@ export function AddLedgerEntrySheet({ friends = [] }: { friends?: FriendOption[]
               </div>
             </div>
 
-            {friend?.hasEmail && (
+            {(friend?.hasEmail || (!friend && typedEmail.includes("@"))) && (
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="notify" defaultChecked className="size-4 accent-[var(--interactive)]" />
-                Email {friend.name} about this
+                Email {friend?.name ?? (typedName.trim() || "them")} about this
               </label>
             )}
 

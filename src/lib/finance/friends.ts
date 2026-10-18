@@ -54,3 +54,22 @@ export function removeFriend(ownerId: string, id: string) {
   const index = friends.findIndex((friend) => friend.id === id);
   if (index !== -1) friends.splice(index, 1);
 }
+
+const EMAIL_PATTERN = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
+
+export function isValidEmail(email: string): boolean {
+  return email.length <= 254 && EMAIL_PATTERN.test(email);
+}
+
+/**
+ * Used when a balance is added for "someone else" with contact details: links
+ * to an existing friend with the same name (filling in missing details) or
+ * adds a new one, so reminders and payment emails work for that balance.
+ */
+export function findOrAddFriend(ownerId: string, input: Omit<Friend, "id">): Friend {
+  const existing = storeFor(ownerId).find((friend) => friend.name.toLowerCase() === input.name.toLowerCase());
+  if (!existing) return addFriend(ownerId, input);
+  if (input.email && !existing.email) existing.email = input.email;
+  if (input.phone && !existing.phone) existing.phone = input.phone;
+  return existing;
+}
