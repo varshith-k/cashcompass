@@ -8,6 +8,14 @@ See the dated, sanitized [database report](evidence/tiger-health-2026-10-18.json
 
 The live database has a compressed financial hypertable, real-time monthly aggregate, successful scheduled refresh/compression jobs, and encrypted connectivity. The app-compatible TLS policy currently does not require peer certificate validation; no application connection settings were changed. Tiger CLI authentication and a matching service read succeeded. CPU, memory, and disk history are accessible. No recurring monitoring, exporter, alert routing, backup-history confirmation, or live recovery drill has been installed/completed by this change.
 
+## Confirmed Console context and free-service limits
+
+The owner's October 18 screenshot shows **Performance trial**, **free Shared service**, DEV, 750 MiB storage and $0/hour. The Operations menu does not show Backup and restore. The account's plan badge and a service's free/standard compute type are separate facts. Backup-history UI is documented for Scale/Enterprise; its absence is not evidence that this free service has no recovery mechanism.
+
+The current [forking guide](https://www.tigerdata.com/docs/deploy/tiger-cloud/tiger-cloud-aws/service-management/fork-services) supports free-to-free or free-to-standard forks. Tiger's [free-tier description](https://www.tigerdata.com/blog/fluid-storage-forkable-ephemeral-durable-infrastructure-age-of-agents) describes 24-hour PITR for free services; the actual recoverable timestamps and restore result for this service remain unverified. Use Operations → **Service management** → Create recovery fork if visible, or the authenticated CLI; Security/VPC peering is unrelated. Do not convert the original service just to find a missing backup-history tab.
+
+The provider's [free-tier announcement](https://www.tigerdata.com/blog/introducing-agentic-postgres-free-plan-experiment-ai-on-postgres) describes up to two free services per account. We found one configured service through CLI. The full three-service isolation workflow below may exceed that free quota: protected original + free drill source + recovered fork. Review the current quota first. If needed, a temporary **standard recovered fork** can use the displayed trial credits while the original stays free. This still requires owner approval of the resource quote and cleanup time; never silently upgrade or consume credits. A smaller one-fork smoke check is not equivalent to the strict before/after marker drill.
+
 ## Repeat database checks
 
 ```sh
@@ -37,7 +45,7 @@ Rules alone do not notify anyone: connect your existing Alertmanager and a chose
 
 ## Backup coverage record
 
-In Console → service → Operations → Backup and restore, record these facts with the verification time:
+For standard services with the corresponding UI, open Console → service → Operations → Backup and restore. For the confirmed free Shared service, check Service management/recovery-fork availability instead, and use provider support if the recoverable window is not exposed. Record the following facts without interpreting a hidden menu as a disabled backup:
 
 | Evidence | What to record |
 | --- | --- |
