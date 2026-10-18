@@ -92,19 +92,32 @@ Settings can let users change their display name. Auth0 has to allow the app to 
 
 For Google users, Auth0 overwrites the name from Google on each login unless you turn off **Sync user profile attributes at each login** under Authentication → Social → Google. Email and photo always come from the sign-in provider.
 
-## 7. Optional two-factor sign-in
+## 7. Two-step verification (required, authenticator app)
 
-In **Settings → Sign-in security** users can turn on **Two-factor sign-in**. After their password or Google sign-in, Auth0 then asks for a code from an authenticator app (Google Authenticator, Authy or similar), with a QR code to set it up the first time. It is off by default. Auth0 asks for the codes on its login page; CashCompass never sees them. The choice is stored in the user's `app_metadata.login_security` (`"app"` or `"off"`).
+Every sign-in, including Google, asks for a code from an authenticator app. Auth0 enforces this on its login page with its built-in policy; there is no Action and CashCompass never sees the codes. Email can't be the main method (Auth0 only allows it as a backup once another factor is set up), so every user, judges included, needs an authenticator app.
 
-1. **Security → Multi-factor Auth**: turn on **One-time Password** (Email is optional; Auth0 only allows it as a second option once another factor is on). Leave **Require Multi-factor Auth** on **Never**. The Action below asks only users who opted in.
-2. **Actions → Library → Create Action → Build from scratch**, trigger **Login / Post Login**. Paste [`docs/auth0-actions/login-security.js`](auth0-actions/login-security.js), then **Deploy**.
-3. **Actions → Triggers → post-login**: drag the Action into the flow and **Apply**.
-4. **Applications → APIs → Auth0 Management API → Application Access**: give **CashCompass** client access with `read:users` and `update:users`. Enable the **Client Credentials** grant as in §6.
-5. Set `AUTH0_LOGIN_SECURITY=true` and restart. Settings shows the switch from then on.
+**Test it in a separate tenant first if your plan allows a second tenant** (the policy applies to the whole tenant). A separate free Auth0 account also works.
 
-Notes:
-- Two-factor can't be required for everyone by email code: Auth0 only emails codes to users who already have another factor. To require it for everyone, set **Require Multi-factor Auth** to **Always** with One-time Password, which makes every user, including demo accounts and judges, install an authenticator app.
-- Turning two-factor off needs a sign-in within the last 10 minutes, so a forgotten open session can't weaken it.
+1. Tenant menu (top left) → **Create tenant**, e.g. `cashcompass-test`, environment **Development**.
+2. **Applications → Create Application → Regular Web Application**. Allowed Callback URLs `http://localhost:3000/auth/callback`, Allowed Logout URLs and Allowed Web Origins `http://localhost:3000`. Enable the **google-oauth2** and **Username-Password-Authentication** connections for it.
+3. **Security → Multi-factor Auth**: turn on **One-time Password**, then **Email**, then **Recovery Code**. Set **Require Multi-factor Auth** to **Always**.
+4. Copy `.env.test-tenant` to `.env.development.local` and fill in the test app's domain, client ID and secret (git-ignored; it overrides `.env.local` in `npm run dev` only). Restart `npm run dev`. Delete the file to go back to the production tenant.
+
+**What to check**
+
+- First sign-in (Google and email/password): QR code → enter a code → recovery code shown once.
+- Later sign-ins: code from the app.
+- Backup: **Try another method → Email** sends a code to the account's verified email.
+- Recovery: **Try another method → Recovery code** works once and shows a new code.
+- Admin reset: **User Management → Users → (user) → Actions → Reset Multi-factor**. The next sign-in asks to set up the app again.
+
+**Production (only after the test passes)**
+
+1. Make sure at least two people can sign in to the Auth0 dashboard, so one can reset the other.
+2. On the production tenant: **Security → Multi-factor Auth** turn on One-time Password, Email and Recovery Code, then set **Require Multi-factor Auth → Always**.
+3. Set `AUTH0_MFA_REQUIRED=true` on the server and restart, so Settings says it's required.
+
+To undo, set **Require Multi-factor Auth** back to **Never**; sign-in works without codes again straight away.
 
 ## 8. Hackathon demo account
 

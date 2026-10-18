@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isAuth0Configured, isDemoAuthMode } from "@/lib/auth/config";
+import { isAuth0Configured, isDemoAuthMode, isMfaRequired } from "@/lib/auth/config";
 import { classifyAuthError } from "@/lib/auth/errors";
 import { signInMethodLabel, toAuthUser } from "@/lib/auth/map-user";
 import { assertOwnedBy, ForbiddenResourceError, onlyOwnedBy, withOwner } from "@/lib/auth/ownership";
@@ -54,6 +54,12 @@ describe("demo mode", () => {
     expect(isDemoAuthMode({ NODE_ENV: "development" } as never)).toBe(true);
     expect(isDemoAuthMode({ ...full, AUTH0_SECRET: " ", NODE_ENV: "development" } as never)).toBe(true);
     expect(isDemoAuthMode({ NODE_ENV: "production" } as never)).toBe(false);
+  });
+
+  it("reports two-step verification as required only with Auth0 configured and the flag set", () => {
+    expect(isMfaRequired({ ...full, AUTH0_MFA_REQUIRED: "true" } as never)).toBe(true);
+    expect(isMfaRequired({ ...full } as never)).toBe(false);
+    expect(isMfaRequired({ AUTH0_MFA_REQUIRED: "true" } as never)).toBe(false);
   });
 });
 

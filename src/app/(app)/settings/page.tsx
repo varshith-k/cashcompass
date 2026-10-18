@@ -8,27 +8,15 @@ import { isNessieConfigured } from "@/lib/nessie/client";
 import { listDemoAccounts } from "@/lib/nessie/accounts";
 import { getSyncStatus } from "@/lib/nessie/status";
 import { requireSession } from "@/lib/auth/session";
-import { getAuth0LoginSecurity, isLoginSecurityEnabled, isProfileEditingEnabled } from "@/lib/auth/management";
+import { isProfileEditingEnabled } from "@/lib/auth/management";
+import { isMfaRequired } from "@/lib/auth/config";
 import { LoginSecurityCard } from "@/components/settings/login-security-card";
-import { toLoginSecurityLevel, type LoginSecurityLevel } from "@/lib/auth/login-security";
-
-async function loadLoginSecurity(source: string, userId: string): Promise<{ level: LoginSecurityLevel | null; unavailableReason?: string }> {
-  if (source !== "auth0") return { level: null, unavailableReason: "Demo mode: sign-in security is handled by Auth0, which isn't connected on this server." };
-  if (!isLoginSecurityEnabled()) return { level: null, unavailableReason: "Sign-in security isn't set up on this deployment yet (see docs/AUTH0_SETUP.md §7)." };
-  try {
-    const current = await getAuth0LoginSecurity(userId);
-    return { level: toLoginSecurityLevel(current.level) };
-  } catch (error) {
-    console.error("[auth] login security read failed:", error instanceof Error ? error.message : "unknown error");
-    return { level: null, unavailableReason: "We couldn't load your sign-in security settings. Refresh to try again." };
-  }
-}
 
 export default async function SettingsPage() {
   await connection();
   const session = await requireSession();
   const ownerId = session.user.id;
-  const [{ accounts, error }, security] = await Promise.all([listDemoAccounts(), loadLoginSecurity(session.source, ownerId)]);
+  const { accounts, error } = await listDemoAccounts();
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -36,7 +24,7 @@ export default async function SettingsPage() {
 
       <AccountCard canEditProfile={session.source === "auth0" && isProfileEditingEnabled()} />
 
-      <LoginSecurityCard initialLevel={security.level} unavailableReason={security.unavailableReason} />
+      <LoginSecurityCard required={isMfaRequired()} isDemo={session.source === "demo"} />
 
       <Card>
         <CardHeader>
