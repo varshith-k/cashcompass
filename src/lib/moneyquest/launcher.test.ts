@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moneyQuestExperienceUrl } from "./launcher";
+import { getMoneyQuestExperienceUrl, moneyQuestExperienceUrl } from "./launcher";
 import { isPublicPath } from "@/lib/auth/routes";
 
 describe("MoneyQuest experience launcher", () => {
@@ -7,10 +7,21 @@ describe("MoneyQuest experience launcher", () => {
     expect(isPublicPath("/moneyquest")).toBe(false);
     expect(isPublicPath("/moneyquest/")).toBe(false);
   });
-  it("requires a configured direct Roblox experience", () => {
+  it("rejects missing or non-game raw URLs", () => {
     for (const value of [undefined, "", "  ", "not a url", "https://www.roblox.com/"]) {
       expect(moneyQuestExperienceUrl(value)).toBeNull();
     }
+  });
+
+  it("opens the owner's game when deployment configuration is absent or invalid", () => {
+    for (const override of [undefined, "", "  ", "javascript:alert(1)", "https://evil.test/games/123"]) {
+      expect(getMoneyQuestExperienceUrl(override)).toBe("https://www.roblox.com/games/73262786586748");
+    }
+  });
+
+  it("allows a validated direct Roblox game override", () => {
+    expect(getMoneyQuestExperienceUrl("https://www.roblox.com/games/123456789/Example?ref=test"))
+      .toBe("https://www.roblox.com/games/123456789");
   });
 
   it("normalizes genuine links and drops query parameters", () => {
