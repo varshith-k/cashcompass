@@ -188,6 +188,13 @@ export function selectUpcomingBills(events: FinancialEvent[]) {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+/** Not-yet-received income (a scheduled paycheck, etc.) — set up via Add Transaction's "Recurring" switch. */
+export function selectUpcomingIncome(events: FinancialEvent[]) {
+  return events
+    .filter((event) => event.direction === "income" && event.record === "planned")
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export function selectRecentTransactions(events: FinancialEvent[]) {
   return events.filter((event) => event.record === "actual").sort((a, b) => b.date.localeCompare(a.date));
 }
