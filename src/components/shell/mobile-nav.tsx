@@ -68,7 +68,10 @@ export function MobileNavTrigger() {
   );
 }
 
-const BOTTOM_NAV_ITEMS = [NAV_ITEMS[0], NAV_ITEMS[4], NAV_ITEMS[7]];
+// Select by route so inserting a companion page cannot displace AI Copilot.
+const BOTTOM_NAV_ITEMS = ["/overview", "/cash-flow", "/copilot"].map(
+  (href) => NAV_ITEMS.find((item) => item.href === href)!,
+);
 
 export function BottomNav() {
   const pathname = usePathname();

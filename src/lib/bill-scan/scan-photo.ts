@@ -25,14 +25,14 @@ export async function scanPhoto(file: FormDataEntryValue | null, kind: ScanKind 
     return { ok: false, message: "Use a JPEG, PNG, or WebP photo under 5 MB, or enter the details manually." };
   }
   if (!process.env.GEMINI_API_KEY) {
-    return { ok: false, message: "Add GEMINI_API_KEY to scan bills automatically — fill in the form manually for now." };
+    return { ok: false, message: "Add GEMINI_API_KEY to scan bills automatically. Fill in the form manually for now." };
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const fields = await extractBillFromImage(buffer.toString("base64"), file.type || "image/jpeg", kind);
 
   if (!fields) {
-    return { ok: false, message: "Couldn't read that photo clearly — fill in the form manually." };
+    return { ok: false, message: "Couldn't read that photo clearly. Fill in the form manually." };
   }
   return { ok: true, fields };
 }

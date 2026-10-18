@@ -6,16 +6,16 @@ import { getSession } from "@/lib/auth/session";
 import { DEFAULT_SIGNED_IN_PATH, loginHref, signupHref } from "@/lib/auth/routes";
 
 export const metadata: Metadata = {
-  title: "CashCompass — Your money. Your direction.",
+  title: "CashCompass. Your money. Your direction.",
   description:
-    "See where your money went, where it stands today, and where it's headed next — before you spend it.",
+    "See where your money went, where it stands today, and where it's headed next, before you spend it.",
 };
 
 const FEATURES = [
   {
     icon: ShieldCheck,
     title: "Safe to Spend",
-    body: "Not your balance — what's actually free after upcoming bills, savings and your buffer.",
+    body: "Not your balance: what's actually free after upcoming bills, savings and your buffer.",
   },
   {
     icon: LineChart,
@@ -64,7 +64,7 @@ export default async function Home() {
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-8 text-muted-foreground">
               You may have enough money today. CashCompass shows whether you can afford what happens
-              afterward — so the next purchase never puts rent at risk.
+              afterward, so the next purchase never puts rent at risk.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button
@@ -72,7 +72,7 @@ export default async function Home() {
                 className="min-h-11 px-6 text-base"
                 nativeButton={false}
                   role="link"
-                render={<a href={signupHref()}>Get started — it&apos;s free</a>}
+                render={<a href={signupHref()}>Get started, it&apos;s free</a>}
               />
               <Button
                 size="lg"
@@ -113,7 +113,7 @@ export default async function Home() {
 
       <footer className="border-t border-border">
         <p className="mx-auto w-full max-w-6xl px-4 py-6 text-xs leading-5 text-muted-foreground sm:px-6">
-          Banking data in this demo is simulated Capital One Nessie demo data — no real bank accounts or
+          Banking data in this demo is simulated Capital One Nessie demo data, no real bank accounts or
           credentials. CashCompass is an independent project and is not affiliated with or endorsed by
           Capital One. Forecasts are estimates, not guarantees.
         </p>
@@ -145,7 +145,7 @@ function PreviewCard() {
       <div className="mt-6 flex items-start gap-3 rounded-xl bg-white/10 p-4 dark:bg-secondary">
         <CalendarClock className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
         <p className="text-sm leading-6">
-          Rent is due in 4 days. Spending $450 today would take you below your $300 buffer — after
+          Rent is due in 4 days. Spending $450 today would take you below your $300 buffer, but after
           payday it&apos;s safe.
         </p>
       </div>

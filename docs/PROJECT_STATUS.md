@@ -1,8 +1,52 @@
 # CashCompass implementation status
 
-Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.md` preserves the original requirements.
+Updated October 18, 2026. The original phase delivery was checked October 17; newer teammate features and the MoneyQuest companion are recorded below. [`PROJECT_HANDOFF.md`](../PROJECT_HANDOFF.md) preserves the requirements and now includes the current feature handoff.
 
-## Phase status
+## MoneyQuest main integration — October 18, 2026
+
+The user authorized merging MoneyQuest into `main`. The merge candidate includes current main through `6ec59a5`, preserving the newer sign-in security, login documentation, interface text, and laptop webcam changes. A push/merge to `main` can activate the documented Vultr auto-deploy timer; a GitHub merge is not by itself proof that production finished deploying.
+
+Merge checks: **181 unit tests passed**, four live-service tests skipped; lint, TypeScript production compilation, and the production build passed. The standalone Luau suite still passes **4,261 assertions across 324 complete decision paths**. Earlier MoneyQuest browser/a11y evidence is recorded below; Studio runtime and production rollout are separate checks.
+
+Roblox public release is still blocked by the owner's newly created account eligibility. Until a genuine public game URL is configured, the website must show “Game publishing in progress.” Studio gameplay, public Player access, and an actual Solana payment remain unverified.
+
+## Current feature inventory — October 18, 2026
+
+The MoneyQuest branch includes GitHub `main` through `56a72d1`, including the newer teammate features below. This is source-level delivery evidence, not a fresh assertion that every external service is live.
+
+| Feature | Implemented behavior | Remaining verification / configuration |
+| --- | --- | --- |
+| Auth0 and app shell | Protected routes, owner-scoped data, account/session controls, responsive shared navigation, themes, reminders, fonts, loading/error feedback. | Earlier Auth0 live checks are historical; production-mode missing-config checks pass for MoneyQuest and Cash Flow. |
+| Overview and simulator | Posted balances, Safe to Spend, everyday spend, recurring forecasts, expected/conservative outcomes, buy-now/payday/delay/repayment/savings comparisons. | Financial assumptions and uncertain incoming repayments remain disclosed. |
+| Transactions and budgets | Editing/filtering/source provenance, allocations and spending comparisons; Tiger-backed budgets query the monthly category continuous aggregate. | Database aggregate needs the current schema; demo behavior uses local calculations. |
+| Bills and credit cards | Manual/assisted capture, upcoming/recurring bills, payment records, statement and minimum-payment fields. | Logged payments do not execute real biller transfers. |
+| Receipts | Separate already-paid receipt log, notes, category/month totals, deletion, and receipt-to-split links. | No persistent raw-image archive. |
+| Phone scanning | Camera/upload controls and laptop-to-phone QR flow; user confirms extracted data before saving. | One-time scan sessions are process-local and expire after ten minutes; live phone/Gemini check pending in this pass. |
+| Bill email reminders | Per-bill scheduling with days-before, local hour/time zone, occurrence tracking, Resend templates, secret-protected cron route, systemd service/timer templates. | Requires email/cron configuration, current schema for durable reminders, and explicit scheduler installation; no live email sent here. |
+| Settle Up and bill splitting | Friends/guest emails, partial repayments, optional email and WhatsApp reminders, equal/custom/Gemini-suggested shares, receipt links, exact-cent validation, and linked receivables. | Confirmation required; optional email requires configuration. New split flows have unit coverage; live Gemini/notification checks are separate. |
+| Nessie sandbox | Account sync/category mapping, account references, P2P transfers, UUID IDs, empty/new-account compatibility. | User reports prior live sync/P2P. Not independently repeated in this pass. |
+| Goals and copilot | Weekly reservations/contributions, forecast effects, validated Gemini financial tools/cards, model/offline fallback, purchase links and image extraction. | Planned AutoSave is not a transfer; service quota/configuration affects live AI features. |
+| Tiger Data | Financial-event/reminder/Solana receipt schema, monthly continuous aggregate, and compression of chunks older than 30 days segmented by owner. | Latest schema application, actual database jobs, and durable live behavior require server evidence. Pool currently disables TLS certificate validation while encrypting traffic. |
+| Solana | Devnet wallet adapter, fixed demo rate/recipient, successful confirmed transfer verification, signature claims and ledger settlement. | Real payment proof unresolved: latest user attempt never showed Phantom approval. Do not mark live end-to-end payment complete. |
+| MoneyQuest | Website launcher/navigation plus separate Luau financial-survival game, six decisions, four stations, HUD/outlook, scoring/results, and replay. | Studio gameplay/publishing, public access, genuine URL, Player launch, and website deployment pending. |
+| Deployment | Documented nginx/PM2/systemd flow polls `origin/main`, tests candidate builds, and supports rollback. | This feature-branch push does not trigger that timer. No production access/change performed here. |
+
+The [current handoff](../PROJECT_HANDOFF.md#current-implementation-handoff--october-18-2026) records all feature details and operating boundaries; the [MoneyQuest README](../roblox/moneyquest/README.md) contains exact Studio and publishing instructions.
+
+## MoneyQuest companion — October 18, 2026
+
+Initially implemented separately on `feature/moneyquest-roblox`; the main integration is now authorized above. This does not mark the existing external-service phases live-verified.
+
+- Added `/moneyquest` and a shared sidebar entry after Cash Flow. Mobile More includes it; the bottom bar retains Overview, Cash Flow, and AI Copilot.
+- Added a validated `NEXT_PUBLIC_ROBLOX_MONEYQUEST_URL` launcher. Missing/invalid configuration displays “Game publishing in progress.” No experience ID or publication is fabricated.
+- Added an upload-ready 512×512 MoneyQuest PNG game icon and editable SVG source in `roblox/moneyquest/assets`, using the existing CashCompass compass branding. Dimensions/PNG format and readability at 150×150 were checked. Creator Hub icon upload and moderation remain owner actions, separate from publishing eligibility.
+- Added `roblox/moneyquest`: original four-station 3D neighborhood, six financial choices plus final review, server-controlled integer-cents simulation, deterministic scheduled events, 0–100 scoring, results, and replay. No real finance data or credentials cross into Roblox.
+- Rojo 7.7.1 builds `roblox/moneyquest/build/MoneyQuest.rbxlx`. All six Luau source files compile; the pure engine, scorer, request protocol, and tests pass static analysis. Standalone Luau verifies 324 full paths with 4,261 assertions.
+- Website verification: after incorporating main through `56a72d1`, lint, typecheck, and production build pass; **175 unit tests pass**, with four live-service tests skipped. A separate credential-free local preview passes eight responsive/theme combinations, axe accessibility, desktop order, mobile More/bottom-bar checks, and navigation to Cash Flow. The earlier production-mode HTTP check confirmed both routes fail closed without Auth0. No live Auth0 sign-in or Roblox launch was performed in this pass.
+- **Still requires owner action/evidence:** Studio runtime/UI/replication playtesting, publishing/releasing with a Roblox account, testing access from Roblox Player, entering the genuine published URL, and confirming website deployment. A built place file is not a Studio playtest or prize-eligibility confirmation.
+- Exact import, manual script placement, test paths, publishing, configuration, and limitations: [`roblox/moneyquest/README.md`](../roblox/moneyquest/README.md).
+
+## Original phase status — October 17, 2026
 
 | Phase | Status | Evidence |
 | --- | --- | --- |
@@ -41,7 +85,7 @@ Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.
 - Replaced unvalidated Gemini financial prose with deterministic formatting of validated tool results. Plain model text cannot introduce balances or projections. Missing/failing Gemini is disclosed in the conversation.
 - Centralized `GEMINI_MODEL`, shared by copilot and photo extraction. The default is `gemini-3.6-flash`, following Google's replacement guidance for retired `gemini-2.0-flash`. [Google model lifecycle documentation](https://ai.google.dev/gemini-api/docs/deprecations).
 
-## Verification
+## Original verification — October 17, 2026
 
 - **122 passing unit tests**: financial calculations (everyday-spending estimate, Safe to Spend window, recurring paychecks), the demo-story regression guard, scoped actions and bill undo, copilot arguments, wording and fallback, Gemini model fallback, Nessie sync and categories, reminders, Solana verification, and auth/isolation.
 - `npm run lint`, `npm run typecheck`, and `npm run build` pass. Fonts are self-hosted (`src/app/fonts`), so the build needs no network access to Google Fonts.
@@ -51,7 +95,7 @@ Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.
 
 ## Remaining environment and product limits
 
-- **Live-verified:** Auth0 (local and https://cashcompass.club: login callback and logout accepted) and Gemini (copilot answers through Gemini; bill-photo extraction still needs a live check when quota allows). **Not yet live-tested:** Nessie sandbox sync, TimescaleDB migrations, and a real Solana devnet broadcast (needs a funded test wallet).
+- **Earlier recorded live checks:** Auth0 (local and https://cashcompass.club: login callback and logout accepted) and Gemini copilot. The user subsequently reported live Nessie sync/P2P and working deployment automation; those were not independently repeated in this pass. Newer Tiger Data source/schema changes are included, but live migration/aggregate/compression evidence is still needed. Solana's wallet was funded according to the user; a successful payment remains unverified because no approval window appeared on the latest attempt. Live photo extraction, scheduled email delivery, and Roblox publication remain separate checks.
 - Without `DATABASE_URL`, financial events reset on server restart. Budgets, goal definitions, sync status, and demo signature claims remain process-local. Multi-process or production deployment needs durable stores and transactional multi-step mutations.
 - Forecast balances start from an opening amount plus recorded activity: the demo opening balance in demo mode (no `DATABASE_URL`), or $0 with a real database. Nessie account balances are references in Settings; importing activity does not reconcile the opening amount to the sandbox balance.
 - Projections cover the displayed horizon. Monthly planned bills and paychecks repeat. Everyday spending is estimated from the last 30 days of actual everyday purchases (at least a 7-day average) and subtracted on each future day; interest, fees, and unknown future events are excluded. Repayments may arrive late or never. Safe to Spend holds back bills, planned savings, debts owed and estimated everyday spending due before the next paycheck (or the next 30 days), plus the buffer. All financial dates use UTC calendar days.

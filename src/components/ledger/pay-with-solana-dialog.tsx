@@ -113,7 +113,7 @@ export function PayWithSolanaDialog({
         <DialogHeader>
           <DialogTitle>Settle up with {counterparty}</DialogTitle>
           <DialogDescription>
-            Solana devnet demo — this sends test SOL, not real money. CashCompass verifies the
+            Solana devnet demo: this sends test SOL, not real money. CashCompass verifies the
             transfer on-chain before marking this ledger entry paid.
           </DialogDescription>
         </DialogHeader>
@@ -132,8 +132,8 @@ export function PayWithSolanaDialog({
             <span className="font-medium">Solana Devnet</span>
           </div>
           <p className="text-xs text-muted-foreground pt-1">
-            Demo rate: 1 SOL = {formatCurrency(SOLANA_DEMO_USD_PER_SOL)}. No live price feed is used —
-            for demonstration only.
+            Demo rate: 1 SOL = {formatCurrency(SOLANA_DEMO_USD_PER_SOL)}. No live price feed is used.
+            For demonstration only.
           </p>
         </div>
 

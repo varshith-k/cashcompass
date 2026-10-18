@@ -2,9 +2,65 @@
 
 > **Your money. Your direction.**
 
-Implementation has progressed beyond this original handoff. See [current phase status and verification](docs/PROJECT_STATUS.md) for the October 17, 2026 delivery record.
+Implementation has progressed beyond this original handoff. See [current phase status and verification](docs/PROJECT_STATUS.md) for the delivery record, including the October 18, 2026 feature inventory below.
 
 This document is the source of truth for handing CashCompass to another model or developer before implementation begins. It records the product direction, requirements, design language, technical expectations, demo strategy, and phased delivery plan.
+
+## Current implementation handoff — October 18, 2026
+
+The numbered sections below preserve the original product requirements. **Do not restart implementation from the historical initial-repository section.** The app already exists. The current MoneyQuest delivery branch is `feature/moneyquest-roblox`; it incorporates GitHub `main` through `56a72d1` and the MoneyQuest implementation from `3279ac9`. Other remote feature branches are not automatically merged by this handoff.
+
+### Delivered feature inventory
+
+| Area | Implemented behavior | Verification / operational boundary |
+| --- | --- | --- |
+| Application shell | Shared desktop/mobile navigation, light/dark themes, account menu, reminder navigation, responsive charts and accessible tables, loading/error feedback, self-hosted fonts. | MoneyQuest uses the same navigation; bottom bar remains Overview, Cash Flow, AI Copilot, and More. |
+| Authentication | Auth0 login/callback/logout, encrypted sessions, owner-scoped financial access, signed-out route protection, local demo fallback. | Demo fallback is development-only. Prior live verification is recorded in status; this delivery does not perform a new live sign-in. |
+| Overview and Cash Flow | Posted balances, Safe to Spend deductions, recurring paychecks/bills, everyday-spend estimate, expected/conservative projections, minimum balances and bills at risk. | Dated deterministic calculations; upcoming repayments are explained in plain language and may arrive late. |
+| What-If Simulator | Compare purchases today/after payday, delayed bills, late repayments, and savings plans; copilot can prefill purchase inputs. | Scenarios are reversible and do not write financial records. MoneyQuest leaves this simulator intact. |
+| Transactions | Create, edit, search/filter, and delete records; preserve manual/Nessie provenance. | Owner-scoped repository; no real bank connection implied. |
+| Bills and credit cards | Upcoming bills, recurring renewal, manual payment recording, image-assisted capture, statement amounts and minimum-payment details. | A logged bill payment does not send money to a biller. Extraction requires user confirmation. |
+| Receipts | Separate already-paid receipt log, merchant/date/category/notes, monthly/category totals, deletion, and links to split an unsplit receipt. | Receipt spend enters the financial-event model; receipt images are not retained as an image archive. |
+| Phone/photo capture | Upload or capture an image; laptop QR handoff to a phone; development QR links use the laptop's network address. | One-time token, one upload, ten-minute process-local expiry. User confirms extracted fields on the laptop before saving. |
+| Scheduled bill reminders | Per-bill days-before, hour, and time-zone selection; owner login email; Resend templates; occurrence tracking; cron endpoint and hourly systemd unit templates. | Requires `RESEND_API_KEY`, `EMAIL_FROM`, `CRON_SECRET`, and an installed scheduler. Units in Git do not install themselves. Live delivery is not confirmed by source inspection. |
+| Settle Up and friends | Money owed/to repay, named friends or one-off contacts, optional contact email, partial repayments, WhatsApp links, and optional email notifications. | Shared balances are financial records, not proof of an external transfer. Email needs configured sender access. |
+| Split a bill | Equal/custom splits or Gemini suggestions from a description; integer-cent reconciliation; receipt linkage; friend/guest shares become Settle Up receivables; optional notifications. | User reviews and confirms shares. Suggestions do not save or transfer funds. No notification was sent during this handoff update. |
+| Capital One Nessie | Account selection/reference balances, stable-ID sync, merchant categorization, friend/account mapping, and sandbox P2P transfers. UUID account IDs and empty/new-account handling are supported. | Sandbox data only. User previously reported live sync/P2P; this pass does not independently repeat those operations. |
+| Budgets | Editable allocations and spending comparisons; Tiger-backed category totals read `monthly_category_spend`. | Continuous aggregate must exist when using a configured database. Demo mode uses local calculations. |
+| Wishlist and savings | Goals, confirmed contributions, weekly reservations, partial final contributions, forecast impact, and planned AutoSave. | Reservations are not bank transfers. Some planning state is still process-local on this branch. |
+| Gemini copilot | Validated financial tools, grounded answer cards, simulator links, model fallback, disclosed offline fallback, and image extraction. | Live Gemini, photo extraction, and split suggestions require configuration/quota and separate live evidence. |
+| Tiger Data / TimescaleDB | Owner-scoped financial-event persistence; schema for receipt/card/split fields, reminder settings, and Solana claims; monthly continuous aggregate; owner-segmented compression policy after 30 days. | Source/schema implemented. Applying migrations, confirming aggregate/compression jobs, and live persistence remain deployment checks. Current pool encrypts traffic but disables certificate validation; record this deployment trust limitation. |
+| Solana | Phantom/Solflare devnet connection, fixed demo USD/SOL rate and recipient, on-chain transfer verification, signature reuse protection, and ledger settlement. | Actual wallet payment is still unverified: the latest user attempt stayed at Sending without a Phantom approval window. Do not call this prize proof complete. |
+| Vultr deployment | Documented nginx → PM2 setup and systemd polling of `origin/main`; candidate build/start checks and rollback. | Feature-branch pushes do not deploy through that documented timer. No SSH access, server restart, timer change, or production deployment occurs in this handoff update. |
+| MoneyQuest website | `/moneyquest` after Cash Flow, Gamepad2 navigation, mobile More access, original SVG concept, scenario overview, game highlights, and simulator CTA. | Missing/invalid `NEXT_PUBLIC_ROBLOX_MONEYQUEST_URL` shows an honest unpublished state. Direct HTTPS Roblox experience URLs only; no iframe or real-data bridge. |
+| MoneyQuest Roblox game | Rojo-compatible Luau project; original bank/store/apartment/advisor neighborhood and NPC guides; HUD, objective highlight, decision dialogs, financial outlook, results, and replay. | Place builds; standalone Luau checks pass. Studio/Player runtime and audience access still require owner testing. |
+
+### MoneyQuest rules and scenarios
+
+The server owns per-player integer-cent balances, dates, bills, deposits, and scores. Clients submit only choice/round/revision identifiers; requests check current phase, station visit, distance, request rate, and duplicate/stale revisions. Respawns preserve the round; completed rounds can restart. There is no DataStore economy, multiplayer game mechanic, real account access, Robux purchase, or external banking bridge.
+
+Opening balance **$2,500**; rent **$1,200**; groceries **$300**; utilities **$150**; savings target **$400**; paycheck **$1,500** on day 15; preferred cash cushion **$300**. Opening safe-to-spend is **$300**.
+
+1. **Day 1, Store:** buy a $1,200 laptop today, wait for a day-16 safety check, or reserve $150 in a separate laptop fund.
+2. **Day 5, Apartment:** pay rent now or use a fictional extension to day 15 with a $50 fee.
+3. **Day 8, Store:** choose the $300 essentials or $500 premium grocery basket.
+4. **Day 11, Bank:** respond to a promised $200 roommate repayment; optionally buy $250 shoes before it arrives. Actual receipt is day 24.
+5. **Day 12, Advisor:** handle a $450 bike repair from checking/available savings or a $500 day-22 plan.
+6. **Day 16, Bank:** save $400, save $200, or save up to $400 after protecting known bills and the buffer.
+7. **Day 30, Advisor:** review checking, savings, laptop fund, lowest balance, paid/on-time bills, five scoring components, and three financial lessons; replay.
+
+The score allocates **35** points to on-time bills, **20** to avoiding negative checking, **15** to the cash buffer, **20** to savings progress, and **10** to purchases fitting safe-to-spend. Waiting can buy the laptop and earn **100/100** with **$500 checking**, **$400 savings**, and a **$300 minimum**. Buying today can end at the same $500 while hitting **−$650** before payday. These are deterministic test expectations, not a recorded Studio playthrough.
+
+### Build, test, publish, and next-owner actions
+
+- Full source map, exact Rojo/manual import, reference paths, Studio checks, publishing steps, URL configuration, and limitations: [MoneyQuest README](roblox/moneyquest/README.md).
+- Generated local place: `roblox/moneyquest/build/MoneyQuest.rbxlx`. Build output is Git-ignored; teammates must run the documented Rojo build or manual import after pulling. Source and project configuration are committed.
+- Roblox icon: upload `roblox/moneyquest/assets/moneyquest-icon.png` (512×512) in Creator Hub → Configurations → Places → starred start place → Icon → Image → Change → Save Changes. Editable SVG source is included. This reuses CashCompass branding; the website logo does not automatically populate Roblox metadata. Upload/moderation and public-release eligibility are separate owner actions.
+- Recorded MoneyQuest verification: Rojo 7.7.1 place build, all six Luau scripts compiled, pure modules/tests analyzed, **324 paths / 4,261 assertions**. Website lint/types/build and eight responsive/theme combinations passed; see status for the latest combined-branch unit count.
+- Owner is publishing the Roblox game and will supply its genuine public `/games/<place-id>` URL. No publication or Studio runtime result has been received yet. Once supplied, validate/configure `NEXT_PUBLIC_ROBLOX_MONEYQUEST_URL`, rebuild, and verify real Player launch. Never substitute a fabricated ID.
+- Complete an actual Solana devnet payment and retain its signature/Explorer proof; investigate the missing approval before retrying an uncertain send.
+- Verify current database schema/Timescale jobs and the reminder scheduler from the real deployment; code presence is not live verification. Keep DB values, provider keys, session secrets, and SSH credentials out of Git and chat.
+- Initial delivery pushed the feature branch. On October 18 the user authorized merging MoneyQuest into `main`, which can trigger the documented Vultr deploy timer. The merge candidate includes newer main changes through `6ec59a5`; verify production rollout separately. Roblox release/URL configuration remains pending. Existing release/other feature branches are preserved.
 
 ## 1. Product overview
 
