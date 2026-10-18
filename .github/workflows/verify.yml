@@ -1,0 +1,48 @@
+name: Verify
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      timescale:
+        image: timescale/timescaledb:latest-pg17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: cashcompass_verification
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cashcompass_verification"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npm test
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:database
+        env:
+          TEST_DATABASE_URL: postgresql://postgres@localhost:5432/cashcompass_verification
+          TEST_TIMESCALE: 'true'
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Browser verification
+        run: |
+          npm run dev > /tmp/cashcompass-dev.log 2>&1 &
+          trap 'kill $(jobs -p) 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail http://localhost:3000/overview > /dev/null; then break; fi
+            sleep 1
+          done
+          npm run test:demo
+          npm run audit:ui
+# Deliberately verifies code only. Deployment requires the server inspection and approval.

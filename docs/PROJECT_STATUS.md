@@ -2,6 +2,8 @@
 
 Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.md` preserves the original requirements.
 
+**Production completion is pending.** Pulled GitHub `main` through `a817ce4`, including Gemini reliability, PR #4 usability fixes and the Vultr deployment guide. This release packages the production-readiness changes on `release/production-readiness` for review before merging into `main`. The new guide reports a PM2/nginx deployment and a systemd timer that polls `main`; those live settings have not been independently inspected from this session. Server credential presence, migrations and release identity still require authenticated access.
+
 ## Phase status
 
 | Phase | Status | Evidence |
@@ -9,15 +11,22 @@ Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.
 | 0 — Audit | Complete | Existing routes, repositories, auth, integrations, environment names, build commands, history, and remote inspected. |
 | 1 — Foundation | Complete for the demo | Responsive shell, semantic colors, keyboard focus, reduced motion, loading skeleton, and recoverable error boundary. |
 | 2 — Dashboard and forecast | Complete for the demo | Available funds use posted activity; Safe to Spend explains its actual deductions. Expected and conservative forecasts share deterministic calculations and readable tables. |
-| 3 — Transactions, bills, Nessie | Implemented; live sandbox verification pending | Transaction editing added; monthly bills renew when paid. Bill scans require confirmation. Configured sandbox accounts are selectable, with balance references and stable-ID import/update protection. |
+| 3 — Transactions, bills, Nessie | Implemented locally; live sandbox verification pending | Transaction editing and atomic bill renewal; confirmed photo extraction; stable-ID imports, cancelled-record reconciliation, and synchronized account balance snapshots. |
 | 4 — Copilot and simulator | Implemented; live Gemini verification pending | Validated tools, grounded result cards, visible local/fallback mode, reversible scenarios, and purchase inputs carried into the simulator. |
 | 5 — Budgets, goals, ledger | Complete for the demo | Editable allocations, weekly planned reserves, confirmed goal contributions, partial repayments, real WhatsApp links, and shared forecast events. |
-| 6 — Verification | Local verification complete | Unit tests, lint, types, production build, responsive/accessibility audit, and connected browser demo. External services require credentials for live checks. |
-| 7 — GitHub delivery | Complete | Delivered implementation, verification, teammate-fix integration, and documentation commits to the existing private `varshith-k/cashcompass` repository on `main`. |
+| 6 — Verification | Local checks pass; external checks pending | Unit/database tests, lint, types, production build, responsive/accessibility audit, and connected browser demo. Live integrations require configured access. |
+| 7 — GitHub delivery | Release branch prepared; main merge awaits approval | All three earlier remote feature/fix branches are ancestors of `main`; the current release is isolated because merging can trigger deployment. |
+| Production release | Pending access, inspection and approval | No working SSH identity is available in this session. No server restart, rebuild, migration or redeployment has been performed here. |
 
 ## Work completed in this pass
 
 - Integrated the latest teammate account-menu and server-only settlement-helper fixes; extended browser coverage to the account and reminder menus.
+- Integrated Gemini reliability from PR #3 and notification/menu/bill-undo/simulator improvements from PR #4. Preserved dynamic reminders and made both payment and undo transactional. All three earlier remote feature/fix branches are merged into `main`.
+- Added durable per-user budgets, goals, checkpoints, account snapshots and sync state, with a shared database transaction/client and owner lock for multi-record mutations.
+- Made bill renewal, goal scheduling/contributions, Nessie imports/reconciliation and Solana receipt-plus-ledger settlement atomic. Added consistent financial snapshots for Overview, Cash Flow and Copilot.
+- Reconciled imported posted activity against synchronized Nessie balances, added a confirmed available-funds checkpoint in Settings, and showed setup guidance for fresh database users.
+- Prepared a nonroot Node 22 Docker image, example Compose configuration, sanitized inventory/environment tools, schema runner, readiness/revision endpoint and verification-only GitHub workflow. These files have not been applied to Vultr.
+- Preserved ordinary `next start` builds for the documented PM2 deployment; Docker explicitly enables standalone output. Prepared a revised deployment script with core-configuration preflight, database-aware readiness and release revision reporting. Its installed server copy must be reviewed/updated separately before the release; changing the repository script does not replace it.
 
 - Added transaction editing with retained source provenance and recoverable save errors.
 - Renewed recurring bills after payment, with month-end clamping and duplicate-payment protection.
@@ -29,33 +38,39 @@ Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.
 - Added accessible daily chart tables, input validation, loading/error screens, form pending states, usable search and reminder navigation, touch targets, and reduced motion.
 - Removed the catch-all wallet bundle; imported only Phantom and Solflare and supplied the wallet-standard `bs58` peer dependency.
 - Required confirmed successful on-chain transfers, validated the payable entry, and prevented signature reuse. Database receipt claims survive restarts; keyless demo claims are process-local.
-- Added Nessie account selection, reference balances, stable external IDs, pending/completed updates, and persistence of ledger phone numbers.
+- Added Nessie account selection, reconciled balance snapshots, stable external IDs, pending/completed/cancelled updates, and persistence of ledger phone numbers.
 - Replaced unvalidated Gemini financial prose with deterministic formatting of validated tool results. Plain model text cannot introduce balances or projections. Missing/failing Gemini is disclosed in the conversation.
-- Centralized `GEMINI_MODEL`, shared by copilot and photo extraction. The default is `gemini-3.6-flash`, following Google's replacement guidance for retired `gemini-2.0-flash`. [Google model lifecycle documentation](https://ai.google.dev/gemini-api/docs/deprecations).
+- Centralized the preferred `GEMINI_MODEL` and fallback list shared by copilot and photo extraction. Live availability of the configured models is not verified without service credentials.
 
 ## Verification
 
-- **95 passing unit tests**: financial calculations, scoped actions, copilot arguments and fallback behavior, Nessie synchronization, Solana verification, and existing auth/isolation tests.
+- **110 passing unit tests**, plus **8 database integration tests** against disposable local TimescaleDB. Earlier database checks also passed against plain PostgreSQL. Database checks verify durable profiles, rollback across event/profile/receipt writes, concurrent bill payment/undo and ledger requests, savings consumption, imported balance reconciliation and balance checkpoints. The normal test command skips these eight explicit database tests and four live Gemini tests.
 - `npm run lint`, `npm run typecheck`, and `npm run build` pass. Missing Auth0 configuration produces expected build-time warnings; production authentication remains closed.
 - `npm run audit:ui`: nine routes × 375/768/1024/1440 pixels × light/dark. axe scans mobile and desktop content; development-only Next.js tooling is excluded. HTTP failures and application error boundaries fail the audit.
-- `npm run test:demo`: dashboard → copilot → purchase comparison; transaction create/edit/search/delete; bill scan fallback/manual save/payment/renewal; goal scheduling/contribution; WhatsApp link and partial repayment. No browser runtime errors.
+- `npm run test:demo`: dashboard → copilot → purchase comparison; dynamic notification/account menus; transaction create/edit/search/delete; bill scan fallback/manual save/payment/undo/renewal; goal scheduling/contribution; WhatsApp link and partial repayment. No browser runtime errors.
+- Full TimescaleDB schema migration and the Node 22 multistage Docker build pass locally. The minimal runtime uses uid 1001; unused `braces`, `stream-json` and the shadcn CLI are excluded from its traced dependency tree. Live service authentication is a separate pending check.
+- A read-only, capability-restricted local runtime returns readiness 200 against the migrated test database, returns 401 for signed-out identity requests, and redirects the protected dashboard to authentication. It used generated test configuration, not real Auth0 credentials.
 - Automated accessibility checks supplement keyboard interactions and visual inspection; they are not a complete screen-reader certification.
 
 ## Remaining environment and product limits
 
-- No Auth0, Gemini, Nessie, or TimescaleDB credentials are configured locally. Real sign-in, photo recognition, live function calling, remote sync, and database migrations are not claimed as live-tested. Contract tests cover the local behavior. Wallet authorization and a real devnet broadcast still need a funded test wallet.
-- Without `DATABASE_URL`, financial events reset on server restart. Budgets, goal definitions, sync status, and demo signature claims remain process-local. Multi-process or production deployment needs durable stores and transactional multi-step mutations.
-- Forecast balances start from a seeded opening amount plus recorded activity. Nessie account balances are references in Settings; importing activity does not reconcile that opening amount to the sandbox balance. The UI states this explicitly.
+- No real Auth0, Gemini, Nessie, or production database credentials are configured locally. Server configuration is unverified, rather than known to be missing. Real sign-in, photo recognition, live function calling and remote sync remain pending. Disposable local databases exercised the actual schema and transactions. Wallet authorization and a real devnet broadcast still need a funded test wallet.
+- Production requires `DATABASE_URL`; development without it keeps events and profiles in process-local memory. `ALLOW_EPHEMERAL_DEMO=true` can explicitly allow ephemeral storage but does not bypass production Auth0. Existing process-local planning data has no durable migration source after a restart.
+- Forecasts use a confirmed checkpoint or synchronized simulated Nessie account balances, offsetting imported posted activity to avoid double counting. Only the keyless demo uses the seeded balance. Manual records apply separately; another sync replaces a checkpoint. Snapshots can become stale and multi-request sandbox fetches are not an atomic real-bank ledger snapshot.
 - Projections cover the displayed horizon. Monthly planned bills repeat; income appears only on recorded dates. Unlisted everyday spending, interest, fees, and future unknown events are excluded. Repayments may arrive late or never. All financial dates use UTC calendar days consistently.
 - AutoSave is a planned reservation, not an executed bank transfer. Goal progress counts confirmed reserves, and a contribution reduces its future scheduled reserve amount.
 - Bill payment records a payment in CashCompass; it does not submit a payment to Nessie or a biller. A manually renewed bill is a separate manual record.
-- Solana uses devnet, an explicit fixed demo conversion rate, and a fixed recipient; it has no per-counterparty wallet linking or live price feed. Receipt claims and ledger writes are separate operations; a process crash between them needs reconciliation before retry. This is not a production payment system.
+- Solana uses devnet, an explicit fixed demo conversion rate, and a shared configured demo recipient; it has no per-counterparty wallet linking or live price feed. Receipt claims and ledger writes commit in the same database transaction. An on-chain payment followed by an unavailable app/database still needs retry/reconciliation; it is not a production payment system.
 - Bill photos are JPEG/PNG/WebP, at most 5 MB, processed once without raw image storage. Unreadable/unsupported images return manual entry; saving always requires confirmation.
 - Browser conversation history lasts for the mounted chat session. Cross-session storage and token streaming are not implemented. Pending feedback describes the request honestly instead of pretending timed stages reflect actual tool execution.
 
 ## Dependencies
 
-The full online npm audit after trimming the wallet bundle reports **24 findings: 0 critical, 9 high, 15 moderate** (including transitive parent-package findings). The original handoff recorded 115 after adding the catch-all Solana bundle. The critical `protobufjs` path from unused wallet adapters is removed. `braces` still appears through the retained shadcn/ESLint toolchain; `stream-json` and `uuid` also remain in retained dependencies. The audit's proposed fixes include breaking changes or no available fix. No forced major downgrades were applied. Recheck advisories before deployment.
+Removed the unused shadcn runtime CLI and replaced its small CSS variant import locally; patched the compatible UUID dependency and tested the actual Solana Web3 RPC client. This removed a further 221 packages. `npm audit --omit=dev` reports **9 moderate, 0 high, 0 critical** findings, including parent-package findings. The full installed dependency tree still has **5 high and 3 moderate** findings; the high `braces` path belongs to the development ESLint toolchain. Remaining `stream-json` findings come through retained RPC tooling without a compatible upstream fix; the unused parser is excluded from the traced Docker runtime. Audit counts differ by production/dev inclusion and peer resolution. No forced breaking downgrades were applied. Recheck advisories before an approved release.
+
+## Deployment access
+
+Earlier SSH reached `66.42.81.135` but key-only authentication for `root` was denied. The user confirmed no temporary key was added. The latest check found no identities in this environment's SSH agent and no trusted host entry in its standard known-hosts file; it stopped without bypassing verification. The newly pulled [Vultr guide](DEPLOYMENT_VULTR.md) reports nginx → PM2 on port 8000 and a two-minute `main` deployment timer. Treat that as repository-reported deployment information until an authenticated read-only inspection verifies the running services, credentials and current release. No GitHub hooks or CI runs were returned by the repository checks before this release. See [the deployment runbook](DEPLOYMENT.md).
 
 ## Three-minute demo
 

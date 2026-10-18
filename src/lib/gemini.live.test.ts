@@ -1,5 +1,6 @@
 // Live Gemini API checks. Skipped unless run via `npm run test:gemini`, so `npm test`
 // never needs a key or spends quota. Run with: npm run test:gemini
+import { existsSync } from "node:fs";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 const LIVE = import.meta.env.MODE === "gemini-live";
@@ -7,7 +8,7 @@ const LIVE = import.meta.env.MODE === "gemini-live";
 describe.skipIf(!LIVE)("Gemini API (live)", () => {
   beforeAll(() => {
     // Next skips .env.local when NODE_ENV=test, so load it directly.
-    process.loadEnvFile(".env.local");
+    for (const path of [".env.local", ".env"]) if (existsSync(path)) process.loadEnvFile(path);
     if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not set in .env.local");
   });
 
@@ -16,16 +17,14 @@ describe.skipIf(!LIVE)("Gemini API (live)", () => {
 
   async function context() {
     const { getDemoEvents, DEMO_PREFERRED_BUFFER, DEMO_STARTING_BALANCE } = await import("@/lib/finance/demo-data");
-    const { getBudgets } = await import("@/lib/finance/budgets");
-    const { getWishlistGoals } = await import("@/lib/finance/wishlist-goals");
     const events = getDemoEvents();
     const nextPayday = events
       .filter((e) => e.category === "Payroll" && e.record === "planned")
       .sort((a, b) => a.date.localeCompare(b.date))[0];
     return {
       events,
-      budgets: getBudgets("live-test"),
-      wishlistGoals: getWishlistGoals("live-test"),
+      budgets: [{ category: "Dining", monthlyLimit: 150 }],
+      wishlistGoals: [{ id: "live-fixture-trip", name: "Miami Trip Goal", targetAmount: 900, targetDate: new Date(Date.now() + 70 * 86400000).toISOString() }],
       openingBalance: DEMO_STARTING_BALANCE,
       bufferThreshold: DEMO_PREFERRED_BUFFER,
       forecastDays: 35,

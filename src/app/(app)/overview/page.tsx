@@ -1,3 +1,4 @@
+import { BalanceSetupNotice } from "@/components/dashboard/balance-setup-notice";
 import { connection } from "next/server";
 import { CalendarClock, PiggyBank, Receipt } from "lucide-react";
 import { HeroOverview } from "@/components/dashboard/hero-overview";
@@ -17,10 +18,8 @@ import {
   selectUpcomingBills,
   sumByDirection,
 } from "@/lib/finance/calculations";
-import { DEMO_PREFERRED_BUFFER, DEMO_STARTING_BALANCE } from "@/lib/finance/demo-data";
-import { getFinancialEventRepository } from "@/lib/finance/repository";
-import { getWishlistGoals } from "@/lib/finance/wishlist-goals";
-import { requireOwnerId } from "@/lib/auth/session";
+import { DEMO_PREFERRED_BUFFER } from "@/lib/finance/demo-data";
+import { getFinancialSnapshot } from "@/lib/finance/snapshot";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -30,21 +29,23 @@ const FORECAST_TOTAL_DAYS = 35;
 export default async function OverviewPage() {
   await connection();
 
-  const events = await getFinancialEventRepository().listEvents();
+  const snapshot = await getFinancialSnapshot();
+  const { balanceBasis, events } = snapshot;
+  if (balanceBasis.source === "unconfigured") return <BalanceSetupNotice />;
   const upcomingBills = selectUpcomingBills(events);
   const recentTransactions = selectRecentTransactions(events);
 
   const startDate = new Date();
   startDate.setUTCDate(startDate.getUTCDate() - FORECAST_HISTORY_DAYS);
 
-  const forecast = computeForecast(DEMO_STARTING_BALANCE, events, {
+  const forecast = computeForecast(balanceBasis.openingBalance, events, {
     days: FORECAST_TOTAL_DAYS,
     startDate,
     lowBalanceThreshold: DEMO_PREFERRED_BUFFER,
   });
 
   const todayIndex = FORECAST_HISTORY_DAYS;
-  const currentBalance = computeAvailableBalance(DEMO_STARTING_BALANCE, events);
+  const currentBalance = computeAvailableBalance(balanceBasis.openingBalance, events);
 
   const upcomingBillsTotal = upcomingBills.reduce((sum, bill) => sum + bill.amount, 0);
   const savingsEarmarks = events.filter((e) => e.category === "Savings" && e.record === "planned").reduce(
@@ -73,7 +74,7 @@ export default async function OverviewPage() {
   );
 
   const nextBill = upcomingBills[0];
-  const primaryGoal = getWishlistGoals(await requireOwnerId())[0];
+  const primaryGoal = snapshot.profile.goals[0];
   const savingsProgressPct = primaryGoal
     ? Math.min(100, Math.round((savingsProgressForGoal(events, primaryGoal.name) / primaryGoal.targetAmount) * 100))
     : 0;
@@ -118,7 +119,7 @@ export default async function OverviewPage() {
         />
       </div>
 
-      <p className="text-xs text-muted-foreground">Demo forecast: starts with a seeded opening balance and recorded events. Monthly bills repeat; unlisted everyday spending is excluded. The conservative balance excludes uncertain repayments. Savings contributions reserve funds here; no money is transferred.</p>
+      <p className="text-xs text-muted-foreground">{balanceBasis.description} Monthly bills repeat; unlisted everyday spending is excluded. The conservative balance excludes uncertain repayments. Savings contributions reserve funds here; no money is transferred.</p>
 
       <Card>
         <CardHeader>

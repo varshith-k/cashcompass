@@ -17,6 +17,7 @@ function positiveAmount(value: unknown): number {
 
 /** All financial prose and cards come from deterministic tool results. */
 export function respondToTool(name: CopilotTool, args: Record<string, unknown>, ctx: ForecastContext): CopilotResult {
+  const assumptions = [ctx.balanceDescription ?? ASSUMPTIONS[0], ...ASSUMPTIONS.slice(1)];
   if (name === "spending_breakdown") {
     const { overBudget, topCategories } = spendingBreakdown(spendByCategoryThisMonth(ctx.events), ctx.budgets);
     return {
@@ -34,7 +35,7 @@ export function respondToTool(name: CopilotTool, args: Record<string, unknown>, 
     if (!result.found) return { reply: "I couldn't find that outstanding repayment. Add or review it in your ledger first.", assumptions: [], actionLabel: "Review ledger", actionHref: "/ledger" };
     return {
       reply: `If ${result.counterparty}'s repayment arrives ${delayDays} days late (${formatShortDate(result.newDate!)} instead of ${formatShortDate(result.originalDate!)}), your projected minimum balance is ${formatCurrency(result.minBalance, { cents: true })}. ${result.billsAtRisk} of ${result.totalBills} upcoming bills fall below your buffer when uncertain income is excluded.`,
-      assumptions: ASSUMPTIONS, actionLabel: "Explore the simulator", actionHref: "/cash-flow",
+      assumptions, actionLabel: "Explore the simulator", actionHref: "/cash-flow",
     };
   }
   if (name === "suggest_savings_plan") {
@@ -53,13 +54,13 @@ export function respondToTool(name: CopilotTool, args: Record<string, unknown>, 
     const check = checkAffordability(ctx, { amount, label: "Savings allocation", date: new Date().toISOString() });
     return {
       reply: `Reserving ${formatCurrency(amount)} today ${check.affordable ? "keeps your forecast above" : "could put your forecast below"} your ${formatCurrency(check.bufferThreshold)} buffer. Expected minimum: ${formatCurrency(check.minBalance, { cents: true })}; without uncertain income: ${formatCurrency(check.conservativeMinBalance, { cents: true })}. ${check.billsAtRisk}/${check.totalBills} bills at risk.`,
-      assumptions: ASSUMPTIONS, actionLabel: "Explore the simulator", actionHref: `/cash-flow?amount=${amount}`,
+      assumptions, actionLabel: "Explore the simulator", actionHref: `/cash-flow?amount=${amount}`,
     };
   }
   const { now, afterPayday } = compareBuyTimings(ctx, { amount, label });
   return {
     reply: `Buying ${label} for ${formatCurrency(amount)} today ${now.affordable ? "keeps your forecast above" : "could reduce your forecast below"} your ${formatCurrency(now.bufferThreshold)} buffer. ${!afterPayday ? "No future payday is recorded for comparison." : afterPayday.affordable ? "Waiting until payday keeps that buffer intact." : "Waiting until payday still needs a closer look at your obligations."}`,
-    assumptions: ASSUMPTIONS,
+    assumptions,
     comparison: [
       { label: "Buy today", ...now },
       ...(afterPayday ? [{ label: "Buy after payday", ...afterPayday }] : []),

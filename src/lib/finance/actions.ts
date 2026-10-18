@@ -1,9 +1,10 @@
 "use server";
 
+import { updatePlanningProfile } from "@/lib/storage/profile";
 import { revalidatePath } from "next/cache";
 import { nextMonthlyDate } from "./dates";
 import { requireOwnerId } from "@/lib/auth/session";
-import { getFinancialEventRepository } from "./repository";
+import { getFinancialEventRepository, withFinancialTransaction } from "./repository";
 import { settleLedgerAmount } from "./ledger";
 import { getBudgets, setBudgetLimits } from "./budgets";
 import { getWishlistGoals, addWishlistGoal, deleteWishlistGoal as removeWishlistGoal } from "./wishlist-goals";
@@ -103,21 +104,23 @@ export async function deleteBill(formData: FormData) {
 }
 
 export async function markBillPaid(formData: FormData): Promise<BillPaidUndo> {
-  const id = String(formData.get("id"));
-  const repo = getFinancialEventRepository();
-  const original = (await repo.listEvents()).find((event) => event.id === id);
-  if (!original || original.record !== "planned" || original.direction !== "expense" || ["Savings", "Repayment"].includes(original.category)) {
-    throw new Error("Unpaid bill not found");
-  }
-  await repo.updateEvent(id, { record: "actual", certainty: "certain", date: new Date().toISOString() });
-  let nextId: string | undefined;
-  if (original.recurrence === "recurring") {
-    const { id: previousId, ...next } = original;
-    void previousId;
-    nextId = (await repo.createEvent({ ...next, source: "manual", sourceRecordId: undefined, date: nextMonthlyDate(original.date) })).id;
-  }
-  revalidatePath("/", "layout");
-  return { id, counterparty: original.counterparty, originalDate: original.date, originalCertainty: original.certainty, nextId };
+  return withFinancialTransaction(async () => {
+    const id = String(formData.get("id"));
+    const repo = getFinancialEventRepository();
+    const original = (await repo.listEvents()).find((event) => event.id === id);
+    if (!original || original.record !== "planned" || original.direction !== "expense" || ["Savings", "Repayment"].includes(original.category)) {
+      throw new Error("Unpaid bill not found");
+    }
+    await repo.updateEvent(id, { record: "actual", certainty: "certain", date: new Date().toISOString() });
+    let nextId: string | undefined;
+    if (original.recurrence === "recurring") {
+      const { id: previousId, ...next } = original;
+      void previousId;
+      nextId = (await repo.createEvent({ ...next, source: "manual", sourceRecordId: undefined, date: nextMonthlyDate(original.date) })).id;
+    }
+    revalidatePath("/", "layout");
+    return { id, counterparty: original.counterparty, originalDate: original.date, originalCertainty: original.certainty, nextId };
+  });
 }
 
 /**
@@ -126,39 +129,41 @@ export async function markBillPaid(formData: FormData): Promise<BillPaidUndo> {
  * touches the signed-in user's own records (the repository is owner-scoped).
  */
 export async function undoMarkBillPaid(undo: BillPaidUndo) {
-  const repo = getFinancialEventRepository();
-  const events = await repo.listEvents();
-  const paid = events.find((event) => event.id === undo?.id);
-  if (!paid || paid.record !== "actual" || paid.direction !== "expense") {
-    throw new Error("Paid bill not found");
-  }
-  // A stored timestamp (not form input), so validate it as a full ISO date.
-  const parsed = new Date(String(undo.originalDate));
-  if (Number.isNaN(parsed.getTime())) throw new Error("Invalid original due date");
-  const originalDate = parsed.toISOString();
-  await repo.updateEvent(paid.id, {
-    record: "planned",
-    certainty: undo.originalCertainty === "uncertain" ? "uncertain" : "certain",
-    date: originalDate,
+  return withFinancialTransaction(async () => {
+    const repo = getFinancialEventRepository();
+    const events = await repo.listEvents();
+    const paid = events.find((event) => event.id === undo?.id);
+    if (!paid || paid.record !== "actual" || paid.direction !== "expense") {
+      throw new Error("Paid bill not found");
+    }
+    // A stored timestamp (not form input), so validate it as a full ISO date.
+    const parsed = new Date(String(undo.originalDate));
+    if (Number.isNaN(parsed.getTime())) throw new Error("Invalid original due date");
+    const originalDate = parsed.toISOString();
+    await repo.updateEvent(paid.id, {
+      record: "planned",
+      certainty: undo.originalCertainty === "uncertain" ? "uncertain" : "certain",
+      date: originalDate,
+    });
+    const next = undo.nextId ? events.find((event) => event.id === undo.nextId) : undefined;
+    if (next && next.record === "planned" && next.counterparty === paid.counterparty && next.recurrence === "recurring") {
+      await repo.deleteEvent(next.id);
+    }
+    revalidatePath("/", "layout");
   });
-  const next = undo.nextId ? events.find((event) => event.id === undo.nextId) : undefined;
-  if (next && next.record === "planned" && next.counterparty === paid.counterparty && next.recurrence === "recurring") {
-    await repo.deleteEvent(next.id);
-  }
-  revalidatePath("/", "layout");
 }
 
 export async function updateBudgetLimits(formData: FormData) {
   const ownerId = await requireOwnerId();
   const limits: Record<string, number> = {};
-  for (const budget of getBudgets(ownerId)) {
+  for (const budget of await getBudgets(ownerId)) {
     const raw = formData.get(`limit_${budget.category}`);
     const value = Number(raw);
     if (Number.isFinite(value) && value >= 0) {
       limits[budget.category] = Math.round(value * 100) / 100;
     }
   }
-  setBudgetLimits(ownerId, limits);
+  await setBudgetLimits(ownerId, limits);
   revalidatePath("/", "layout");
 }
 
@@ -166,9 +171,9 @@ export async function createWishlistGoal(formData: FormData) {
   const ownerId = await requireOwnerId();
   const name = String(formData.get("name") || "").trim();
   if (!name) throw new Error("Goal name is required");
-  if (getWishlistGoals(ownerId).some((goal) => goal.name.toLowerCase() === name.toLowerCase())) throw new Error("Use a different goal name");
+  if ((await getWishlistGoals(ownerId)).some((goal) => goal.name.toLowerCase() === name.toLowerCase())) throw new Error("Use a different goal name");
 
-  addWishlistGoal(ownerId, {
+  await addWishlistGoal(ownerId, {
     name,
     targetAmount: parseAmount(formData.get("targetAmount")),
     targetDate: parseDate(formData.get("targetDate")),
@@ -177,15 +182,17 @@ export async function createWishlistGoal(formData: FormData) {
 }
 
 export async function deleteWishlistGoal(formData: FormData) {
-  const ownerId = await requireOwnerId();
-  const id = String(formData.get("id"));
-  const goal = getWishlistGoals(ownerId).find((item) => item.id === id);
-  if (goal) {
-    const repo = getFinancialEventRepository();
-    for (const event of (await repo.listEvents()).filter((e) => e.category === "Savings" && e.record === "planned" && e.counterparty === goal.name)) await repo.deleteEvent(event.id);
-  }
-  removeWishlistGoal(ownerId, id);
-  revalidatePath("/", "layout");
+  return withFinancialTransaction(async () => {
+    const ownerId = await requireOwnerId();
+    const id = String(formData.get("id"));
+    const goal = (await getWishlistGoals(ownerId)).find((item) => item.id === id);
+    if (goal) {
+      const repo = getFinancialEventRepository();
+      for (const event of (await repo.listEvents()).filter((e) => e.category === "Savings" && e.record === "planned" && e.counterparty === goal.name)) await repo.deleteEvent(event.id);
+    }
+    await removeWishlistGoal(ownerId, id);
+    revalidatePath("/", "layout");
+  });
 }
 
 export async function createLedgerEntry(formData: FormData) {
@@ -220,43 +227,58 @@ export async function logLedgerPayment(formData: FormData) {
 }
 
 export async function planWishlistSavings(formData: FormData) {
-  const ownerId = await requireOwnerId();
-  const goal = getWishlistGoals(ownerId).find((item) => item.id === String(formData.get("goalId")));
-  if (!goal) throw new Error("Goal not found");
-  const weeklyAmount = parseAmount(formData.get("weeklyAmount"));
-  const repo = getFinancialEventRepository();
-  const events = await repo.listEvents();
-  const saved = events.filter((e) => e.category === "Savings" && e.counterparty === goal.name && e.record === "actual").reduce((sum, e) => sum + e.amount, 0);
-  let remaining = Math.max(0, goal.targetAmount - saved);
-  const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
-  const target = new Date(`${goal.targetDate.slice(0, 10)}T00:00:00.000Z`);
-  const weeks = Math.min(52, Math.max(0, Math.ceil((target.getTime() - today.getTime()) / (7 * 86400000))));
-  if (!weeks || !remaining) throw new Error("Set a future target date for an unfinished goal");
-  for (const event of events.filter((e) => e.category === "Savings" && e.counterparty === goal.name && e.record === "planned")) await repo.deleteEvent(event.id);
-  for (let i = 1; i <= weeks && remaining > 0; i++) {
-    const date = new Date(Math.min(target.getTime(), today.getTime() + i * 7 * 86400000));
-    const amount = Math.min(remaining, weeklyAmount);
-    await repo.createEvent({ date: date.toISOString(), amount, direction: "expense", record: "planned", certainty: "certain", recurrence: "recurring", source: "manual", category: "Savings", counterparty: goal.name });
-    remaining = Math.round((remaining - amount) * 100) / 100;
-  }
-  revalidatePath("/", "layout");
+  return withFinancialTransaction(async () => {
+    const ownerId = await requireOwnerId();
+    const goal = (await getWishlistGoals(ownerId)).find((item) => item.id === String(formData.get("goalId")));
+    if (!goal) throw new Error("Goal not found");
+    const weeklyAmount = parseAmount(formData.get("weeklyAmount"));
+    const repo = getFinancialEventRepository();
+    const events = await repo.listEvents();
+    const saved = events.filter((e) => e.category === "Savings" && e.counterparty === goal.name && e.record === "actual").reduce((sum, e) => sum + e.amount, 0);
+    let remaining = Math.max(0, goal.targetAmount - saved);
+    const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+    const target = new Date(`${goal.targetDate.slice(0, 10)}T00:00:00.000Z`);
+    const weeks = Math.min(52, Math.max(0, Math.ceil((target.getTime() - today.getTime()) / (7 * 86400000))));
+    if (!weeks || !remaining) throw new Error("Set a future target date for an unfinished goal");
+    for (const event of events.filter((e) => e.category === "Savings" && e.counterparty === goal.name && e.record === "planned")) await repo.deleteEvent(event.id);
+    for (let i = 1; i <= weeks && remaining > 0; i++) {
+      const date = new Date(Math.min(target.getTime(), today.getTime() + i * 7 * 86400000));
+      const amount = Math.min(remaining, weeklyAmount);
+      await repo.createEvent({ date: date.toISOString(), amount, direction: "expense", record: "planned", certainty: "certain", recurrence: "recurring", source: "manual", category: "Savings", counterparty: goal.name });
+      remaining = Math.round((remaining - amount) * 100) / 100;
+    }
+    revalidatePath("/", "layout");
+  });
 }
 
 export async function addWishlistContribution(formData: FormData) {
-  const ownerId = await requireOwnerId();
-  const goalName = String(formData.get("goalName") || "").trim();
-  if (!getWishlistGoals(ownerId).some((goal) => goal.name === goalName)) throw new Error("Goal not found");
-  const repo = getFinancialEventRepository();
-  const amount = parseAmount(formData.get("amount"));
-  // Reserving funds now replaces that amount of scheduled future reserves.
-  let toConsume = amount;
-  const planned = (await repo.listEvents()).filter((e) => e.category === "Savings" && e.counterparty === goalName && e.record === "planned").sort((a, b) => a.date.localeCompare(b.date));
-  for (const event of planned) {
-    if (toConsume <= 0) break;
-    if (toConsume >= event.amount) await repo.deleteEvent(event.id);
-    else await repo.updateEvent(event.id, { amount: Math.round((event.amount - toConsume) * 100) / 100 });
-    toConsume = Math.round((toConsume - event.amount) * 100) / 100;
-  }
-  await repo.createEvent({ date: new Date().toISOString(), amount, direction: "expense", record: "actual", certainty: "certain", recurrence: "one-time", source: "manual", category: "Savings", counterparty: goalName });
+  return withFinancialTransaction(async () => {
+    const ownerId = await requireOwnerId();
+    const goalName = String(formData.get("goalName") || "").trim();
+    if (!(await getWishlistGoals(ownerId)).some((goal) => goal.name === goalName)) throw new Error("Goal not found");
+    const repo = getFinancialEventRepository();
+    const amount = parseAmount(formData.get("amount"));
+    // Reserving funds now replaces that amount of scheduled future reserves.
+    let toConsume = amount;
+    const planned = (await repo.listEvents()).filter((e) => e.category === "Savings" && e.counterparty === goalName && e.record === "planned").sort((a, b) => a.date.localeCompare(b.date));
+    for (const event of planned) {
+      if (toConsume <= 0) break;
+      if (toConsume >= event.amount) await repo.deleteEvent(event.id);
+      else await repo.updateEvent(event.id, { amount: Math.round((event.amount - toConsume) * 100) / 100 });
+      toConsume = Math.round((toConsume - event.amount) * 100) / 100;
+    }
+    await repo.createEvent({ date: new Date().toISOString(), amount, direction: "expense", record: "actual", certainty: "certain", recurrence: "one-time", source: "manual", category: "Savings", counterparty: goalName });
+    revalidatePath("/", "layout");
+  });
+}
+
+export async function saveBalanceCheckpoint(formData: FormData) {
+  const balance = Number(formData.get("balance"));
+  if (!Number.isFinite(balance) || balance < 0 || balance > 9999999999.99) throw new Error("Enter a valid balance");
+  await withFinancialTransaction(async (ownerId) => {
+    const events = await getFinancialEventRepository().listEvents();
+    const signedPosted = events.filter((event) => event.record === "actual" && event.date.slice(0, 10) <= new Date().toISOString().slice(0, 10)).reduce((sum, event) => sum + (event.direction === "income" ? event.amount : -event.amount), 0);
+    await updatePlanningProfile(ownerId, (profile) => { profile.openingBalance = Math.round((balance - signedPosted) * 100) / 100; });
+  });
   revalidatePath("/", "layout");
 }

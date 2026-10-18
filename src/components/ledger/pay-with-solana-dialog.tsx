@@ -17,7 +17,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { settleLedgerWithSolana } from "@/lib/solana/actions";
-import { SOLANA_DEMO_RECIPIENT, SOLANA_DEMO_USD_PER_SOL } from "@/lib/solana/config";
+import { useSettlementRecipient } from "@/lib/solana/provider";
+import { SOLANA_DEMO_USD_PER_SOL } from "@/lib/solana/config";
 import { formatCurrency } from "@/lib/format";
 
 type Step = "idle" | "sending" | "verifying" | "success" | "error";
@@ -36,6 +37,7 @@ export function PayWithSolanaDialog({
   const [error, setError] = useState<string | null>(null);
   const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
 
+  const recipientAddress = useSettlementRecipient();
   const { connection } = useConnection();
   const { connected, publicKey, sendTransaction } = useWallet();
   const { setVisible: setWalletModalVisible } = useWalletModal();
@@ -60,7 +62,7 @@ export function PayWithSolanaDialog({
     setError(null);
 
     try {
-      const recipient = new PublicKey(SOLANA_DEMO_RECIPIENT);
+      const recipient = new PublicKey(recipientAddress);
       const lamports = Math.round(demoSol * 1_000_000_000);
 
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();

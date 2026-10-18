@@ -14,7 +14,7 @@ export default async function BudgetsPage() {
 
   const events = await getFinancialEventRepository().listEvents();
   const spendByCategory = spendByCategoryThisMonth(events);
-  const budgets = getBudgets(await requireOwnerId());
+  const budgets = await getBudgets(await requireOwnerId());
 
   const budgetsWithSpend = budgets.map((budget) => ({
     ...budget,

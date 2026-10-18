@@ -1,0 +1,19 @@
+# Review against the existing deployment before use. This file is not auto-deployed.
+services:
+  app:
+    image: ${CASHCOMPASS_IMAGE:?Set a verified image tag}
+    restart: unless-stopped
+    env_file:
+      - ${CASHCOMPASS_ENV_FILE:?Set the path to the server-only environment file}
+    ports:
+      - "127.0.0.1:3000:3000"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache:uid=1001,gid=1001
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 1g
+    cpus: 1

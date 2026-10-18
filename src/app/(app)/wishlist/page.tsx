@@ -13,7 +13,7 @@ export default async function WishlistPage() {
   await connection();
 
   const events = await getFinancialEventRepository().listEvents();
-  const goals = getWishlistGoals(await requireOwnerId());
+  const goals = await getWishlistGoals(await requireOwnerId());
 
   return (
     <div>

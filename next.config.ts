@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Docker uses a traced server; the existing PM2 deployment uses next start.
+  output: process.env.CASHCOMPASS_OUTPUT === "standalone" ? "standalone" : undefined,
   experimental: {
     serverActions: { bodySizeLimit: "6mb" },
   },

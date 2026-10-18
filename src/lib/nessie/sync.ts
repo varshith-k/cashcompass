@@ -1,5 +1,6 @@
 import "server-only";
-import { getFinancialEventRepository } from "@/lib/finance/repository";
+import { updatePlanningProfile } from "@/lib/storage/profile";
+import { getFinancialEventRepository, withFinancialTransaction } from "@/lib/finance/repository";
 import type { FinancialEvent, NewFinancialEvent } from "@/lib/finance/types";
 import {
   getAccount,
@@ -25,7 +26,6 @@ function findExisting(existing: FinancialEvent[], candidate: NewFinancialEvent):
 
 export async function syncNessieAccount(accountId: string) {
   const repo = getFinancialEventRepository();
-  const existing = await repo.listEvents();
 
   const [account, purchases, deposits, withdrawals, bills] = await Promise.all([
     getAccount(accountId),
@@ -48,6 +48,13 @@ export async function syncNessieAccount(accountId: string) {
     return merchantNames.get(merchantId)!;
   }
 
+  const cancelled = new Set([
+    ...purchases.filter((item) => ["cancelled", "canceled", "failed"].includes(item.status)).map((item) => `${accountId}/purchase/${item._id}`),
+    ...deposits.filter((item) => ["cancelled", "canceled", "failed"].includes(item.status ?? "")).map((item) => `${accountId}/deposit/${item._id}`),
+    ...withdrawals.filter((item) => ["cancelled", "canceled", "failed"].includes(item.status ?? "")).map((item) => `${accountId}/withdrawal/${item._id}`),
+    ...bills.filter((item) => ["cancelled", "canceled", "failed"].includes(item.status)).map((item) => `${accountId}/bill/${item._id}`),
+  ]);
+  if (account._id !== accountId || !Number.isFinite(account.balance)) throw new Error("Nessie returned invalid account data");
   const candidates: NewFinancialEvent[] = [];
 
   for (const purchase of purchases) {
@@ -114,22 +121,42 @@ export async function syncNessieAccount(accountId: string) {
     });
   }
 
-  if (candidates.some((candidate) => !Number.isFinite(candidate.amount) || candidate.amount <= 0)) throw new Error("Nessie returned an invalid amount. No guessed records were imported.");
-  let added = 0;
-  let skipped = 0;
-  let updated = 0;
-  for (const candidate of candidates) {
-    const previous = findExisting(existing, candidate);
-    if (previous) {
-      if (Object.entries(candidate).some(([key, value]) => previous[key as keyof FinancialEvent] !== value)) {
-        await repo.updateEvent(previous.id, candidate);
+  if (candidates.some((candidate) => !Number.isFinite(candidate.amount) || candidate.amount <= 0 || candidate.amount > 9999999999.99 || !candidate.sourceRecordId || candidate.sourceRecordId.endsWith("/undefined"))) throw new Error("Nessie returned an invalid amount. No guessed records were imported.");
+  return withFinancialTransaction(async (ownerId) => {
+    const existing = await repo.listEvents();
+    let added = 0;
+    let skipped = 0;
+    let updated = 0;
+    for (let index = existing.length - 1; index >= 0; index--) {
+      const event = existing[index];
+      if (event.sourceRecordId && cancelled.has(event.sourceRecordId)) {
+        await repo.deleteEvent(event.id);
+        existing.splice(index, 1);
         updated++;
-      } else skipped++;
-      continue;
+      }
     }
-    const created = await repo.createEvent(candidate);
-    existing.push(created);
-    added++;
-  }
-  return { added, skipped, updated, accountId: account._id, accountName: account.nickname, accountBalance: account.balance };
+    for (const candidate of candidates) {
+      const previous = findExisting(existing, candidate);
+      if (previous) {
+        if (Object.entries(candidate).some(([key, value]) => previous[key as keyof FinancialEvent] !== value)) {
+          const updatedEvent = await repo.updateEvent(previous.id, candidate);
+          existing[existing.findIndex((event) => event.id === previous.id)] = updatedEvent;
+          updated++;
+        } else skipped++;
+        continue;
+      }
+      const created = await repo.createEvent(candidate);
+      existing.push(created);
+      added++;
+    }
+    const result = { added, skipped, updated, accountId: account._id, accountName: account.nickname, accountBalance: account.balance };
+    if (!Number.isFinite(account.balance)) throw new Error("Nessie returned an invalid account balance");
+    await updatePlanningProfile(ownerId, (profile) => {
+      const reflectedEvents = Object.fromEntries(existing.filter((event) => event.sourceRecordId?.startsWith(`${accountId}/`) && event.record === "actual" && event.date.slice(0, 10) <= new Date().toISOString().slice(0, 10)).map((event) => [event.id, event.direction === "income" ? event.amount : -event.amount]));
+      profile.accountSnapshots[accountId] = { balance: account.balance, timestamp: new Date().toISOString(), reflectedEvents };
+      profile.openingBalance = null;
+      profile.syncStatus = { ...result, timestamp: new Date().toISOString() };
+    });
+    return result;
+  });
 }

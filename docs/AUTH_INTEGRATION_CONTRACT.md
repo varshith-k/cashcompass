@@ -132,6 +132,7 @@ The proxy is the first gate. **Route Handlers and Server Actions must still call
 `getFinancialEventRepository()` resolves the owner from the verified session on every call (`requireOwnerId()`), so callers never pass a user id:
 
 - **Tiger Data:** `financial_events.owner_id` is `NOT NULL`. Every `SELECT`, `UPDATE` and `DELETE` filters on it, so an update or delete with someone else's id matches nothing. The continuous aggregate groups by `owner_id`.
+- **Planning and settlements:** budgets, goals, checkpoints, account snapshots and sync state use `planning_profiles.owner_id`. Financial mutations and Solana receipt claims share an owner-scoped database transaction.
 - **Demo/in-memory:** events, budgets, wishlist goals and the Nessie sync status are kept per user. Each new user starts from the demo seed.
 - **Pages and server actions** pass `await requireOwnerId()` to the budget, goal and sync-status helpers. The copilot receives the user's budgets and goals on its `ForecastContext`.
 - Covered by `src/lib/finance/user-isolation.test.ts`.

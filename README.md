@@ -34,7 +34,7 @@ All credentials stay server-side. `.env.example` lists the supported variables.
 - [Capital One Nessie sandbox](src/lib/nessie/README.md)
 - [Solana devnet](src/lib/solana/README.md)
 
-Run `db/schema.sql` on your TimescaleDB service before setting `DATABASE_URL`. It also upgrades existing installations with phone numbers, external record IDs, and settlement receipts. Budget and goal definitions remain process-local, even with a database configured.
+Configure `DATABASE_URL` and run `npm run db:migrate` against the intended TimescaleDB service before starting the app. The schema stores financial events, budgets, goals, balance snapshots, synchronization state, and settlement receipts. Production requires durable storage. Review the [deployment runbook](docs/DEPLOYMENT.md) before changing an existing installation.
 
 ## Verify
 
@@ -43,6 +43,8 @@ npm test
 npm run lint
 npm run typecheck
 npm run build
+# Optional, against a disposable local TimescaleDB database:
+# TEST_DATABASE_URL=postgresql://postgres@localhost:55433/cashcompass_verification TEST_TIMESCALE=true npm run test:database
 # With the development server running:
 npm run audit:ui
 npm run test:demo
@@ -50,7 +52,7 @@ npm run test:demo
 
 The UI audit checks nine routes at four widths in both themes, with accessibility scans at mobile and desktop widths. The browser demo checks connected mutations and removes its uniquely named records. It assumes the local keyless demo environment.
 
-See [phase status, verification, and limitations](docs/PROJECT_STATUS.md) and the original [product handoff](PROJECT_HANDOFF.md). Forecasts use a disclosed seeded opening balance, not a reconciled banking balance. Savings reserve funds in the model; they do not transfer money. Nessie records are simulated and do not imply Capital One endorsement.
+See [phase status, verification, and limitations](docs/PROJECT_STATUS.md) and the original [product handoff](PROJECT_HANDOFF.md). Forecasts use a confirmed balance checkpoint or synchronized Nessie balances; only the keyless demo uses a seeded balance. Savings reserve funds in the model; they do not transfer money. Nessie records are simulated and do not imply Capital One endorsement.
 
 ## Contributors
 

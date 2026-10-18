@@ -1,9 +1,8 @@
 import "server-only";
 import { Connection, type ParsedInstruction } from "@solana/web3.js";
-import { SOLANA_RPC_ENDPOINT, explorerUrl } from "./config";
+import { verificationRpcEndpoint } from "./server-config";
+import { explorerUrl } from "./config";
 import type { SolanaPaymentVerification } from "./types";
-
-const connection = new Connection(SOLANA_RPC_ENDPOINT, "confirmed");
 
 /**
  * Re-derives the transfer from the chain instead of trusting whatever
@@ -15,6 +14,7 @@ export async function verifySolanaTransfer(
   expectedRecipient: string,
   expectedLamports: number,
 ): Promise<SolanaPaymentVerification> {
+  const connection = new Connection(verificationRpcEndpoint(), "confirmed");
   const base = {
     signature,
     recipient: expectedRecipient,

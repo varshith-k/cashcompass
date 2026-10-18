@@ -18,8 +18,8 @@ try {
   await page.getByRole("button", { name: /User menu/ }).click();
   await page.getByRole("menuitem", { name: "Settings", exact: true }).waitFor();
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Notifications", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Review upcoming bills", exact: true }).waitFor();
+  await page.getByRole("button", { name: /^Notifications/ }).click();
+  await page.getByRole("menuitem", { name: "All bills & payments", exact: true }).waitFor();
   await page.keyboard.press("Escape");
   console.log("PASS account and reminder menus");
   await visit("/copilot");
@@ -64,13 +64,16 @@ try {
   await dialog.getByRole("button", { name: "Add bill", exact: true }).click();
   await saved();
   await row(tag).getByRole("button", { name: "Mark paid", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.waitForFunction((tag) => [...document.querySelectorAll("main li")].some((li) => li.textContent.includes(tag) && li.textContent.includes("Tomorrow")), tag);
+  await row(tag).getByRole("button", { name: "Mark paid", exact: true }).click();
   await page.waitForFunction((tag) => [...document.querySelectorAll("main li")].some((li) => li.textContent.includes(tag) && !li.textContent.includes("Tomorrow")), tag);
   await row(tag).getByRole("button", { name: `Delete bill from ${tag}`, exact: true }).click();
   await row(tag).waitFor({ state: "hidden" });
   await visit("/transactions");
   await row(tag).getByRole("button", { name: `Delete transaction with ${tag}`, exact: true }).click();
   await row(tag).waitFor({ state: "hidden" });
-  console.log("PASS bill scan fallback → manual confirmation → pay → monthly renewal");
+  console.log("PASS bill scan fallback → manual confirmation → pay → undo → monthly renewal");
 
   await visit("/wishlist");
   await page.getByRole("button", { name: "Add goal", exact: true }).click();

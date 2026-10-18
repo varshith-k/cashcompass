@@ -5,12 +5,11 @@ import { requireOwnerId } from "@/lib/auth/session";
 import { isNessieConfigured } from "./client";
 import { syncNessieAccount } from "./sync";
 import { listDemoAccounts } from "./accounts";
-import { recordSyncStatus } from "./status";
 
 export async function syncNessie(selectedAccountId?: string) {
   // Each user syncs the shared demo account into their own records
   // (repository writes are scoped to the session user).
-  const ownerId = await requireOwnerId();
+  await requireOwnerId();
   if (!isNessieConfigured()) {
     return { ok: false as const, message: "Add NESSIE_API_KEY in your environment to sync real demo data." };
   }
@@ -23,7 +22,6 @@ export async function syncNessie(selectedAccountId?: string) {
 
   try {
     const result = await syncNessieAccount(accountId);
-    recordSyncStatus(ownerId, result);
     revalidatePath("/", "layout");
     return { ok: true as const, ...result };
   } catch (error) {

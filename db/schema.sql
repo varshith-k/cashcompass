@@ -58,7 +58,8 @@ SELECT
   sum(amount) AS total
 FROM financial_events
 WHERE record = 'actual'
-GROUP BY owner_id, month, category, direction;
+GROUP BY owner_id, month, category, direction
+WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('monthly_category_spend',
   start_offset => INTERVAL '3 months',
@@ -73,4 +74,11 @@ CREATE TABLE IF NOT EXISTS solana_settlement_receipts (
   owner_id text NOT NULL,
   entry_id text NOT NULL,
   claimed_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Durable per-user planning, account snapshots and synchronization state.
+CREATE TABLE IF NOT EXISTS planning_profiles (
+  owner_id text PRIMARY KEY,
+  data jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
