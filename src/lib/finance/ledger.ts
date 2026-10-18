@@ -1,5 +1,6 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
+import { notifyFriend } from "@/lib/email/notify-friend";
 import { getFinancialEventRepository } from "./repository";
 
 /**
@@ -44,9 +45,17 @@ export async function settleLedgerAmount(
       counterparty,
       // Links each partial payment to the ledger entry it reduces.
       sourceRecordId: `ledger/${original.id}`,
+      friendId: original.friendId,
     });
     await repo.updateEvent(id, { amount: Math.round((remaining - amountPaid) * 100) / 100 });
   }
 
   revalidatePath("/", "layout");
+
+  // Let the friend know (best-effort: an email problem never undoes the payment).
+  try {
+    await notifyFriend("payment", original, { amount: amountPaid, remaining: Math.max(0, Math.round((remaining - amountPaid) * 100) / 100) });
+  } catch (error) {
+    console.warn("[settle-up] payment email failed:", error instanceof Error ? error.message : "unknown error");
+  }
 }

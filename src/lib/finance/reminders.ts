@@ -45,7 +45,7 @@ export function buildReminders(events: FinancialEvent[]): Reminder[] {
       id: event.id,
       title: `${event.counterparty} owes you ${formatCurrency(event.amount, { cents: true })}`,
       detail: daysUntil(event.date) < 0 ? "Repayment is late" : `Expected ${formatRelativeDay(event.date).toLowerCase()}`,
-      href: "/ledger",
+      href: "/settle-up",
       tone: "info",
     }));
 

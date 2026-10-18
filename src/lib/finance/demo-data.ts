@@ -56,8 +56,8 @@ const DEMO_EVENT_TEMPLATES: DemoEventTemplate[] = [
   { id: "evt-utilities", dayOffset: 4, amount: 118.3, direction: "expense", record: "planned", certainty: "certain", recurrence: "recurring", source: "manual", category: "Utilities", counterparty: "Duke Energy" },
   { id: "evt-rent-next", dayOffset: 5, amount: 1250, direction: "expense", record: "planned", certainty: "certain", recurrence: "recurring", source: "manual", category: "Housing", counterparty: "Lakeview Apartments" },
   { id: "evt-streaming", dayOffset: 6, amount: 15.99, direction: "expense", record: "planned", certainty: "certain", recurrence: "recurring", source: "manual", category: "Subscriptions", counterparty: "Netflix" },
-  { id: "evt-owe-alex", dayOffset: 8, amount: 60, direction: "expense", record: "planned", certainty: "certain", recurrence: "one-time", source: "manual", category: "Repayment", counterparty: "Alex (concert tickets)" },
-  { id: "evt-roommate-repayment", dayOffset: 9, amount: 180, direction: "income", record: "planned", certainty: "uncertain", recurrence: "one-time", source: "manual", category: "Repayment", counterparty: "Sam (roommate)", counterpartyPhone: "+15555550123" },
+  { id: "evt-owe-alex", dayOffset: 8, amount: 60, direction: "expense", record: "planned", certainty: "certain", recurrence: "one-time", source: "manual", category: "Repayment", counterparty: "Alex (concert tickets)", friendId: "friend-alex" },
+  { id: "evt-roommate-repayment", dayOffset: 9, amount: 180, direction: "income", record: "planned", certainty: "uncertain", recurrence: "one-time", source: "manual", category: "Repayment", counterparty: "Sam (roommate)", counterpartyPhone: "+15555550123", friendId: "friend-sam" },
   { id: "evt-phone-bill", dayOffset: 11, amount: 65, direction: "expense", record: "planned", certainty: "certain", recurrence: "recurring", source: "manual", category: "Utilities", counterparty: "Verizon" },
 
   // Next paycheck, then savings toward the wishlist goal.

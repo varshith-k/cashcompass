@@ -26,6 +26,8 @@ export interface FinancialEvent {
   scenarioId?: string;
   /** Ledger entries only — lets "remind to pay" use a real WhatsApp link instead of a fabricated one. */
   counterpartyPhone?: string;
+  /** Settle Up entries only: the friend this balance is with (see friends.ts), for email notifications. */
+  friendId?: string;
 }
 
 export type NewFinancialEvent = Omit<FinancialEvent, "id">;
