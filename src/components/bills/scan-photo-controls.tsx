@@ -7,12 +7,23 @@ import { scanBillImage, type ScanBillResult } from "@/lib/bill-scan/actions";
 import { compressImage } from "@/lib/bill-scan/compress-image";
 import type { ExtractedBill } from "@/lib/bill-scan/extract";
 import { PhoneScanPanel } from "./phone-scan-panel";
+import { WebcamCaptureDialog } from "./webcam-capture-dialog";
 
 /**
- * Photo capture for bills and receipts: "Take photo" (rear camera on phones),
- * "Upload photo", and on larger screens "Use my phone" (QR code). Calls
- * onFields with whatever Gemini could read; the user always reviews before saving.
+ * Photo capture for bills and receipts: "Take photo", "Upload photo", and on
+ * larger screens "Use my phone" (QR code). Calls onFields with whatever
+ * Gemini could read; the user always reviews before saving.
+ *
+ * "Take photo" differs by device: on a touch-primary device (phone/tablet)
+ * it opens the native camera app via <input capture>, which works well
+ * there. On a mouse/trackpad-primary device (laptop/desktop) that attribute
+ * is ignored by the browser and silently falls back to a file picker
+ * indistinguishable from "Upload photo" - so there it opens a live webcam
+ * capture dialog instead (webcam-capture-dialog.tsx).
  */
+function isTouchPrimaryDevice(): boolean {
+  return typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches === true;
+}
 export function ScanPhotoControls({
   kind,
   onFields,
@@ -26,6 +37,7 @@ export function ScanPhotoControls({
   const [message, setMessage] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [phoneScan, setPhoneScan] = useState(false);
+  const [webcamOpen, setWebcamOpen] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,7 +98,12 @@ export function ScanPhotoControls({
       {fileInput(fileInputRef, false)}
       {fileInput(cameraInputRef, true)}
       <div className="grid grid-cols-2 gap-2">
-        <Button type="button" className="min-h-11" disabled={scanning} onClick={() => cameraInputRef.current?.click()}>
+        <Button
+          type="button"
+          className="min-h-11"
+          disabled={scanning}
+          onClick={() => (isTouchPrimaryDevice() ? cameraInputRef.current?.click() : setWebcamOpen(true))}
+        >
           {scanning ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
           {scanning ? "Reading…" : "Take photo"}
         </Button>
@@ -109,6 +126,7 @@ export function ScanPhotoControls({
           }}
         />
       )}
+      <WebcamCaptureDialog open={webcamOpen} onOpenChange={setWebcamOpen} onCapture={handlePhoto} kind={kind} />
       <p className="text-xs text-muted-foreground">
         Snap or upload a {kind} and CashCompass fills in the details for you to check.
       </p>
