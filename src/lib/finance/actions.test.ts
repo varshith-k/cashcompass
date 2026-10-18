@@ -9,7 +9,7 @@ vi.mock("./repository", () => ({ getFinancialEventRepository: () => ({
   updateEvent: async (id: string, patch: Partial<FinancialEvent>) => { const i = state.events.findIndex((e) => e.id === id); if (i < 0) throw new Error("not found"); return state.events[i] = { ...state.events[i], ...patch }; },
   deleteEvent: async (id: string) => { state.events = state.events.filter((e) => e.id !== id); },
 }) }));
-import { createBill, createReceipt, createTransaction, deleteReceipt, deleteTransaction, markBillPaid, undoMarkBillPaid, updateTransaction, planWishlistSavings, addWishlistContribution } from "./actions";
+import { createBill, createReceipt, createTransaction, deleteReceipt, deleteTransaction, deleteUpcomingIncome, markBillPaid, undoMarkBillPaid, updateTransaction, planWishlistSavings, addWishlistContribution } from "./actions";
 import { getReminderStore } from "./bill-reminders";
 import { settleLedgerAmount } from "./ledger";
 import { revalidatePath } from "next/cache";
@@ -68,6 +68,24 @@ describe("connected financial actions", () => {
   it("rejects impossible dates and sub-cent amounts", async () => {
     await expect(createTransaction(form({ date: "2026-02-31", amount: "10", direction: "expense" }))).rejects.toThrow();
     await expect(createTransaction(form({ date: "2026-10-17", amount: "0.001", direction: "expense" }))).rejects.toThrow();
+    expect(state.events).toHaveLength(0);
+  });
+  it("marking income recurring sets next payday up (the only way a real account can)", async () => {
+    await createTransaction(form({ date: "2026-11-02", amount: "1800", direction: "income", category: "Payroll", counterparty: "Acme Co", recurring: "on" }));
+    expect(state.events[0]).toMatchObject({ record: "planned", recurrence: "recurring", direction: "income", category: "Payroll" });
+    const { findNextPayday } = await import("./calculations");
+    expect(findNextPayday(state.events, "2026-10-17")).toMatchObject({ date: "2026-11-02T00:00:00.000Z", amount: 1800 });
+  });
+  it("ignores the recurring flag on an expense (recurring income only)", async () => {
+    await createTransaction(form({ date: "2026-10-17", amount: "50", direction: "expense", category: "Dining", counterparty: "Cafe", recurring: "on" }));
+    expect(state.events[0]).toMatchObject({ record: "actual", recurrence: "one-time" });
+  });
+  it("upcoming income can be deleted, but not through deleteTransaction (wrong record kind)", async () => {
+    await createTransaction(form({ date: "2026-11-02", amount: "1800", direction: "income", category: "Payroll", counterparty: "Acme Co", recurring: "on" }));
+    const id = state.events[0].id;
+    await expect(deleteTransaction(form({ id }))).rejects.toThrow();
+    expect(state.events).toHaveLength(1);
+    await deleteUpcomingIncome(form({ id }));
     expect(state.events).toHaveLength(0);
   });
   it("creates a capped savings schedule and consumes planned reserves when contributing", async () => {

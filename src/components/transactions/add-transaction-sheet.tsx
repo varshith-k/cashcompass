@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -28,6 +29,7 @@ export function AddTransactionSheet({ transaction }: { transaction?: FinancialEv
   const [open, setOpen] = useState(false);
   const [direction, setDirection] = useState<EventDirection>(transaction?.direction ?? "expense");
   const [category, setCategory] = useState<string>(transaction?.category ?? EXPENSE_CATEGORIES[0]);
+  const [recurring, setRecurring] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -37,6 +39,7 @@ export function AddTransactionSheet({ transaction }: { transaction?: FinancialEv
   function handleDirectionChange(next: EventDirection) {
     setDirection(next);
     setCategory(next === "expense" ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0]);
+    if (next === "expense") setRecurring(false);
   }
 
   return (
@@ -131,6 +134,18 @@ export function AddTransactionSheet({ transaction }: { transaction?: FinancialEv
               </SelectContent>
             </Select>
           </div>
+
+          {!transaction && direction === "income" && (
+            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+              <div>
+                <Label htmlFor={`${formId}-recurring`}>Recurring</Label>
+                <p className="text-xs text-muted-foreground">
+                  Hasn&rsquo;t happened yet — repeats monthly and sets your next payday
+                </p>
+              </div>
+              <Switch id={`${formId}-recurring`} name="recurring" checked={recurring} onCheckedChange={setRecurring} />
+            </div>
+          )}
 
           {error && <p role="alert" className="text-sm text-critical">{error}</p>}
           <Button type="submit" className="w-full" disabled={pending}>

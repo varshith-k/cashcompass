@@ -46,13 +46,21 @@ function parseDate(raw: FormDataEntryValue | null): string {
 }
 
 export async function createTransaction(formData: FormData) {
+  const direction = parseDirection(formData.get("direction"));
+  // Only income can be marked recurring here — an upcoming, not-yet-received
+  // paycheck (or other recurring income) rather than something already in
+  // the account. This is the only way a real (non-demo) account can ever
+  // populate "next payday": findNextPayday() requires a planned, recurring
+  // Payroll-category income event, and nothing else in the app creates one.
+  const recurring = direction === "income" && formData.get("recurring") === "on";
+
   const input: NewFinancialEvent = {
     date: parseDate(formData.get("date")),
     amount: parseAmount(formData.get("amount")),
-    direction: parseDirection(formData.get("direction")),
-    record: "actual",
+    direction,
+    record: recurring ? "planned" : "actual",
     certainty: "certain",
-    recurrence: "one-time",
+    recurrence: recurring ? "recurring" : "one-time",
     source: "manual",
     category: String(formData.get("category") || "Other"),
     counterparty: String(formData.get("counterparty") || "").trim() || "Unknown",
@@ -93,6 +101,10 @@ async function deleteMatching(formData: FormData, matches: (event: FinancialEven
 
 export async function deleteTransaction(formData: FormData) {
   await deleteMatching(formData, (e) => e.record === "actual", "Transaction not found");
+}
+
+export async function deleteUpcomingIncome(formData: FormData) {
+  await deleteMatching(formData, (e) => e.record === "planned" && e.direction === "income", "Upcoming income not found");
 }
 
 export async function createBill(formData: FormData) {
