@@ -1,33 +1,26 @@
 "use server";
 
 import { requireSession } from "@/lib/auth/session";
-import { extractBillFromImage, type ExtractedBill } from "./extract";
+import { createPhoneScanSession, readPhoneScanSession, type PhoneScanStatus } from "./phone-sessions";
+import { scanPhoto, type ScanBillResult } from "./scan-photo";
 
-export interface ScanBillResult {
-  ok: boolean;
-  fields?: ExtractedBill;
-  message?: string;
-}
+export type { ScanBillResult } from "./scan-photo";
 
 export async function scanBillImage(formData: FormData): Promise<ScanBillResult> {
   // Spends the Gemini API key, so only signed-in users may call it.
   await requireSession();
-  const file = formData.get("photo");
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, message: "No photo received." };
-  }
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
-    return { ok: false, message: "Use a JPEG, PNG, or WebP photo under 5 MB, or enter the details manually." };
-  }
-  if (!process.env.GEMINI_API_KEY) {
-    return { ok: false, message: "Add GEMINI_API_KEY to scan bills automatically — fill in the form manually for now." };
-  }
+  return scanPhoto(formData.get("photo"));
+}
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const fields = await extractBillFromImage(buffer.toString("base64"), file.type || "image/jpeg");
+/** Laptop: starts a one-time "scan with your phone" session (QR code token). */
+export async function startPhoneScan(): Promise<{ token: string; expiresAt: number }> {
+  const { user } = await requireSession();
+  return createPhoneScanSession(user.id);
+}
 
-  if (!fields) {
-    return { ok: false, message: "Couldn't read that photo clearly — fill in the form manually." };
-  }
-  return { ok: true, fields };
+/** Laptop: polls for the phone's photo result. Only the session's owner can read it. */
+export async function checkPhoneScan(token: string): Promise<{ status: PhoneScanStatus; result?: ScanBillResult }> {
+  const { user } = await requireSession();
+  if (typeof token !== "string" || token.length > 64) return { status: "expired" };
+  return readPhoneScanSession(token, user.id);
 }

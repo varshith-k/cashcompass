@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, Loader2, Plus, Sparkles } from "lucide-react";
+import { Camera, ImageUp, Loader2, Plus, Smartphone, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -21,7 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createBill } from "@/lib/finance/actions";
-import { scanBillImage } from "@/lib/bill-scan/actions";
+import { scanBillImage, type ScanBillResult } from "@/lib/bill-scan/actions";
+import { PhoneScanPanel } from "./phone-scan-panel";
+import { compressImage } from "@/lib/bill-scan/compress-image";
 import { EXPENSE_CATEGORIES } from "@/lib/finance/categories";
 
 export function AddBillSheet() {
@@ -35,6 +37,10 @@ export function AddBillSheet() {
   const [pending, setPending] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanMessage, setScanMessage] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [phoneScan, setPhoneScan] = useState(false);
+  // Opens the phone's rear camera directly (capture="environment"); on desktop it falls back to a file picker.
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,27 +51,40 @@ export function AddBillSheet() {
     setCategory(EXPENSE_CATEGORIES[0]);
     setRecurring(true);
     setScanMessage(null);
+    setPreview((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
+    setPhoneScan(false);
   }
 
-  async function handlePhoto(file: File) {
+  // Fills the form from a scan result (direct upload or the phone).
+  function applyScanResult(result: ScanBillResult) {
+    if (!result.ok) {
+      setScanMessage(result.message ?? "Couldn't read that photo — fill in the form manually.");
+      return;
+    }
+    const fields = result.fields!;
+    if (fields.counterparty) setCounterparty(fields.counterparty);
+    if (fields.amount) setAmount(String(fields.amount));
+    if (fields.date) setDate(fields.date);
+    if (fields.category) setCategory(fields.category);
+    setScanMessage("Pulled these fields from the photo — double-check before saving.");
+  }
+
+  async function handlePhoto(original: File) {
     setScanning(true);
     setScanMessage(null);
     try {
+      // Camera photos are large (and HEIC on iPhones): shrink to a JPEG first.
+      const file = await compressImage(original);
+      setPreview((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return URL.createObjectURL(file);
+      });
       const photoData = new FormData();
       photoData.set("photo", file);
-      const result = await scanBillImage(photoData);
-
-      if (!result.ok) {
-        setScanMessage(result.message ?? "Couldn't read that photo — fill in the form manually.");
-        return;
-      }
-
-      const fields = result.fields!;
-      if (fields.counterparty) setCounterparty(fields.counterparty);
-      if (fields.amount) setAmount(String(fields.amount));
-      if (fields.date) setDate(fields.date);
-      if (fields.category) setCategory(fields.category);
-      setScanMessage("Pulled these fields from the photo — double-check before saving.");
+      applyScanResult(await scanBillImage(photoData));
     } catch {
       setScanMessage("Unable to scan the photo. Try again or enter the details manually.");
     } finally {
@@ -122,20 +141,63 @@ export function AddBillSheet() {
               e.target.value = "";
             }}
           />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handlePhoto(file);
+              e.target.value = "";
+            }}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              className="min-h-11"
+              disabled={scanning}
+              onClick={() => cameraInputRef.current?.click()}
+            >
+              {scanning ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
+              {scanning ? "Reading…" : "Take photo"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11"
+              disabled={scanning}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <ImageUp className="size-4" />
+              Upload photo
+            </Button>
+          </div>
           <Button
             type="button"
-            variant="outline"
-            className="w-full"
-            disabled={scanning}
-            onClick={() => fileInputRef.current?.click()}
+            variant="ghost"
+            className="hidden sm:flex w-full"
+            disabled={scanning || phoneScan}
+            onClick={() => setPhoneScan(true)}
           >
-            {scanning ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Camera className="size-4" />
-            )}
-            {scanning ? "Reading photo…" : "Scan a bill photo"}
+            <Smartphone className="size-4" />
+            Use my phone to take the photo
           </Button>
+          {phoneScan && (
+            <PhoneScanPanel
+              onClose={() => setPhoneScan(false)}
+              onResult={(result) => {
+                setPhoneScan(false);
+                applyScanResult(result);
+              }}
+            />
+          )}
+          <p className="text-xs text-muted-foreground">Snap or upload a bill and CashCompass fills in the details for you to check.</p>
+          {preview && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview} alt="Bill photo being read" className="max-h-40 w-full rounded-lg border border-border object-contain bg-muted" />
+          )}
           {scanMessage && (
             <p role="status" className="flex items-start gap-1.5 text-xs text-muted-foreground">
               <Sparkles className="size-3.5 mt-0.5 shrink-0" />

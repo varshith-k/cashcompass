@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Dev only: lets a phone on the same Wi-Fi open the dev server by the
+  // laptop's private IP (used by "scan a bill with your phone").
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.*.*.*"],
   experimental: {
     serverActions: { bodySizeLimit: "6mb" },
   },
