@@ -1,6 +1,6 @@
 import "server-only";
 
-const BASE_URL = process.env.NESSIE_API_BASE_URL || "http://api.nessieisreal.com";
+const BASE_URL = process.env.NESSIE_API_BASE_URL || "https://api.nessieisreal.com";
 
 export interface NessieAccount {
   _id: string;
