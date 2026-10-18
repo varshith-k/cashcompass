@@ -124,6 +124,20 @@ This follows Roblox's [client/server boundary guidance](https://create.roblox.co
 
 Standalone tests do not cover Roblox Instances, UI layout, replication, real movement/proximity, or Studio permissions. Those remain manual until performed in Studio/Player. See [Studio testing modes](https://create.roblox.com/docs/studio/testing-modes).
 
+## Set the Roblox game icon
+
+Upload-ready file: **`assets/moneyquest-icon.png`**, 512×512, opaque PNG. Editable source: `assets/moneyquest-icon.svg`. It reuses the existing CashCompass compass mark and adds the MoneyQuest title. The PNG was checked at full size and 150×150; no image-generation service or external artwork is required.
+
+The default sky image in Creator Hub is Roblox's automatically assigned experience icon. Website branding and the `.rbxlx` source do not upload a custom icon automatically.
+
+1. In Creator Hub, open **CashCompass: MoneyQuest**.
+2. Choose **Configurations → Places**, then open the start place marked with a star.
+3. Select **Icon**, choose media type **Image**, and click **Change**.
+4. Select `assets/moneyquest-icon.png`, confirm the preview, then click **Save Changes**.
+5. Allow Roblox's image moderation to finish before expecting it to appear to other players.
+
+These are the [official Roblox icon upload steps](https://create.roblox.com/docs/production/publishing/experience-icons). Uploading an icon and public-release eligibility are separate; the new-account waiting period still applies.
+
 ## Publish with your Roblox account
 
 1. Finish Studio testing, then **Stop** the play session.
