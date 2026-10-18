@@ -2,6 +2,12 @@
 
 Updated October 18, 2026. The original phase delivery was checked October 17; newer teammate features and the MoneyQuest companion are recorded below. [`PROJECT_HANDOFF.md`](../PROJECT_HANDOFF.md) preserves the requirements and now includes the current feature handoff.
 
+## Gemini conversational handling — October 18, 2026
+
+The screenshot's “Gemini unavailable” label also appeared when Gemini returned a greeting or unsupported reply without a financial tool call. Added a validated guidance tool for greetings, capabilities, missing purchase amounts, and off-topic messages; financial answers still come from deterministic calculations. Gemini guidance and financial results have separate labels, and fallback wording no longer assumes an outage. Ambiguous multiple calls and invalid guidance reasons are rejected.
+
+The `/api/auth/me` handler now supplies Next.js’s generated `RouteContext<"/api/auth/me">` to `withSession`, correcting the production build type mismatch without changing session validation. Based on current main through `8d652b9`. Verification: 195 unit tests passed (six live tests skipped in the default suite), lint passed, and the Webpack production build passed including TypeScript. All six opt-in Gemini live checks previously passed locally: affordability, savings, spending, greeting, off-topic handling, and synthetic bill-photo extraction. Turbopack encountered a local worker-port permission failure; Webpack was used for the completed build check. The owner authorized merge/deployment; rollout confirmation awaits server evidence, and the available SSH authentication is denied.
+
 ## MoneyQuest main integration — October 18, 2026
 
 The user authorized merging MoneyQuest into `main`. The merge candidate includes current main through `6ec59a5`, preserving the newer sign-in security, login documentation, interface text, and laptop webcam changes. A push/merge to `main` can activate the documented Vultr auto-deploy timer; a GitHub merge is not by itself proof that production finished deploying.

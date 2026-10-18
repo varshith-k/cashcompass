@@ -45,6 +45,35 @@ describe("grounded copilot", () => {
     expect(result.comparison?.[0].minBalance).toBe(800);
     expect(result.actionHref).toContain("amount=1200");
   });
+  it.each([
+    ["hi", "greeting", "Hi!"],
+    ["are u dumb", "unsupported", "CashCompass finances"],
+    ["what can you do?", "capabilities", "Can I afford $200"],
+    ["Can I buy a laptop?", "purchase_amount", "How much"],
+  ])("handles %s through Gemini guidance without claiming an outage", async (message, reason, reply) => {
+    vi.stubEnv("GEMINI_API_KEY", "test-only");
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ candidates: [{ content: { parts: [{ functionCall: { name: "explain_capabilities", args: { reason } } }] } }] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await respondWithGemini(message, ctx);
+    expect(result.engine).toBe("gemini");
+    expect(result.kind).toBe("guidance");
+    expect(result.reply).toContain(reply);
+    expect(result.comparison).toBeUndefined();
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.toolConfig.functionCallingConfig.mode).toBe("ANY");
+    expect(body.tools[0].functionDeclarations.some((tool: { name: string }) => tool.name === "explain_capabilities")).toBe(true);
+  });
+  it.each(["invented", "__proto__", 100, null])("rejects unrecognized guidance reason %s", (reason) => {
+    expect(() => respondToTool("explain_capabilities", { reason }, ctx)).toThrow();
+  });
+  it("rejects ambiguous multiple tool calls", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-only");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ candidates: [{ content: { parts: [
+      { functionCall: { name: "explain_capabilities", args: { reason: "greeting" } } },
+      { functionCall: { name: "check_affordability", args: { amount: 1, label: "invented" } } },
+    ] } }] })));
+    expect((await respondWithGemini("hi", ctx)).engine).toBe("fallback");
+  });
   it("does not let malformed tool arguments become financial events", async () => {
     vi.stubEnv("GEMINI_API_KEY", "test-only");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ candidates: [{ content: { parts: [{ functionCall: { name: "check_affordability", args: { amount: -500 } } }] } }] })));

@@ -46,6 +46,14 @@ describe.skipIf(!LIVE)("Gemini API (live)", () => {
     expect(result.reply.length).toBeGreaterThan(20);
   }, 60_000);
 
+  it.each(["hi", "are u dumb"])("Gemini handles conversational message: %s", async (prompt) => {
+    const { respondWithGemini } = await import("@/lib/copilot/gemini-client");
+    const result = await respondWithGemini(prompt, await context());
+    expect(result.engine).toBe("gemini");
+    expect(result.kind).toBe("guidance");
+    expect(result.comparison).toBeUndefined();
+  }, 60_000);
+
   it("bill scan reads a bill photo", async () => {
     const sharp = (await import("sharp")).default;
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400">
