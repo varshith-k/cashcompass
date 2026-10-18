@@ -8,18 +8,18 @@ import { requireSession } from "./session";
 export type LoginSecurityResult = { ok: true; level: LoginSecurityLevel; message: string } | { ok: false; message: string };
 
 const SAVED: Record<LoginSecurityLevel, string> = {
-  email: "Authenticator app turned off. You'll get a code by email when you sign in.",
-  app: "Authenticator app turned on. On your next sign-in, scan the QR code with your authenticator app.",
+  off: "Two-factor sign-in turned off.",
+  app: "Two-factor sign-in turned on. On your next sign-in, scan the QR code with your authenticator app.",
 };
 
-/** Turns the optional authenticator app (MFA) on or off for the signed-in user. 2FA by email stays on either way. */
+/** Turns optional two-factor sign-in (authenticator app) on or off for the signed-in user. */
 export async function setAuthenticatorApp(enabled: boolean): Promise<LoginSecurityResult> {
   const session = await requireSession();
   if (session.source !== "auth0" || !isLoginSecurityEnabled()) {
     return { ok: false, message: "Sign-in security settings aren't available on this deployment." };
   }
   if (typeof enabled !== "boolean") return { ok: false, message: "Something went wrong. Please try again." };
-  const level: LoginSecurityLevel = enabled ? "app" : "email";
+  const level: LoginSecurityLevel = enabled ? "app" : "off";
 
   try {
     // The id comes from the verified session, never from the browser.

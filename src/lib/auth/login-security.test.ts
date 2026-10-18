@@ -25,9 +25,9 @@ vi.mock("./management", () => ({
 import { setAuthenticatorApp } from "./security-actions";
 
 describe("login security rules", () => {
-  it("defaults everyone to the emailed code", () => {
-    expect(toLoginSecurityLevel(undefined)).toBe("email");
-    expect(toLoginSecurityLevel("off")).toBe("email");
+  it("is off unless the user turned it on", () => {
+    expect(toLoginSecurityLevel(undefined)).toBe("off");
+    expect(toLoginSecurityLevel("email")).toBe("off");
     expect(toLoginSecurityLevel("app")).toBe("app");
   });
 
@@ -58,8 +58,8 @@ describe("setAuthenticatorApp", () => {
     expect(setMock).not.toHaveBeenCalled();
 
     auth.createdAt = Math.floor(Date.now() / 1000) - 60;
-    expect(await setAuthenticatorApp(false)).toMatchObject({ ok: true, level: "email" });
-    expect(auth.saved).toBe("email");
+    expect(await setAuthenticatorApp(false)).toMatchObject({ ok: true, level: "off" });
+    expect(auth.saved).toBe("off");
   });
 
   it("is unavailable in demo mode or before the Auth0 side is set up", async () => {

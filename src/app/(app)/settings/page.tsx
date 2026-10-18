@@ -12,15 +12,15 @@ import { getAuth0LoginSecurity, isLoginSecurityEnabled, isProfileEditingEnabled 
 import { LoginSecurityCard } from "@/components/settings/login-security-card";
 import { toLoginSecurityLevel, type LoginSecurityLevel } from "@/lib/auth/login-security";
 
-async function loadLoginSecurity(source: string, userId: string): Promise<{ level: LoginSecurityLevel | null; emailVerified: boolean; unavailableReason?: string }> {
-  if (source !== "auth0") return { level: null, emailVerified: false, unavailableReason: "Demo mode: sign-in security is handled by Auth0, which isn't connected on this server." };
-  if (!isLoginSecurityEnabled()) return { level: null, emailVerified: false, unavailableReason: "Sign-in security isn't set up on this deployment yet (see docs/AUTH0_SETUP.md §7)." };
+async function loadLoginSecurity(source: string, userId: string): Promise<{ level: LoginSecurityLevel | null; unavailableReason?: string }> {
+  if (source !== "auth0") return { level: null, unavailableReason: "Demo mode: sign-in security is handled by Auth0, which isn't connected on this server." };
+  if (!isLoginSecurityEnabled()) return { level: null, unavailableReason: "Sign-in security isn't set up on this deployment yet (see docs/AUTH0_SETUP.md §7)." };
   try {
     const current = await getAuth0LoginSecurity(userId);
-    return { level: toLoginSecurityLevel(current.level), emailVerified: current.emailVerified };
+    return { level: toLoginSecurityLevel(current.level) };
   } catch (error) {
     console.error("[auth] login security read failed:", error instanceof Error ? error.message : "unknown error");
-    return { level: null, emailVerified: false, unavailableReason: "We couldn't load your sign-in security settings. Refresh to try again." };
+    return { level: null, unavailableReason: "We couldn't load your sign-in security settings. Refresh to try again." };
   }
 }
 
@@ -36,12 +36,7 @@ export default async function SettingsPage() {
 
       <AccountCard canEditProfile={session.source === "auth0" && isProfileEditingEnabled()} />
 
-      <LoginSecurityCard
-        initialLevel={security.level}
-        emailVerified={security.emailVerified}
-        email={session.user.email}
-        unavailableReason={security.unavailableReason}
-      />
+      <LoginSecurityCard initialLevel={security.level} unavailableReason={security.unavailableReason} />
 
       <Card>
         <CardHeader>
