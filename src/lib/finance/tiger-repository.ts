@@ -8,7 +8,11 @@ let pool: Pool | null = null;
 
 function getPool() {
   if (!pool) {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    // Tiger Data's managed Postgres presents a cert chain Node's default CA
+    // bundle won't fully verify; the connection is still TLS-encrypted, this
+    // only skips hostname/CA validation (the same trust model `sslmode=require`
+    // gives under standard libpq, before pg's newer strict default applies).
+    pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
   }
   return pool;
 }
