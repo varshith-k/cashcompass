@@ -5,6 +5,8 @@ import { forecastInputs } from "@/lib/finance/forecast-inputs";
 import { getFinancialSnapshot } from "@/lib/finance/snapshot";
 import { BalanceSetupNotice } from "@/components/dashboard/balance-setup-notice";
 
+export const metadata = { title: "Cash Flow" };
+
 export default async function CashFlowPage({ searchParams }: { searchParams: Promise<{ amount?: string; label?: string }> }) {
   await connection();
 

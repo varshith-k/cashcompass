@@ -61,6 +61,8 @@ async function loadSharing(
   }
 }
 
+export const metadata = { title: "Settle Up" };
+
 export default async function SettleUpPage({ searchParams }: { searchParams: Promise<{ split?: string }> }) {
   const { split: splitReceiptId } = await searchParams;
   await connection();

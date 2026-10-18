@@ -27,6 +27,8 @@ import { requireOwnerId } from "@/lib/auth/session";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const metadata = { title: "Overview" };
+
 export default async function OverviewPage() {
   await connection();
 

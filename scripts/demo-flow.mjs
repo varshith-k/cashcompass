@@ -56,7 +56,7 @@ try {
   await visit("/bills");
   await page.getByRole("button", { name: "Add bill", exact: true }).click();
   dialog = page.getByRole("dialog");
-  await dialog.locator('input[type="file"]').setInputFiles({ name: "bill.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XcAAAAASUVORK5CYII=", "base64") });
+  await dialog.locator('input[type="file"]').first().setInputFiles({ name: "bill.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1XcAAAAASUVORK5CYII=", "base64") });
   await dialog.getByText(/fill in the form manually/).waitFor();
   await dialog.getByLabel("Biller", { exact: true }).fill(tag);
   await dialog.getByLabel("Amount", { exact: true }).fill("15");

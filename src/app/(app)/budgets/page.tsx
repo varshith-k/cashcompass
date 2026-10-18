@@ -8,6 +8,8 @@ import { getBudgets } from "@/lib/finance/budgets";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { formatCurrency } from "@/lib/format";
 
+export const metadata = { title: "Budgets" };
+
 export default async function BudgetsPage() {
   await connection();
 

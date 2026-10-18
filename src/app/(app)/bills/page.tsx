@@ -17,6 +17,8 @@ const TABS = [
   { id: "receipts", label: "Receipts" },
 ] as const;
 
+export const metadata = { title: "Bills & Payments" };
+
 export default async function BillsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   await connection();
 

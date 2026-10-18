@@ -18,6 +18,8 @@ import { isProfileEditingEnabled } from "@/lib/auth/management";
 import { isMfaRequired } from "@/lib/auth/config";
 import { LoginSecurityCard } from "@/components/settings/login-security-card";
 
+export const metadata = { title: "Settings" };
+
 export default async function SettingsPage() {
   await connection();
   const session = await requireSession();
