@@ -4,7 +4,7 @@ Updated October 18, 2026. The original phase delivery was checked October 17; ne
 
 ## Per-user Nessie accounts — October 18, 2026
 
-Implemented on `feature/nessie-per-user-accounts`; **not deployed or independently verified against live Nessie**.
+Implemented on `feature/nessie-per-user-accounts`, including newer main through `9c23514`; **not deployed or independently verified against live Nessie**.
 
 - Authenticated app visits automatically prepare a separate fictional Nessie customer and $0 checking account after hydration. Existing users are included. Auth0 login is unchanged and does not wait for Nessie; server rendering/prefetch does not create accounts.
 - Durable `nessie_user_accounts` mapping/checkpoints, unique remote IDs, per-owner PostgreSQL advisory locks, and marker-based recovery prevent shared-account fallback and blind duplicate creation. Uncertain outcomes stop for review if no unique matching object can be found.
@@ -38,6 +38,7 @@ The MoneyQuest branch includes GitHub `main` through `56a72d1`, including the ne
 | Phone scanning | Camera/upload controls and laptop-to-phone QR flow; user confirms extracted data before saving. | One-time scan sessions are process-local and expire after ten minutes; live phone/Gemini check pending in this pass. |
 | Bill email reminders | Per-bill scheduling with days-before, local hour/time zone, occurrence tracking, Resend templates, secret-protected cron route, systemd service/timer templates. | Requires email/cron configuration, current schema for durable reminders, and explicit scheduler installation; no live email sent here. |
 | Settle Up and bill splitting | Friends/guest emails, partial repayments, optional email and WhatsApp reminders, equal/custom/Gemini-suggested shares, receipt links, exact-cent validation, and linked receivables. | Confirmation required; optional email requires configuration. New split flows have unit coverage; live Gemini/notification checks are separate. |
+| Live Split Room | Settle Up entry point to the separate DeepSpace collaborative draft-splitting app, with configurable URL/default destination. | Incorporated from teammate main `9c23514`; external room behavior was not independently exercised. |
 | Nessie sandbox | Per-user persisted sandbox customer/$0 checking account provisioning, setup/recovery, owned-account sync and payer validation, categories, P2P, UUID/empty-account compatibility. | Per-user changes are on the feature branch; require Auth0 + Nessie key + DB and live deployment verification. Historical shared-account sync/P2P was user-reported. |
 | Goals and copilot | Weekly reservations/contributions, forecast effects, validated Gemini financial tools/cards, model/offline fallback, purchase links and image extraction. | Planned AutoSave is not a transfer; service quota/configuration affects live AI features. |
 | Tiger Data | Financial-event/reminder/Solana receipt schema, monthly continuous aggregate, and compression of chunks older than 30 days segmented by owner. | Latest schema application, actual database jobs, and durable live behavior require server evidence. Pool currently disables TLS certificate validation while encrypting traffic. |
