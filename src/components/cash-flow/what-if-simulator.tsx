@@ -125,7 +125,7 @@ export function WhatIfSimulator({
         return {
           scenarioEvents: events.filter((e) => e.id !== original.id).concat(shifted),
           assumptions: [`Pushes the ${original.counterparty} payment ${delay} day(s) later, to ${formatShortDate(shifted.date)}.`],
-          suggestedAction: "Only delay a bill if the biller allows it — this doesn't contact them for you.",
+          suggestedAction: "Only delay a bill if the biller allows it. This doesn't contact them for you.",
         };
       }
       case "repayment-late": {
@@ -220,14 +220,14 @@ export function WhatIfSimulator({
                     <SelectValue placeholder="Choose a bill">
                       {(value: string | null) => {
                         const bill = bills.find((b) => b.id === value);
-                        return bill ? `${bill.counterparty} — ${formatCurrency(bill.amount)}` : "Choose a bill";
+                        return bill ? `${bill.counterparty} (${formatCurrency(bill.amount)})` : "Choose a bill";
                       }}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {bills.map((bill) => (
                       <SelectItem key={bill.id} value={bill.id}>
-                        {bill.counterparty} — {formatCurrency(bill.amount)}
+                        {bill.counterparty} ({formatCurrency(bill.amount)})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -247,14 +247,14 @@ export function WhatIfSimulator({
                     <SelectValue placeholder="Choose a repayment">
                       {(value: string | null) => {
                         const repayment = repayments.find((r) => r.id === value);
-                        return repayment ? `${repayment.counterparty} — ${formatCurrency(repayment.amount)}` : "Choose a repayment";
+                        return repayment ? `${repayment.counterparty} (${formatCurrency(repayment.amount)})` : "Choose a repayment";
                       }}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {repayments.map((r) => (
                       <SelectItem key={r.id} value={r.id}>
-                        {r.counterparty} — {formatCurrency(r.amount)}
+                        {r.counterparty} ({formatCurrency(r.amount)})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -329,7 +329,7 @@ export function WhatIfSimulator({
           )}
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground pl-6">
             <ShieldCheck className="size-3.5 shrink-0" />
-            Reversible — nothing here changes your real transactions or bills.
+            Reversible: nothing here changes your real transactions or bills.
           </p>
         </div>
       </CardContent>

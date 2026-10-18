@@ -64,7 +64,7 @@ export function NessieCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Simulated banking records from Capital One&rsquo;s Nessie sandbox — not a real connected
+          Simulated banking records from Capital One&rsquo;s Nessie sandbox, not a real connected
           bank account, and no real credentials are ever requested.
         </p>
 
@@ -78,7 +78,7 @@ export function NessieCard({
         {accountError && <p role="alert" className="text-xs text-caution">{accountError}</p>}
         {status && (
           <p className="text-xs text-muted-foreground">
-            Last synced {new Date(status.timestamp).toLocaleString()} — {status.added} added, {status.updated ?? 0} updated, {status.skipped} already up to date.
+            Last synced {new Date(status.timestamp).toLocaleString()}: {status.added} added, {status.updated ?? 0} updated, {status.skipped} already up to date.
           </p>
         )}
         {message && <p role="status" className="text-xs text-caution">{message}</p>}
