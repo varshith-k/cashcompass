@@ -55,6 +55,7 @@ export function LedgerList({
                   )}
                   <span className="text-xs text-muted-foreground">Expected {formatRelativeDay(entry.date)}</span>
                 </div>
+                {entry.notes && <p className="mt-0.5 text-xs text-muted-foreground truncate">{entry.notes}</p>}
               </div>
 
               <p className="text-sm font-medium tabular-nums shrink-0">

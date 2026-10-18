@@ -1,4 +1,5 @@
-import { Receipt, StickyNote, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Receipt, SplitSquareHorizontal, StickyNote, Trash2 } from "lucide-react";
 import { ActionForm } from "@/components/ui/action-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import type { FinancialEvent } from "@/lib/finance/types";
 import { formatCurrency, formatShortDate } from "@/lib/format";
 
 /** Logged receipts (already-paid purchases), newest first, with this month's total by category. */
-export function ReceiptsList({ receipts }: { receipts: FinancialEvent[] }) {
+export function ReceiptsList({ receipts, splits = {} }: { receipts: FinancialEvent[]; splits?: Record<string, string[]> }) {
   if (receipts.length === 0) {
     return (
       <div className="flex flex-col items-center text-center gap-2 py-16 text-muted-foreground rounded-xl border border-border bg-card">
@@ -64,7 +65,17 @@ export function ReceiptsList({ receipts }: { receipts: FinancialEvent[] }) {
                 </p>
               )}
             </div>
-            <p className="text-sm font-medium tabular-nums shrink-0">{formatCurrency(receipt.amount, { cents: true })}</p>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <p className="text-sm font-medium tabular-nums">{formatCurrency(receipt.amount, { cents: true })}</p>
+              {splits[receipt.id]?.length ? (
+                <span className="text-xs text-positive">Split with {splits[receipt.id]!.join(", ")}</span>
+              ) : (
+                <Link href={`/settle-up?split=${receipt.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-interactive hover:underline">
+                  <SplitSquareHorizontal className="size-3.5" aria-hidden="true" />
+                  Split
+                </Link>
+              )}
+            </div>
             <ActionForm action={deleteReceipt}>
               <input type="hidden" name="id" value={receipt.id} />
               <Button
