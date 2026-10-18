@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Banknote, Check, Gamepad2, HeartPulse, Landmark, ShieldCheck, ShoppingBag, Sparkles, Timer, Wallet } from "lucide-react";
 import { NeighborhoodPreview } from "@/components/moneyquest/neighborhood-preview";
-import { moneyQuestExperienceUrl } from "@/lib/moneyquest/launcher";
+import { getMoneyQuestExperienceUrl } from "@/lib/moneyquest/launcher";
 
 export const metadata: Metadata = {
   title: "MoneyQuest | CashCompass",
@@ -17,7 +17,7 @@ const highlights = [
 ];
 
 export default function MoneyQuestPage() {
-  const experienceUrl = moneyQuestExperienceUrl(process.env.NEXT_PUBLIC_ROBLOX_MONEYQUEST_URL);
+  const experienceUrl = getMoneyQuestExperienceUrl(process.env.NEXT_PUBLIC_ROBLOX_MONEYQUEST_URL);
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 pb-4">
@@ -37,14 +37,10 @@ export default function MoneyQuestPage() {
             </div>
             <p className="max-w-md text-sm leading-relaxed text-sky-100">A paycheck, rent, a tempting purchase. Explore a small Roblox neighborhood and find out why money in your account isn’t always money you can spend.</p>
             <div className="space-y-3 pt-1">
-              {experienceUrl ? (
-                <a href={experienceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 max-w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-center text-sm font-semibold text-[#004977] transition-colors hover:bg-sky-50">
-                  <Gamepad2 className="size-5 shrink-0" aria-hidden="true" /> Play MoneyQuest on Roblox <ArrowUpRight className="size-4 shrink-0" aria-hidden="true" /><span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              ) : (
-                <div className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-medium"><span className="size-2 rounded-full bg-[#5ee1c3]" aria-hidden="true" /> Game publishing in progress</div>
-              )}
-              <p className="max-w-sm text-xs leading-relaxed text-sky-100">{experienceUrl ? "Opens on Roblox. Sign in and use Roblox Player to join the experience." : "Our Roblox companion is being prepared for launch. Explore the challenge below, or try the Cash Flow simulator today."}</p>
+              <a href={experienceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 max-w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-center text-sm font-semibold text-[#004977] transition-colors hover:bg-sky-50">
+                <Gamepad2 className="size-5 shrink-0" aria-hidden="true" /> Open MoneyQuest on Roblox <ArrowUpRight className="size-4 shrink-0" aria-hidden="true" /><span className="sr-only"> (opens in a new tab)</span>
+              </a>
+              <p className="max-w-sm text-xs leading-relaxed text-sky-100">Opens the game’s Roblox page in a new tab. Sign-in, age, and playtester restrictions may apply.</p>
             </div>
           </div>
           <NeighborhoodPreview />
