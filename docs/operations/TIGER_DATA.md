@@ -6,15 +6,26 @@ Operational checks live separately from the financial UI. The health and recover
 
 See the dated, sanitized [database report](evidence/tiger-health-2026-10-18.json) and [cloud metrics report](evidence/tiger-metrics-2026-10-18.json). These cover the database selected by the local `DATABASE_URL`; they do not establish which database Vultr currently uses.
 
-The live database has a compressed financial hypertable, real-time monthly aggregate, successful scheduled refresh/compression jobs, and encrypted connectivity. The app-compatible TLS policy currently does not require peer certificate validation; no application connection settings were changed. Tiger CLI authentication and a matching service read succeeded. CPU, memory, and disk history are accessible. No recurring monitoring, exporter, alert routing, backup-history confirmation, or live recovery drill has been installed/completed by this change.
+The live database has a compressed financial hypertable, real-time monthly aggregate, successful scheduled refresh/compression jobs, and encrypted connectivity. The app-compatible TLS policy currently does not require peer certificate validation; no application connection settings were changed. Tiger CLI authentication and a matching service read succeeded. CPU, memory, and disk history are accessible. No recurring monitoring, exporter, alert routing, or backup-history confirmation has been installed/completed by this change. The authorized live recovery attempt and confirmed cleanup are recorded below; it did not verify PITR.
 
 ## Confirmed Console context and free-service limits
 
 The owner's October 18 screenshot shows **Performance trial**, **free Shared service**, DEV, 750 MiB storage and $0/hour. The Operations menu does not show Backup and restore. The account's plan badge and a service's free/standard compute type are separate facts. Backup-history UI is documented for Scale/Enterprise; its absence is not evidence that this free service has no recovery mechanism.
 
-The current [forking guide](https://www.tigerdata.com/docs/deploy/tiger-cloud/tiger-cloud-aws/service-management/fork-services) supports free-to-free or free-to-standard forks. Tiger's [free-tier description](https://www.tigerdata.com/blog/fluid-storage-forkable-ephemeral-durable-infrastructure-age-of-agents) describes 24-hour PITR for free services; the actual recoverable timestamps and restore result for this service remain unverified. Use Operations → **Service management** → Create recovery fork if visible, or the authenticated CLI; Security/VPC peering is unrelated. Do not convert the original service just to find a missing backup-history tab.
+The current [forking guide](https://www.tigerdata.com/docs/deploy/tiger-cloud/tiger-cloud-aws/service-management/fork-services) supports free-to-free or free-to-standard forks. Tiger's [free-tier description](https://www.tigerdata.com/blog/fluid-storage-forkable-ephemeral-durable-infrastructure-age-of-agents) describes 24-hour PITR for free services; the actual recoverable timestamps and a successful restore result for this service remain unverified. Use Operations → **Service management** → Create recovery fork if visible, or the authenticated CLI; Security/VPC peering is unrelated. Do not convert the original service just to find a missing backup-history tab.
 
 The provider's [free-tier announcement](https://www.tigerdata.com/blog/introducing-agentic-postgres-free-plan-experiment-ai-on-postgres) describes up to two free services per account. We found one configured service through CLI. The full three-service isolation workflow below may exceed that free quota: protected original + free drill source + recovered fork. Review the current quota first. If needed, a temporary **standard recovered fork** can use the displayed trial credits while the original stays free. This still requires owner approval of the resource quote and cleanup time; never silently upgrade or consume credits. A smaller one-fork smoke check is not equivalent to the strict before/after marker drill.
+
+## Authorized live recovery attempt — October 18, 2026
+
+The owner approved two temporary copies and their deletion, capped at **$1 of trial credits**, with a maximum lifetime of 30 minutes after readiness. [Sanitized attempt evidence](evidence/tiger-pitr-2026-10-18.json) records **incomplete**, not a successful restore.
+
+- A free isolated DEV source clone became ready in 62 seconds. Before/after checkpoints were committed only there, bracketing target **2026-10-18T09:12:30.483Z**.
+- A DEV timestamp recovery fork was requested with **0.5 CPU / 2 GiB** standard compute. It remained **QUEUED** until the original 25-minute overall deadline; no recovered data could be checked. A transient CLI/API interruption was handled by resuming observation of the same copies, without creating replacements.
+- Both specifically identified copies were deleted and their absence confirmed at **09:36:29Z**. The original service remained READY with the same identity. The private env file was unchanged during the resumed observation. Stored CLI read-only mode remains `all`; no default service is configured, and fork commands used `--no-set-default`.
+- The published us-east-1 Performance compute rate was **$0.0412/hour** ([pricing](https://www.tigerdata.com/pricing)); conservative estimated total was **below $0.10**. Actual billed trial-credit usage was not verified. No subscription conversion or original-service mutation was performed.
+
+A retry needs investigation of the provider's provisioning queue and a fresh approved cost/time window. The account's full earliest/latest recoverable range, backup inventory, recurring monitoring and notification routing remain unverified/uninstalled. Do not mark PITR complete from this attempted creation, source checkpoints, or local verifier tests.
 
 ## Repeat database checks
 
@@ -32,6 +43,12 @@ For one-off checks from the operations worktree, run its script by absolute path
 ## CLI access
 
 Use an interactive terminal in the same environment as the project. The [official CLI instructions](https://github.com/timescale/tiger-cli#installation) provide Windows PowerShell and macOS/Linux installation options. Run `tiger auth login`, authorize in your own browser, and select the correct project. Use `tiger auth login --headless` if no local browser is available. Keep login tokens local. Do not print connection-string commands or use `--with-password` in shared logs. This delivery was checked with Tiger CLI 0.26.0.
+
+### CLI read-only mode and generated connection URLs
+
+A stored `read_only=all` blocks fork/delete operations before API changes. For an explicitly approved isolated DEV drill, a per-process `TIGER_READ_ONLY=prod` override permits the owned DEV copies while leaving the saved CLI setting unchanged. Keep the exact original-ID exclusion and owned-copy allowlist in the operator workflow; the original service is currently tagged DEV, so the CLI tag policy alone cannot protect it. Use explicit IDs and `--no-set-default` throughout.
+
+The CLI's generated PostgreSQL URL includes `sslmode=require`. With the installed `pg` version, URL TLS options override the supplied pool SSL settings and may enforce certificate validation unexpectedly. The live drill applies the application's existing encrypted, certificate-unverified TLS policy only to in-memory URLs for its owned temporary copies. It does not change private env files, saved CLI configuration, or production TLS settings. A future certificate-verification rollout should configure the provider's trusted CA rather than infer verified identity from encryption alone.
 
 ## Recurring monitoring and alerts
 
