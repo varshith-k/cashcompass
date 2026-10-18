@@ -1,0 +1,64 @@
+groups:
+  - name: cashcompass-tiger
+    rules:
+      - alert: CashCompassTigerExporterDown
+        expr: up{job="cashcompass-tiger"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Tiger metrics endpoint has been unreachable for 5 minutes
+      - alert: CashCompassTigerScrapeNotConfigured
+        expr: absent(up{job="cashcompass-tiger"})
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: No CashCompass Tiger scrape target is configured
+      - alert: CashCompassTigerPostgresMetricsMissing
+        expr: up{job="cashcompass-tiger"} == 1 unless on (job, instance) pg_up{job="cashcompass-tiger"}
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Enable PostgreSQL metrics on the attached Tiger exporter
+      - alert: CashCompassTigerDatabaseUnavailable
+        expr: pg_up{job="cashcompass-tiger"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: The exporter cannot connect to PostgreSQL
+      - alert: CashCompassTigerHighCPU
+        expr: >-
+          (sum by (project_id, service_id, region, role) (timescale_cloud_system_cpu_usage_millicores{job="cashcompass-tiger"})
+          / sum by (project_id, service_id, region, role) (timescale_cloud_system_cpu_total_millicores{job="cashcompass-tiger"})) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Tiger CPU usage exceeds 85 percent
+      - alert: CashCompassTigerHighMemory
+        expr: >-
+          (sum by (project_id, service_id, region, role) (timescale_cloud_system_memory_usage_bytes{job="cashcompass-tiger"})
+          / sum by (project_id, service_id, region, role) (timescale_cloud_system_memory_total_bytes{job="cashcompass-tiger"})) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Tiger memory usage exceeds 85 percent; review cache usage before resizing
+      - alert: CashCompassTigerLongTransaction
+        expr: pg_stat_activity_max_tx_duration{job="cashcompass-tiger",datname="tsdb"} > 120
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: A database transaction has exceeded two minutes for five minutes
+      - alert: CashCompassTigerWALArchiveFailures
+        expr: increase(pg_stat_archiver_failed_count_total{job="cashcompass-tiger"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: PostgreSQL reports recent WAL archive failures
+          description: Check Tiger backup history. Zero failures or missing archiver metrics do not prove PITR coverage.

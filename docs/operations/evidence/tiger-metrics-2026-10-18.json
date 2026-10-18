@@ -1,0 +1,55 @@
+{
+  "capturedAt": "2026-10-18T08:23:34.595Z",
+  "authenticatedServiceRead": true,
+  "serviceReady": true,
+  "from": "2026-10-18T08:08:34.595Z",
+  "to": "2026-10-18T08:23:34.595Z",
+  "bucketSeconds": 60,
+  "metrics": {
+    "timescale_cloud_system_cpu_total_millicores": {
+      "status": "available",
+      "samples": 14,
+      "average": 250,
+      "maximum": 250,
+      "latest": 250,
+      "latestTime": "2026-10-18T08:22:00Z"
+    },
+    "timescale_cloud_system_cpu_usage_millicores": {
+      "status": "available",
+      "samples": 14,
+      "average": 7.071428571428571,
+      "maximum": 13,
+      "latest": 6,
+      "latestTime": "2026-10-18T08:22:00Z"
+    },
+    "timescale_cloud_system_memory_total_bytes": {
+      "status": "available",
+      "samples": 14,
+      "average": 1073741824,
+      "maximum": 1073741824,
+      "latest": 1073741824,
+      "latestTime": "2026-10-18T08:22:00Z"
+    },
+    "timescale_cloud_system_memory_usage_bytes": {
+      "status": "available",
+      "samples": 14,
+      "average": 172790345.14285713,
+      "maximum": 195035136,
+      "latest": 169869312,
+      "latestTime": "2026-10-18T08:22:00Z"
+    },
+    "timescale_cloud_system_disk_usage_bytes": {
+      "status": "available",
+      "samples": 14,
+      "average": 378535936,
+      "maximum": 378535936,
+      "latest": 378535936,
+      "latestTime": "2026-10-18T08:22:00Z"
+    }
+  },
+  "status": "ok",
+  "backupCoverageVerified": false,
+  "recurringMonitoringInstalled": false,
+  "alertRoutingVerified": false,
+  "note": "Ad hoc primary-service metric samples only. No exporter or alerts were installed; backup history, retention and PITR still require separate verification."
+}

@@ -15,7 +15,11 @@
     "test:gemini": "vitest run --mode gemini-live --silent=false --reporter=verbose src/lib/gemini.live.test.ts",
     "test:database": "vitest run --mode database src/lib/storage/database.test.ts",
     "check:env": "node scripts/check-environment.mjs",
-    "db:migrate": "node scripts/migrate-database.mjs"
+    "db:migrate": "node scripts/migrate-database.mjs",
+    "tiger:health": "node scripts/tiger-health.mjs",
+    "tiger:recovery:check": "node scripts/tiger-recovery-check.mjs",
+    "test:tiger:ops": "node --test tests/operations/*.test.mjs",
+    "tiger:metrics": "node scripts/tiger-cloud-metrics.mjs"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.32.1",

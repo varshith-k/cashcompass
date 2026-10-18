@@ -142,3 +142,7 @@ Auto Backups (scheduled, billed) and the pre-deploy snapshot script above (on-de
 ### Monitoring (already included, no setup)
 
 Every Vultr instance ships with CPU, disk, and network graphs at no extra cost — **instance → Overview** in the dashboard already shows them. Nothing in this repo needs to change for that; there's no monitoring API integration here because there's nothing to integrate against the app itself (it's infrastructure-level, not app-level, metrics).
+
+## External database recovery
+
+Vultr disk snapshots/backups cover the server, not an external Tiger Cloud database. Database health checks, managed backup coverage, and isolated point-in-time recovery tests are documented in [Tiger Data operations](operations/TIGER_DATA.md). Neither a successful Vultr snapshot request nor a successful SQL connection proves the database has a tested recovery path.

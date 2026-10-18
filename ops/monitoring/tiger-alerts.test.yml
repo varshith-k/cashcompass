@@ -1,0 +1,41 @@
+rule_files:
+  - tiger-alerts.yml
+evaluation_interval: 1m
+tests:
+  - name: exporter-down-after-five-minutes
+    interval: 1m
+    input_series:
+      - series: 'up{job="cashcompass-tiger",instance="fixture"}'
+        values: '0+0x15'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: CashCompassTigerExporterDown
+        exp_alerts:
+          - exp_labels:
+              job: cashcompass-tiger
+              instance: fixture
+              severity: critical
+            exp_annotations:
+              summary: Tiger metrics endpoint has been unreachable for 5 minutes
+      - eval_time: 10m
+        alertname: CashCompassTigerPostgresMetricsMissing
+        exp_alerts: []
+  - name: high-cpu-after-ten-minutes
+    interval: 1m
+    input_series:
+      - series: 'timescale_cloud_system_cpu_usage_millicores{job="cashcompass-tiger",project_id="fixture",service_id="fixture",region="fixture",role="primary"}'
+        values: '90+0x15'
+      - series: 'timescale_cloud_system_cpu_total_millicores{job="cashcompass-tiger",project_id="fixture",service_id="fixture",region="fixture",role="primary"}'
+        values: '100+0x15'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: CashCompassTigerHighCPU
+        exp_alerts:
+          - exp_labels:
+              project_id: fixture
+              service_id: fixture
+              region: fixture
+              role: primary
+              severity: warning
+            exp_annotations:
+              summary: Tiger CPU usage exceeds 85 percent

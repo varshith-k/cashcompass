@@ -59,3 +59,5 @@ Every repository call is scoped to the signed-in user. `getFinancialEventReposit
 - Signed-out calls redirect to login.
 
 The schema expects `owner_id text NOT NULL` and primary key `(id, event_date)`, which TimescaleDB requires for hypertables. If an old installation lacks ownership, inspect and migrate its records with an explicit ownership mapping before deployment; do not drop a table containing user data. The readiness endpoint rejects a missing owner column.
+
+Monitoring, backup boundaries and isolated recovery checks: [Tiger operations runbook](../../../docs/operations/TIGER_DATA.md). Do not recreate financial_events to add columns; apply additive schema migrations and verify recovery separately.
