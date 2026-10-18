@@ -11,6 +11,11 @@ interface HeroOverviewProps {
   safeToSpend: number;
   reservedForBills: number;
   savingsEarmarks: number;
+  debtsOwed: number;
+  everydaySpending: number;
+  dailySpend: number;
+  /** Safe to Spend covers the period up to this date (next payday, or 30 days). */
+  windowEndDate: string;
   preferredBuffer: number;
   nextPaydayDate: string | null;
   nextPaydayAmount: number;
@@ -28,6 +33,10 @@ export function HeroOverview({
   safeToSpend,
   reservedForBills,
   savingsEarmarks,
+  debtsOwed,
+  everydaySpending,
+  dailySpend,
+  windowEndDate,
   preferredBuffer,
   nextPaydayDate,
   nextPaydayAmount,
@@ -46,9 +55,9 @@ export function HeroOverview({
           label="Safe to Spend"
           value={formatCurrency(safeToSpend)}
           highlight
-          tooltip={`${formatCurrency(availableBalance, { cents: true })} available − ${formatCurrency(reservedForBills, { cents: true })} upcoming bills − ${formatCurrency(savingsEarmarks, { cents: true })} planned savings − ${formatCurrency(preferredBuffer)} buffer = ${formatCurrency(safeToSpend, { cents: true })} Safe to Spend (minimum $0). Expected income is excluded.`}
+          tooltip={`Until ${formatShortDate(windowEndDate)}: ${formatCurrency(availableBalance, { cents: true })} available − ${formatCurrency(reservedForBills, { cents: true })} bills − ${formatCurrency(savingsEarmarks, { cents: true })} planned savings − ${formatCurrency(debtsOwed, { cents: true })} you owe − ${formatCurrency(everydaySpending, { cents: true })} everyday spending (about ${formatCurrency(dailySpend, { cents: true })}/day) − ${formatCurrency(preferredBuffer)} buffer = ${formatCurrency(safeToSpend, { cents: true })} (minimum $0). Expected income is excluded.`}
         />
-        <Stat label="Reserved for bills" value={formatCurrency(reservedForBills)} />
+        <Stat label="Bills before payday" value={formatCurrency(reservedForBills)} />
         <Stat
           label="Next payday"
           value={nextPaydayDate ? formatCurrency(nextPaydayAmount) : "Not scheduled"}

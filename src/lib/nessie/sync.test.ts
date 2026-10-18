@@ -25,12 +25,12 @@ describe("Nessie synchronization", () => {
     vi.mocked(getAccountPurchases).mockResolvedValue([purchase, { ...purchase, _id: "p2" }]);
     expect((await syncNessieAccount("account")).added).toBe(2);
   });
-  it("updates a pending transaction when completed", async () => {
+  it("treats a pending card purchase as already spent, not as a bill, and doesn't duplicate it when it completes", async () => {
     vi.mocked(getAccountPurchases).mockResolvedValue([{ ...purchase, status: "pending" }]);
     await syncNessieAccount("account");
-    expect(state.events[0].record).toBe("planned");
+    expect(state.events[0].record).toBe("actual");
     vi.mocked(getAccountPurchases).mockResolvedValue([purchase]);
-    expect((await syncNessieAccount("account")).updated).toBe(1);
+    await syncNessieAccount("account");
     expect(state.events).toHaveLength(1);
     expect(state.events[0].record).toBe("actual");
   });

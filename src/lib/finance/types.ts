@@ -33,9 +33,15 @@ export type FinancialEventUpdate = Partial<NewFinancialEvent>;
 
 export interface SafeToSpendInput {
   availableBalance: number;
+  /** Bills due before the next payday. */
   upcomingBills: number;
+  /** Planned savings due before the next payday. */
   savingsEarmarks: number;
   preferredBuffer: number;
+  /** Money the user owes others (ledger), due before the next payday. */
+  debtsOwed?: number;
+  /** Estimated everyday spending until the next payday. */
+  everydaySpending?: number;
 }
 
 export interface SafeToSpendResult {

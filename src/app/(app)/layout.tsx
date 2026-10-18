@@ -4,6 +4,7 @@ import { SolanaProvider } from "@/lib/solana/provider";
 import { AppShell } from "@/components/shell/app-shell";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { buildReminders } from "@/lib/finance/reminders";
+import { isNessieConfigured } from "@/lib/nessie/client";
 
 export default async function AppLayout({
   children,
@@ -17,7 +18,7 @@ export default async function AppLayout({
   return (
     <AuthProvider session={session}>
       <SolanaProvider>
-        <AppShell reminders={reminders}>{children}</AppShell>
+        <AppShell reminders={reminders} nessieConnected={isNessieConfigured()}>{children}</AppShell>
       </SolanaProvider>
     </AuthProvider>
   );
