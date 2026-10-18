@@ -26,12 +26,14 @@ CREATE TABLE IF NOT EXISTS financial_events (
   counterparty text NOT NULL,
   scenario_id text,
   counterparty_phone text,
+  friend_id text,
   source_record_id text,
   PRIMARY KEY (id, event_date)
 );
 
 -- Safe upgrades for existing installations.
 ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS counterparty_phone text;
+ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS friend_id text;
 ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS source_record_id text;
 
 -- Hypertable on event_date is what makes this a competitive Tiger Data

@@ -5,6 +5,8 @@ import { nextMonthlyDate } from "./dates";
 import { requireOwnerId } from "@/lib/auth/session";
 import { getFinancialEventRepository } from "./repository";
 import { settleLedgerAmount } from "./ledger";
+import { getFriend } from "./friends";
+import { notifyFriend, type NotifyResult } from "@/lib/email/notify-friend";
 import { getBudgets, setBudgetLimits } from "./budgets";
 import { getWishlistGoals, addWishlistGoal, deleteWishlistGoal as removeWishlistGoal } from "./wishlist-goals";
 import type { EventCertainty, EventDirection, FinancialEvent, NewFinancialEvent } from "./types";
@@ -202,9 +204,12 @@ export async function deleteWishlistGoal(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
-export async function createLedgerEntry(formData: FormData) {
+export async function createLedgerEntry(formData: FormData): Promise<NotifyResult | null> {
+  const ownerId = await requireOwnerId();
   const direction = parseDirection(formData.get("direction"));
-  await getFinancialEventRepository().createEvent({
+  // A saved friend supplies the name, phone and email; otherwise a typed name.
+  const friend = getFriend(ownerId, String(formData.get("friendId") || "") || undefined);
+  const created = await getFinancialEventRepository().createEvent({
     date: parseDate(formData.get("date")),
     amount: parseAmount(formData.get("amount")),
     direction,
@@ -215,10 +220,18 @@ export async function createLedgerEntry(formData: FormData) {
     recurrence: "one-time",
     source: "manual",
     category: "Repayment",
-    counterparty: String(formData.get("counterparty") || "").trim() || "Unknown",
-    counterpartyPhone: String(formData.get("phone") || "").trim() || undefined,
+    counterparty: friend?.name ?? (String(formData.get("counterparty") || "").trim().slice(0, 60) || "Unknown"),
+    counterpartyPhone: friend?.phone ?? (String(formData.get("phone") || "").trim() || undefined),
+    friendId: friend?.id,
   });
   revalidatePath("/", "layout");
+  if (!friend || formData.get("notify") !== "on") return null;
+  try {
+    return await notifyFriend("added", created);
+  } catch (error) {
+    console.warn("[settle-up] added email failed:", error instanceof Error ? error.message : "unknown error");
+    return null;
+  }
 }
 
 export async function deleteLedgerEntry(formData: FormData) {

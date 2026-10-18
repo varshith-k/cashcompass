@@ -12,97 +12,144 @@ import {
 } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import type { NotifyResult } from "@/lib/email/notify-friend";
 import { createLedgerEntry } from "@/lib/finance/actions";
 import type { EventDirection } from "@/lib/finance/types";
+import { ReminderStatus } from "./send-reminder-button";
 
-export function AddLedgerEntrySheet() {
+export interface FriendOption {
+  id: string;
+  name: string;
+  hasEmail: boolean;
+}
+
+const SOMEONE_ELSE = "";
+
+export function AddLedgerEntrySheet({ friends = [] }: { friends?: FriendOption[] }) {
   const [open, setOpen] = useState(false);
   const [direction, setDirection] = useState<EventDirection>("income");
+  const [friendId, setFriendId] = useState<string>(friends[0]?.id ?? SOMEONE_ELSE);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
+  const [emailResult, setEmailResult] = useState<NotifyResult | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const friend = friends.find((f) => f.id === friendId);
+
+  function close(next: boolean) {
+    setOpen(next);
+    if (!next) setEmailResult(null);
+  }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={close}>
       <SheetTrigger
         render={
           <Button size="sm">
             <Plus className="size-4" />
-            Add entry
+            Add balance
           </Button>
         }
       />
       <SheetContent side="right" className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Add money owed or lent</SheetTitle>
+          <SheetTitle>{emailResult ? "Balance added" : "Add a balance"}</SheetTitle>
         </SheetHeader>
-        <form
-          ref={formRef}
-          action={async (formData) => {
-            setPending(true);
-            setError(false);
-            try {
-              await createLedgerEntry(formData);
-              formRef.current?.reset();
-              setOpen(false);
-            } catch {
-              setError(true);
-            } finally {
-              setPending(false);
-            }
-          }}
-          className="flex-1 overflow-y-auto px-4 pb-6 space-y-4"
-        >
-          <input type="hidden" name="direction" value={direction} />
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant={direction === "income" ? "default" : "outline"}
-              onClick={() => setDirection("income")}
-            >
-              Owed to me
-            </Button>
-            <Button
-              type="button"
-              variant={direction === "expense" ? "default" : "outline"}
-              onClick={() => setDirection("expense")}
-            >
-              I owe
+        {emailResult ? (
+          <div className="px-4 pb-6 space-y-4">
+            <ReminderStatus result={emailResult} friendName={friend?.name ?? "your friend"} />
+            <Button className="w-full" onClick={() => close(false)}>
+              Done
             </Button>
           </div>
+        ) : (
+          <form
+            ref={formRef}
+            action={async (formData) => {
+              setPending(true);
+              setError(false);
+              try {
+                const result = await createLedgerEntry(formData);
+                formRef.current?.reset();
+                if (result) setEmailResult(result);
+                else close(false);
+              } catch {
+                setError(true);
+              } finally {
+                setPending(false);
+              }
+            }}
+            className="flex-1 overflow-y-auto px-4 pb-6 space-y-4"
+          >
+            <input type="hidden" name="direction" value={direction} />
 
-          <div className="space-y-1.5">
-            <Label htmlFor="counterparty">Who</Label>
-            <Input id="counterparty" name="counterparty" required placeholder="Sam" />
-          </div>
-
-          {direction === "income" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="phone">Their phone (optional)</Label>
-              <Input id="phone" name="phone" type="tel" placeholder="+1 555 123 4567" />
-              <p className="text-xs text-muted-foreground">
-                Lets you send a WhatsApp reminder later — no account or API key needed.
-              </p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button type="button" variant={direction === "income" ? "default" : "outline"} onClick={() => setDirection("income")}>
+                They owe me
+              </Button>
+              <Button type="button" variant={direction === "expense" ? "default" : "outline"} onClick={() => setDirection("expense")}>
+                I owe them
+              </Button>
             </div>
-          )}
 
-          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="amount">Amount</Label>
-              <Input id="amount" name="amount" type="number" step="0.01" min="0.01" required placeholder="0.00" />
+              <Label htmlFor="friendId">Friend</Label>
+              <select
+                id="friendId"
+                name="friendId"
+                value={friendId}
+                onChange={(e) => setFriendId(e.target.value)}
+                className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                {friends.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+                <option value={SOMEONE_ELSE}>Someone else (not in my friends)</option>
+              </select>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="date">Expected date</Label>
-              <Input id="date" name="date" type="date" required />
-            </div>
-          </div>
 
-          {error && <p role="alert" className="text-sm text-critical">Unable to save. Check the details and try again.</p>}
-          <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "Adding…" : "Add entry"}
-          </Button>
-        </form>
+            {!friend && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="counterparty">Who</Label>
+                  <Input id="counterparty" name="counterparty" required maxLength={60} placeholder="Sam" />
+                </div>
+                {direction === "income" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone">Their phone (optional)</Label>
+                    <Input id="phone" name="phone" type="tel" placeholder="+1 555 123 4567" />
+                    <p className="text-xs text-muted-foreground">For a one-tap WhatsApp reminder. Add them as a friend to email them too.</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="amount">Amount</Label>
+                <Input id="amount" name="amount" type="number" step="0.01" min="0.01" required placeholder="0.00" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="date">{direction === "income" ? "Expected by" : "Pay by"}</Label>
+                <Input id="date" name="date" type="date" required />
+              </div>
+            </div>
+
+            {friend?.hasEmail && (
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="notify" defaultChecked className="size-4 accent-[var(--interactive)]" />
+                Email {friend.name} about this
+              </label>
+            )}
+
+            {error && <p role="alert" className="text-sm text-critical">Unable to save. Check the details and try again.</p>}
+            <Button type="submit" className="w-full" disabled={pending}>
+              {pending ? "Adding…" : "Add balance"}
+            </Button>
+          </form>
+        )}
       </SheetContent>
     </Sheet>
   );

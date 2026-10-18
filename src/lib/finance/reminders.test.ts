@@ -39,7 +39,7 @@ describe("buildReminders", () => {
     expect(reminders.map((r) => r.title.split(" ")[0])).toEqual(["Phone", "Rent", "Sam"]);
     expect(reminders[0]).toMatchObject({ tone: "overdue", detail: "Overdue", href: "/bills" });
     expect(reminders[1]).toMatchObject({ tone: "soon", href: "/bills" });
-    expect(reminders[2]).toMatchObject({ tone: "info", href: "/ledger" });
+    expect(reminders[2]).toMatchObject({ tone: "info", href: "/settle-up" });
     expect(reminders[2]!.title).toContain("owes you");
   });
 

@@ -35,7 +35,7 @@ export function respondToTool(name: CopilotTool, args: Record<string, unknown>, 
     const delayDays = args.delayDays ?? 5;
     if (typeof delayDays !== "number" || !Number.isInteger(delayDays) || delayDays < 0 || delayDays > 365) throw new Error("Delay must be between 0 and 365 days");
     const result = checkRepaymentDelay(ctx, { delayDays, counterpartyContains: typeof args.counterpartyContains === "string" ? args.counterpartyContains : undefined });
-    if (!result.found) return { reply: "I couldn't find that outstanding repayment. Add or review it in your ledger first.", assumptions: [], actionLabel: "Review ledger", actionHref: "/ledger" };
+    if (!result.found) return { reply: "I couldn't find that outstanding repayment. Add or review it in Settle Up first.", assumptions: [], actionLabel: "Open Settle Up", actionHref: "/settle-up" };
     return {
       reply: `If ${result.counterparty}'s repayment arrives ${delayDays} days late (${formatShortDate(result.newDate!)} instead of ${formatShortDate(result.originalDate!)}), your projected minimum balance is ${formatCurrency(result.minBalance, { cents: true })}. ${result.billsAtRisk} of ${result.totalBills} upcoming bills fall below your buffer when uncertain income is excluded.`,
       assumptions: assumptionsFor(ctx), actionLabel: "Explore the simulator", actionHref: "/cash-flow",
