@@ -24,7 +24,7 @@ export async function addFriendAction(_previous: FriendFormState, formData: Form
   if (!name || name.length > 60) return { status: "error", message: "Enter a name (up to 60 characters)." };
   if (email && (email.length > 254 || !EMAIL_PATTERN.test(email))) return { status: "error", message: "That email address doesn't look right." };
   if (phone && !/^\+?[\d\s().-]{7,20}$/.test(phone)) return { status: "error", message: "That phone number doesn't look right." };
-  if (nessieAccountId && !isNessieId(nessieAccountId)) return { status: "error", message: "A Nessie account ID is 24 characters (0-9, a-f)." };
+  if (nessieAccountId && !isNessieId(nessieAccountId)) return { status: "error", message: "That doesn't look like a Nessie account ID (24 hex characters, or a UUID)." };
 
   try {
     addFriend(ownerId, { name, email: email || undefined, phone: phone || undefined, nessieAccountId: nessieAccountId || undefined });
