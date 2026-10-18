@@ -8,7 +8,7 @@ A separate Roblox financial-literacy mini-game, written in Luau. The CashCompass
 
 Implemented: original procedural 3D neighborhood, four interactive stations, six financial decision challenges, a day-30 review, HUD, forecasts, server-controlled finance calculations, transparent scoring, and replay. The Rojo place builds locally, Luau syntax checks pass, and all **324 complete decision paths** pass **4,261 assertions** in standalone Luau. Engine, scorer, protocol, and tests also pass `luau-analyze`.
 
-**Studio playtesting and public release are still required.** A generated `.rbxlx` is a build artifact, not proof of successful Studio execution. The owner supplied the real saved experience URL, [CashCompass: MoneyQuest](https://www.roblox.com/games/73262786586748/CashCompass-MoneyQuest), and confirmed it is still restricted to Playtesters/the new-account waiting period. Place ID: `73262786586748`; the public place lookup resolves universe ID `10771656737`. Anonymous playability returned `GuestProhibited`, which alone does not distinguish private access from a sign-in requirement. Public Player access has not been verified. Keep the launcher in “Game publishing in progress” until release/access is confirmed. No ID was fabricated.
+**Studio playtesting and public Player access remain unverified.** A generated `.rbxlx` is a build artifact, not proof of successful Studio execution. The owner supplied [CashCompass: MoneyQuest](https://www.roblox.com/games/73262786586748/CashCompass-MoneyQuest) and showed its signed-in Roblox details page with the thumbnail and Play control. Place ID: `73262786586748`; universe ID: `10771656737`. Earlier confirmation said Playtesters/new-account waiting-period restrictions remained; anonymous `GuestProhibited` alone does not prove public/private access. At the owner's request, CashCompass now provides **Open MoneyQuest on Roblox**, opening that genuine page and noting Roblox's sign-in/age/playtester restrictions. No ID or successful playthrough is fabricated.
 
 ## Open the place now
 
@@ -162,15 +162,21 @@ These steps follow [Roblox's current publishing guidance](https://create.roblox.
 
 ## Connect the published experience to CashCompass
 
-Enter the genuine URL directly into the deployment's private environment configuration:
+The launcher now defaults to the owner-supplied URL in `src/lib/moneyquest/launcher.ts`:
+
+`https://www.roblox.com/games/73262786586748/CashCompass-MoneyQuest`
+
+It works without changing server environment files. The CTA says **Open MoneyQuest on Roblox**, opens a new tab, and states that Roblox sign-in, age, and playtester restrictions may apply. Linking to a saved experience is separate from verifying public join access.
+
+To override the destination for a future experience, optionally configure:
 
 ```dotenv
 NEXT_PUBLIC_ROBLOX_MONEYQUEST_URL=
 ```
 
-Set the value to the copied URL; do not leave a placeholder ID. Locally put it in the git-ignored `.env.local`. The value is public and is deliberately not a secret. Rebuild Next.js after changing this `NEXT_PUBLIC_` variable. Deployment still needs the owner's approval under the existing server-change instructions.
+Set the value to a genuine Roblox experience URL; do not use a placeholder ID. Locally put it in the git-ignored `.env.local`. The value is public. Rebuild Next.js after changing this `NEXT_PUBLIC_` variable. The user has authorized MoneyQuest integration into main; the documented main deploy timer can pick up merged changes.
 
-Only HTTPS `roblox.com`/`www.roblox.com` direct `/games/<positive-place-id>` links are accepted; tracking parameters are discarded. Missing/invalid links show “Game publishing in progress” and no play button. No automatic availability check contacts Roblox. A configured link opens in a new tab with `noopener noreferrer`. Roblox handles launching its player. The Cash Flow simulator remains unchanged and linked as an alternative.
+Only HTTPS `roblox.com`/`www.roblox.com` direct `/games/<positive-place-id>` overrides are accepted; tracking parameters are discarded. Missing/invalid overrides fall back to the owner's actual game page. No automatic availability check contacts Roblox. The link uses `noopener noreferrer`; Roblox controls sign-in and launching its player. The Cash Flow simulator remains unchanged and linked as an alternative.
 
 Website verification from the repository root:
 
@@ -182,11 +188,13 @@ npm test
 BASE_URL=http://localhost:3101 node scripts/audit-moneyquest.mjs
 ```
 
-The browser audit needs a running isolated local demo server with no real financial integrations. It checks four widths, both themes, desktop placement, mobile More navigation, the retained bottom-bar links, honest unpublished state (or `MONEYQUEST_EXPECT_LAUNCH_URL`), the Cash Flow link, runtime errors, overflow, and axe accessibility. Do not run stateful finance tests against a live database.
+The browser audit needs a running isolated local demo server with no real financial integrations. It checks four widths, both themes, desktop placement, mobile More navigation, the retained bottom-bar links, the owner's default Roblox link (or `MONEYQUEST_EXPECT_LAUNCH_URL`), access-restriction wording, the Cash Flow link, runtime errors, overflow, and axe accessibility. Do not run stateful finance tests against a live database.
 
 Verified October 18, 2026: after incorporating `main` through `56a72d1`, lint, typecheck, production build, **175 unit tests** (four live-service tests skipped), and the unpublished-state browser audit pass. The browser audit covers **375/768/1024/1440 px × light/dark**, with zero overflow, runtime errors, or axe violations. Both menus and navigation into Cash Flow work. The earlier production-mode HTTP check confirmed MoneyQuest and Cash Flow both redirect to the configuration error page when Auth0 is missing; this is not a new live Auth0 sign-in test.
 
-The browser audit ran against a fresh, credential-free temporary preview because the already-running workspace dev server had stale client assets after dependency restoration. That server was left running; restart your local `npm run dev` process if its buttons are unresponsive. No Vultr restart, rebuild, deployment, main-branch push, or Roblox publication was performed.
+The browser audit ran against a fresh, credential-free temporary preview because the already-running workspace dev server had stale client assets after dependency restoration. That server was left running; restart your local `npm run dev` process if its buttons are unresponsive. During the initial feature implementation no Vultr restart, deployment, main-branch push, or Roblox publication was performed. The user later authorized main integration; see the current project status for subsequent delivery evidence.
+
+The owner-requested default-link update passes **183 unit tests**, lint, typecheck, production build, and the updated eight-combination browser audit. The audit verifies the real destination and access wording, not successful Roblox joining.
 
 Local dependency restoration required `npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund`: the existing lockfile omits React Native peer packages. No package manifest or lockfile was changed. Use Node 22+ for the wallet dependencies' declared engine requirements.
 
@@ -194,7 +202,7 @@ Changed website files:
 
 | File | Purpose |
 | --- | --- |
-| `src/app/(app)/moneyquest/page.tsx` | Launcher, honest unpublished state, scenario overview, Cash Flow link |
+| `src/app/(app)/moneyquest/page.tsx` | Owner's default Roblox link, access wording, scenario overview, Cash Flow link |
 | `src/components/moneyquest/neighborhood-preview.tsx` | Original SVG neighborhood concept |
 | `src/lib/moneyquest/launcher.ts` and `launcher.test.ts` | URL validation and launcher/auth-boundary tests |
 | `src/components/shell/nav-items.ts` | Shared MoneyQuest route and Gamepad2 icon |
