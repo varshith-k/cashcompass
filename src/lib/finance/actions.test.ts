@@ -9,7 +9,8 @@ vi.mock("./repository", () => ({ getFinancialEventRepository: () => ({
   updateEvent: async (id: string, patch: Partial<FinancialEvent>) => { const i = state.events.findIndex((e) => e.id === id); if (i < 0) throw new Error("not found"); return state.events[i] = { ...state.events[i], ...patch }; },
   deleteEvent: async (id: string) => { state.events = state.events.filter((e) => e.id !== id); },
 }) }));
-import { createTransaction, markBillPaid, undoMarkBillPaid, updateTransaction, planWishlistSavings, addWishlistContribution } from "./actions";
+import { createBill, createReceipt, createTransaction, deleteReceipt, deleteTransaction, markBillPaid, undoMarkBillPaid, updateTransaction, planWishlistSavings, addWishlistContribution } from "./actions";
+import { getReminderStore } from "./bill-reminders";
 import { settleLedgerAmount } from "./ledger";
 import { revalidatePath } from "next/cache";
 import { addWishlistGoal } from "./wishlist-goals";
@@ -77,5 +78,32 @@ describe("connected financial actions", () => {
     await addWishlistContribution(form({ goalName: goal.name, amount: "25" }));
     expect(state.events.filter((e) => e.record === "planned").reduce((sum, e) => sum + e.amount, 0)).toBe(75);
     expect(state.events.find((e) => e.record === "actual")?.amount).toBe(25);
+  });
+  it("logs a receipt as an already-paid expense with notes, and only deletes receipts via deleteReceipt", async () => {
+    await createReceipt(form({ counterparty: "Barbeque Nation", amount: "1240.50", date: "2026-10-18", category: "Dining", notes: "Team lunch, split with Sam" }));
+    expect(state.events[0]).toMatchObject({ counterparty: "Barbeque Nation", amount: 1240.5, record: "actual", direction: "expense", isReceipt: true, notes: "Team lunch, split with Sam" });
+    state.events.push({ ...bill, id: "plain", record: "actual" });
+    await expect(deleteReceipt(form({ id: "plain" }))).rejects.toThrow();
+    await deleteReceipt(form({ id: state.events[0]!.id }));
+    expect(state.events.map((e) => e.id)).toEqual(["plain"]);
+    await deleteTransaction(form({ id: "plain" }));
+    expect(state.events).toHaveLength(0);
+  });
+  it("stores a credit card minimum payment and rejects one above the statement balance", async () => {
+    await createBill(form({ counterparty: "Chase Sapphire", amount: "340", minimumPayment: "35", date: "2026-11-10", category: "Credit card", recurring: "on" }));
+    expect(state.events[0]).toMatchObject({ category: "Credit card", amount: 340, minimumPayment: 35, record: "planned" });
+    await expect(createBill(form({ counterparty: "Card", amount: "40", minimumPayment: "50", date: "2026-11-10", category: "Credit card" }))).rejects.toThrow();
+    await createBill(form({ counterparty: "Power", amount: "80", minimumPayment: "10", date: "2026-11-10", category: "Utilities" }));
+    expect(state.events[1]!.minimumPayment).toBeUndefined();
+  });
+  it("moves a bill's reminder to next month when paid, and back on undo", async () => {
+    state.events = [{ ...bill }];
+    await getReminderStore().upsert("test-owner", "bill", { email: "me@example.com", daysBefore: 3, hour: 9, timeZone: "UTC" });
+    const undo = await markBillPaid(form({ id: "bill" }));
+    const reminders = () => getReminderStore().listForOwner("test-owner");
+    expect((await reminders()).map((r) => r.billId)).toEqual([undo.nextId]);
+    await undoMarkBillPaid(undo);
+    expect((await reminders()).map((r) => r.billId)).toEqual(["bill"]);
+    await getReminderStore().remove("test-owner", "bill");
   });
 });

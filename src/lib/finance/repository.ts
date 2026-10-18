@@ -20,6 +20,14 @@ export interface FinancialEventRepository {
   createEvent(input: NewFinancialEvent): Promise<FinancialEvent>;
   updateEvent(id: string, patch: FinancialEventUpdate): Promise<FinancialEvent>;
   deleteEvent(id: string): Promise<void>;
+  /**
+   * Actual (not planned) expense total per category, for the current UTC
+   * calendar month. In Tiger Data mode this reads the pre-computed
+   * `monthly_category_spend` continuous aggregate directly instead of
+   * scanning every event — the point of having it. Demo mode has no
+   * aggregate to read, so it derives the same shape from in-memory events.
+   */
+  getMonthlyCategorySpend(): Promise<Map<string, number>>;
 }
 
 /** Storage backend. Every method takes the owner explicitly; only this module calls it. */
@@ -28,6 +36,7 @@ export interface FinancialEventStore {
   createEvent(ownerId: string, input: NewFinancialEvent): Promise<FinancialEvent>;
   updateEvent(ownerId: string, id: string, patch: FinancialEventUpdate): Promise<FinancialEvent>;
   deleteEvent(ownerId: string, id: string): Promise<void>;
+  getMonthlyCategorySpend(ownerId: string): Promise<Map<string, number>>;
 }
 
 let cachedStore: FinancialEventStore | null = null;
@@ -39,6 +48,16 @@ function getStore(): FinancialEventStore {
       : new DemoFinancialEventStore();
   }
   return cachedStore;
+}
+
+/**
+ * Store access for trusted background jobs (the bill-reminder job, behind
+ * CRON_SECRET), which run without a signed-in user and pass the owner
+ * explicitly. Never call this from request-driven code: use
+ * getFinancialEventRepository(), which takes the owner from the session.
+ */
+export function getEventStoreForJobs(): FinancialEventStore {
+  return getStore();
 }
 
 const userScopedRepository: FinancialEventRepository = {
@@ -53,6 +72,9 @@ const userScopedRepository: FinancialEventRepository = {
   },
   async deleteEvent(id) {
     return getStore().deleteEvent(await requireOwnerId(), id);
+  },
+  async getMonthlyCategorySpend() {
+    return getStore().getMonthlyCategorySpend(await requireOwnerId());
   },
 };
 

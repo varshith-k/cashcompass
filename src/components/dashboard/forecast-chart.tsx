@@ -73,7 +73,7 @@ export function ForecastChart({ points, bufferThreshold, todayIndex }: ForecastC
               }}
             />
             <Tooltip content={<ForecastTooltip todayIndex={todayIndex} points={points} />} />
-            <Line type="monotone" dataKey="conservativeBalance" name="Without uncertain income" stroke="var(--caution)" strokeDasharray="5 5" dot={false} />
+            <Line type="monotone" dataKey="conservativeBalance" name="Without money owed to you" stroke="var(--caution)" strokeDasharray="5 5" dot={false} />
             <Area
               type="monotone"
               dataKey="projectedBalance"
@@ -89,10 +89,10 @@ export function ForecastChart({ points, bufferThreshold, todayIndex }: ForecastC
 
       <details className="mt-3 text-xs text-muted-foreground">
         <summary className="cursor-pointer">Forecast assumptions and daily balances</summary>
-        <p className="my-2">Blue: expected balance. Dashed: balance without uncertain incoming repayments. Monthly bills repeat; other unrecorded activity is excluded. Projections are estimates.</p>
+        <p className="my-2">Blue: expected balance. Dashed: balance without money friends owe you. Monthly bills repeat; other unrecorded activity is excluded. Projections are estimates.</p>
         <div className="max-h-56 overflow-auto">
           <table className="w-full text-left tabular-nums"><caption className="sr-only">Daily cash-flow forecast</caption>
-            <thead><tr><th scope="col">Date</th><th scope="col">Expected</th><th scope="col">Without uncertain income</th></tr></thead>
+            <thead><tr><th scope="col">Date</th><th scope="col">Expected</th><th scope="col">Without money owed to you</th></tr></thead>
             <tbody>{points.map((point) => <tr key={point.date}><th scope="row">{formatShortDate(point.date)}</th><td>{formatCurrency(point.projectedBalance, { cents: true })}</td><td>{formatCurrency(point.conservativeBalance, { cents: true })}{point.isLowBalanceRisk ? " · Below buffer" : ""}</td></tr>)}</tbody>
           </table>
         </div>

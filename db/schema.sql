@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS financial_events (
   scenario_id text,
   counterparty_phone text,
   friend_id text,
+  notes text,
+  is_receipt boolean NOT NULL DEFAULT false,
+  minimum_payment numeric(12, 2),
   source_record_id text,
   PRIMARY KEY (id, event_date)
 );
@@ -34,6 +37,9 @@ CREATE TABLE IF NOT EXISTS financial_events (
 -- Safe upgrades for existing installations.
 ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS counterparty_phone text;
 ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS friend_id text;
+ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS notes text;
+ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS is_receipt boolean NOT NULL DEFAULT false;
+ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS minimum_payment numeric(12, 2);
 ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS source_record_id text;
 
 -- Hypertable on event_date is what makes this a competitive Tiger Data
@@ -41,6 +47,16 @@ ALTER TABLE financial_events ADD COLUMN IF NOT EXISTS source_record_id text;
 -- (the forecast window, a month of transactions) hit only the relevant
 -- chunks instead of scanning the whole table.
 SELECT create_hypertable('financial_events', 'event_date', if_not_exists => TRUE);
+
+-- Compression: chunks older than 30 days compress automatically. Segmented
+-- by owner_id so a per-user query still only decompresses that user's
+-- rows, ordered by event_date since that's how this table is always read.
+ALTER TABLE financial_events SET (
+  timescaledb.compress,
+  timescaledb.compress_segmentby = 'owner_id',
+  timescaledb.compress_orderby = 'event_date DESC'
+);
+SELECT add_compression_policy('financial_events', INTERVAL '30 days', if_not_exists => TRUE);
 
 CREATE INDEX IF NOT EXISTS financial_events_owner_date_idx ON financial_events (owner_id, event_date DESC);
 CREATE INDEX IF NOT EXISTS financial_events_owner_id_idx ON financial_events (owner_id, id);
@@ -50,8 +66,13 @@ CREATE INDEX IF NOT EXISTS financial_events_category_idx ON financial_events (ca
 -- and the dashboard's "monthly expenses" metric. Only actual (not planned)
 -- events count toward real spend. Refreshes incrementally as new events
 -- land, instead of re-scanning history on every dashboard load.
+-- materialized_only = false enables real-time aggregation: a query against
+-- this view transparently unions the materialized (refreshed hourly, below)
+-- history with a live aggregate over whatever hasn't been refreshed yet.
+-- Without it, a transaction added seconds ago wouldn't show up here until
+-- the next scheduled refresh - up to an hour of a visibly stale dashboard.
 CREATE MATERIALIZED VIEW IF NOT EXISTS monthly_category_spend
-WITH (timescaledb.continuous) AS
+WITH (timescaledb.continuous, timescaledb.materialized_only = false) AS
 SELECT
   owner_id,
   time_bucket('1 month', event_date) AS month,
@@ -61,6 +82,10 @@ SELECT
 FROM financial_events
 WHERE record = 'actual'
 GROUP BY owner_id, month, category, direction;
+
+-- Safe to re-run: fixes an existing installation created before this
+-- setting was added above (IF NOT EXISTS skips the CREATE either way).
+ALTER MATERIALIZED VIEW monthly_category_spend SET (timescaledb.materialized_only = false);
 
 SELECT add_continuous_aggregate_policy('monthly_category_spend',
   start_offset => INTERVAL '3 months',
@@ -75,4 +100,20 @@ CREATE TABLE IF NOT EXISTS solana_settlement_receipts (
   owner_id text NOT NULL,
   entry_id text NOT NULL,
   claimed_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Bill email reminders ("Remind me" on Bills & Payments). One per bill per
+-- user; moved to the next occurrence when a recurring bill is paid.
+-- last_sent_key prevents sending twice for the same due date.
+CREATE TABLE IF NOT EXISTS bill_reminders (
+  id text PRIMARY KEY,
+  owner_id text NOT NULL,
+  bill_id text NOT NULL,
+  email text NOT NULL,
+  days_before integer NOT NULL CHECK (days_before BETWEEN 0 AND 30),
+  hour integer NOT NULL CHECK (hour BETWEEN 0 AND 23),
+  time_zone text NOT NULL,
+  last_sent_key text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (owner_id, bill_id)
 );

@@ -59,10 +59,17 @@ function requireApiKey(): string {
   return key;
 }
 
-async function get<T>(path: string): Promise<T> {
+async function get<T>(path: string, options?: { on404?: T }): Promise<T> {
   const key = requireApiKey();
   const url = `${BASE_URL}${path}${path.includes("?") ? "&" : "?"}key=${encodeURIComponent(key)}`;
   const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15000) });
+  // Unlike purchases/deposits/bills, Nessie's /transfers endpoint returns 404
+  // (not 200 + []) when an account simply has no transfers yet - true for
+  // every brand-new account. Callers that pass on404 treat that as empty
+  // rather than a real failure; everything else still throws on 404.
+  if (response.status === 404 && options && "on404" in options) {
+    return options.on404 as T;
+  }
   if (!response.ok) {
     throw new NessieError(`Nessie request failed: ${response.status} ${path}`);
   }
@@ -114,16 +121,21 @@ export interface NessieTransfer {
   description?: string;
 }
 
-/** Nessie object ids are 24 hex characters; anything else is rejected before a request is made. */
+/**
+ * Nessie object ids: legacy sandbox accounts use a 24-char Mongo ObjectId;
+ * the current sandbox (confirmed live, Oct 2026) returns UUIDs instead.
+ * Accept either shape rather than guess which one any given account has.
+ */
 export function isNessieId(value: unknown): value is string {
-  return typeof value === "string" && /^[a-f0-9]{24}$/i.test(value);
+  if (typeof value !== "string") return false;
+  return /^[a-f0-9]{24}$/i.test(value) || /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
 }
 
 /** Transfers the account sent (payer) and received (payee), de-duplicated by id. */
 export async function getAccountTransfers(accountId: string): Promise<NessieTransfer[]> {
   const [sent, received] = await Promise.all([
-    get<NessieTransfer[]>(`/accounts/${encodeURIComponent(accountId)}/transfers?type=payer`),
-    get<NessieTransfer[]>(`/accounts/${encodeURIComponent(accountId)}/transfers?type=payee`),
+    get<NessieTransfer[]>(`/accounts/${encodeURIComponent(accountId)}/transfers?type=payer`, { on404: [] }),
+    get<NessieTransfer[]>(`/accounts/${encodeURIComponent(accountId)}/transfers?type=payee`, { on404: [] }),
   ]);
   const byId = new Map<string, NessieTransfer>();
   for (const transfer of [...sent, ...received]) byId.set(transfer._id, transfer);

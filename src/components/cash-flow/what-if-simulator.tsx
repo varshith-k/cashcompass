@@ -135,7 +135,7 @@ export function WhatIfSimulator({
         return {
           scenarioEvents: events.filter((e) => e.id !== original.id).concat(shifted),
           assumptions: [`Assumes ${original.counterparty}'s repayment arrives ${delay} day(s) late, on ${formatShortDate(shifted.date)}.`],
-          suggestedAction: "Uncertain repayments shouldn't be counted on to cover a bill due before they arrive.",
+          suggestedAction: "Don't count on money a friend owes you to cover a bill due before they pay.",
         };
       }
       case "save-for-goal": {
@@ -183,7 +183,7 @@ export function WhatIfSimulator({
         <CardTitle>What-if simulator</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        <p className="text-xs text-muted-foreground">Forecast from your opening balance and recorded events. Monthly bills and paychecks repeat; everyday spending is estimated at {formatCurrency(dailySpend, { cents: true })}/day from your last 30 days. Uncertain repayments may not arrive. Results cover the visible forecast only.</p>
+        <p className="text-xs text-muted-foreground">Forecast from your opening balance and recorded events. Monthly bills and paychecks repeat; everyday spending is estimated at {formatCurrency(dailySpend, { cents: true })}/day from your last 30 days. Money friends owe you may not arrive on time. Results cover the visible forecast only.</p>
         <div className="flex flex-wrap gap-1.5">
           {SCENARIOS.map((s) => (
             <Button
@@ -310,7 +310,7 @@ export function WhatIfSimulator({
           />
         </div>
 
-        <p className="text-xs text-muted-foreground">Scenario minimum without uncertain repayments: {formatCurrency(conservativeMinimum, { cents: true })}. {conservativeMinimum < bufferThreshold ? "This falls below your buffer." : "This stays above your buffer in the visible forecast."}</p>
+        <p className="text-xs text-muted-foreground">Scenario minimum without money owed to you: {formatCurrency(conservativeMinimum, { cents: true })}. {conservativeMinimum < bufferThreshold ? "This falls below your buffer." : "This stays above your buffer in the visible forecast."}</p>
         <div className="rounded-lg bg-accent px-4 py-3 space-y-2">
           <p className="flex items-start gap-2 text-sm">
             {getsWorse ? (

@@ -69,6 +69,25 @@ describe("Settle Up actions", () => {
     expect(notify).toHaveBeenCalledWith("reminder", expect.objectContaining({ direction: "income" }));
   });
 
+  it("saves 'someone else' with an email as a friend and emails them", async () => {
+    const result = await createLedgerEntry(form({ direction: "income", friendId: "", counterparty: "  Jess  Rivera ", email: "Jess@Example.com", amount: "18", date: "2026-11-02", notify: "on" }));
+    const jess = getFriends("auth0|settle-test").find((f) => f.name === "Jess Rivera");
+    expect(jess?.email).toBe("jess@example.com");
+    expect(state.events[0]).toMatchObject({ counterparty: "Jess Rivera", friendId: jess?.id });
+    expect(notify).toHaveBeenCalledWith("added", expect.objectContaining({ friendId: jess?.id }));
+    expect(result).toEqual({ status: "sent", to: "sam@example.com" });
+
+    // Same name again links to the same friend instead of duplicating.
+    await createLedgerEntry(form({ direction: "expense", friendId: "", counterparty: "jess rivera", email: "jess@example.com", amount: "5", date: "2026-11-03" }));
+    expect(getFriends("auth0|settle-test").filter((f) => f.name.toLowerCase() === "jess rivera")).toHaveLength(1);
+    expect(state.events[1]!.friendId).toBe(jess?.id);
+  });
+
+  it("rejects an invalid email for someone else and saves nothing", async () => {
+    await expect(createLedgerEntry(form({ direction: "income", friendId: "", counterparty: "Kim", email: "not-an-email", amount: "9", date: "2026-11-02" }))).rejects.toThrow();
+    expect(state.events).toHaveLength(0);
+  });
+
   it("validates new friends", async () => {
     const idle = { status: "idle" as const, message: "" };
     expect((await addFriendAction(idle, form({ name: "Jo", email: "not-an-email" }))).status).toBe("error");
@@ -76,5 +95,14 @@ describe("Settle Up actions", () => {
     expect((await addFriendAction(idle, form({ name: "Jo Park", email: "Jo@Example.com" }))).status).toBe("saved");
     expect(getFriends("auth0|settle-test").find((f) => f.name === "Jo Park")?.email).toBe("jo@example.com");
     expect((await addFriendAction(idle, form({ name: "jo park" }))).status).toBe("error");
+  });
+
+  it("accepts both Nessie account id formats (current UUIDs and legacy 24-hex) and rejects others", async () => {
+    const idle = { status: "idle" as const, message: "" };
+    const uuid = "3f2b8c1e-9d4a-4b6f-a1c2-7e5d9f0b1a2c";
+    expect((await addFriendAction(idle, form({ name: "Uuid Friend", nessieAccountId: uuid.toUpperCase() }))).status).toBe("saved");
+    expect(getFriends("auth0|settle-test").find((f) => f.name === "Uuid Friend")?.nessieAccountId).toBe(uuid);
+    expect((await addFriendAction(idle, form({ name: "Hex Friend", nessieAccountId: "0123456789abcdef01234567" }))).status).toBe("saved");
+    expect((await addFriendAction(idle, form({ name: "Bad Friend", nessieAccountId: "12345" }))).status).toBe("error");
   });
 });

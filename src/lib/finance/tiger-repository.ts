@@ -8,9 +8,18 @@ let pool: Pool | null = null;
 
 function getPool() {
   if (!pool) {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    // Tiger Data's managed Postgres presents a cert chain Node's default CA
+    // bundle won't fully verify; the connection is still TLS-encrypted, this
+    // only skips hostname/CA validation (the same trust model `sslmode=require`
+    // gives under standard libpq, before pg's newer strict default applies).
+    pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
   }
   return pool;
+}
+
+/** Shared connection pool, also used by the bill-reminder store. */
+export function getTigerPool(): Pool {
+  return getPool();
 }
 
 interface FinancialEventRow {
@@ -28,6 +37,9 @@ interface FinancialEventRow {
   counterparty_phone: string | null;
   friend_id: string | null;
   source_record_id: string | null;
+  notes: string | null;
+  is_receipt: boolean | null;
+  minimum_payment: string | null;
 }
 
 function toFinancialEvent(row: FinancialEventRow): FinancialEvent {
@@ -46,6 +58,9 @@ function toFinancialEvent(row: FinancialEventRow): FinancialEvent {
     counterpartyPhone: row.counterparty_phone ?? undefined,
     friendId: row.friend_id ?? undefined,
     sourceRecordId: row.source_record_id ?? undefined,
+    notes: row.notes ?? undefined,
+    isReceipt: row.is_receipt ? true : undefined,
+    minimumPayment: row.minimum_payment === null || row.minimum_payment === undefined ? undefined : Number(row.minimum_payment),
   };
 }
 
@@ -73,7 +88,8 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
     return this.withClient(async (client) => {
       const result = await client.query<FinancialEventRow>(
         `SELECT id, event_date, amount, direction, record, certainty,
-                recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id, friend_id
+                recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id, friend_id,
+                notes, is_receipt, minimum_payment
          FROM financial_events
          WHERE owner_id = $1
          ORDER BY event_date`,
@@ -88,8 +104,9 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
       const result = await client.query<FinancialEventRow>(
         `INSERT INTO financial_events
            (id, owner_id, event_date, amount, direction, record, certainty,
-            recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id, friend_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id, friend_id,
+            notes, is_receipt, minimum_payment)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
          RETURNING *`,
         [
           randomUUID(),
@@ -107,6 +124,9 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
           input.counterpartyPhone ?? null,
           input.sourceRecordId ?? null,
           input.friendId ?? null,
+          input.notes ?? null,
+          input.isReceipt ?? false,
+          input.minimumPayment ?? null,
         ],
       );
       return toFinancialEvent(result.rows[0]);
@@ -129,6 +149,9 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
         counterpartyPhone: "counterparty_phone",
         friendId: "friend_id",
         sourceRecordId: "source_record_id",
+        notes: "notes",
+        isReceipt: "is_receipt",
+        minimumPayment: "minimum_payment",
       };
 
       const entries = Object.entries(patch).filter(
@@ -163,5 +186,27 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
     await this.withClient((client) =>
       client.query("DELETE FROM financial_events WHERE id = $1 AND owner_id = $2", [id, ownerId]),
     );
+  }
+
+  /**
+   * Reads the pre-computed `monthly_category_spend` continuous aggregate
+   * (db/schema.sql) for the current UTC calendar month, instead of pulling
+   * every event and summing in JS. This is the actual point of defining a
+   * continuous aggregate - lag-free category totals that refresh
+   * incrementally as new events land, rather than a full table scan on
+   * every dashboard load.
+   */
+  async getMonthlyCategorySpend(ownerId: string): Promise<Map<string, number>> {
+    return this.withClient(async (client) => {
+      const result = await client.query<{ category: string; total: string }>(
+        `SELECT category, total
+         FROM monthly_category_spend
+         WHERE owner_id = $1 AND direction = 'expense' AND month = date_trunc('month', now())`,
+        [ownerId],
+      );
+      const totals = new Map<string, number>();
+      for (const row of result.rows) totals.set(row.category, Number(row.total));
+      return totals;
+    });
   }
 }

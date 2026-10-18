@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { ArrowRightLeft, Mail, Phone, Trash2, Users } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { AddFriendSheet } from "@/components/ledger/add-friend-sheet";
+import { SplitBillSheet } from "@/components/ledger/split-bill-sheet";
 import { AddLedgerEntrySheet } from "@/components/ledger/add-ledger-entry-sheet";
 import { LedgerList } from "@/components/ledger/ledger-list";
 import { ActionForm } from "@/components/ui/action-form";
@@ -16,13 +17,20 @@ import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { removeFriendAction } from "@/lib/finance/settle-up-actions";
 import { formatCurrency } from "@/lib/format";
 
-export default async function SettleUpPage() {
+export default async function SettleUpPage({ searchParams }: { searchParams: Promise<{ split?: string }> }) {
+  const { split: splitReceiptId } = await searchParams;
   await connection();
 
   const ownerId = await requireOwnerId();
   const events = await getFinancialEventRepository().listEvents();
   const { owedToMe, iOwe } = selectLedgerEntries(events);
   const friends = getFriends(ownerId);
+  // Receipts that can be split here (newest first); already-split ones are marked.
+  const splitKeys = new Set(events.map((e) => e.sourceRecordId).filter((k): k is string => Boolean(k?.startsWith("split/"))));
+  const receiptOptions = events
+    .filter((e) => e.isReceipt && e.record === "actual" && e.direction === "expense")
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .map((e) => ({ id: e.id, merchant: e.counterparty, amount: e.amount, date: e.date, notes: e.notes, alreadySplit: splitKeys.has(`split/${e.id}`) }));
   const emailReady = isEmailConfigured();
   const emailableFriendIds = friends.filter((f) => f.email).map((f) => f.id);
   const nessieFriendIds = isNessieConfigured() ? friends.filter((f) => f.nessieAccountId).map((f) => f.id) : [];
@@ -38,9 +46,14 @@ export default async function SettleUpPage() {
     <div className="space-y-6">
       <PageHeader
         title="Settle Up"
-        description="Track who owes whom with your friends, send reminders, and settle up. Money owed to you counts as uncertain in your forecast, never as guaranteed cash."
+        description="Track who owes whom with your friends, send reminders, and settle up. Money friends owe you is shown in your forecast but never counted as cash you can spend until they pay."
         actions={
           <div className="flex gap-2">
+            <SplitBillSheet
+              receipts={receiptOptions}
+              friends={friends.map((f) => ({ id: f.id, name: f.name, hasEmail: Boolean(f.email) }))}
+              initialReceiptId={typeof splitReceiptId === "string" ? splitReceiptId : undefined}
+            />
             <AddFriendSheet />
             <AddLedgerEntrySheet friends={friends.map((f) => ({ id: f.id, name: f.name, hasEmail: Boolean(f.email) }))} />
           </div>

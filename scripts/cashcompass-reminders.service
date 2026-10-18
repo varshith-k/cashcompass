@@ -1,0 +1,11 @@
+[Unit]
+Description=Send due CashCompass bill reminder emails
+After=network-online.target pm2-root.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+# CRON_SECRET must match the value in /root/cashcompass/.env.production.local.
+EnvironmentFile=/root/cashcompass/.env.production.local
+ExecStart=/bin/sh -c 'curl --fail --silent --show-error --max-time 60 -X POST -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:8000/api/public/cron/bill-reminders'

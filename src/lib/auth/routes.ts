@@ -23,8 +23,8 @@ export const DEFAULT_SIGNED_IN_PATH = "/overview";
  */
 export const PUBLIC_PATHS: readonly string[] = ["/", AUTH_ERROR_PATH];
 
-/** Prefixes that are always public (SDK auth routes and public APIs). */
-export const PUBLIC_PREFIXES: readonly string[] = ["/auth/", "/api/public/"];
+/** Prefixes that are always public: SDK auth routes, public APIs, and one-time phone scan links. */
+export const PUBLIC_PREFIXES: readonly string[] = ["/auth/", "/api/public/", "/scan/"];
 
 export function isPublicPath(pathname: string): boolean {
   const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;

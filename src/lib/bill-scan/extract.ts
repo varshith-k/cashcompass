@@ -8,7 +8,19 @@ export interface ExtractedBill {
   amount?: number;
   date?: string; // YYYY-MM-DD
   category?: string;
+  /** Credit card statements only. */
+  minimumPayment?: number;
 }
+
+/** "bill": something still to pay (due date). "receipt": an already-paid purchase (purchase date). */
+export type ScanKind = "bill" | "receipt";
+
+const PROMPTS: Record<ScanKind, string> = {
+  bill: `Extract the payee/biller name, total amount due, due date, and the best-fitting category from this bill or statement photo.
+If it is a credit card statement, use category "Credit card", the statement balance as "amount", and also return "minimumPayment" (the minimum payment due).`,
+  receipt: `This is a receipt for a purchase that has already been paid (restaurant, shop, cafe, cab, etc.).
+Extract the merchant/shop name, the final total paid (including tax and tip), the purchase date, and the best-fitting category.`,
+};
 
 interface GeminiResponse {
   candidates?: { content?: { parts?: { text?: string }[] } }[];
@@ -24,14 +36,15 @@ interface GeminiResponse {
 export async function extractBillFromImage(
   base64Data: string,
   mimeType: string,
+  kind: ScanKind = "bill",
 ): Promise<ExtractedBill | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
   try {
-    const prompt = `Extract the payee/biller name, total amount due, due date, and the best-fitting category from this bill or receipt photo.
+    const prompt = `${PROMPTS[kind]}
 Category must be exactly one of: ${EXPENSE_CATEGORIES.join(", ")}.
-Respond with only this JSON shape, no other text: {"counterparty": string, "amount": number, "date": "YYYY-MM-DD", "category": string}.
+Respond with only this JSON shape, no other text: {"counterparty": string, "amount": number, "date": "YYYY-MM-DD", "category": string${kind === "bill" ? ', "minimumPayment": number' : ""}}.
 If a field truly cannot be read from the image, omit it rather than guessing.`;
 
     const data = await postGemini<GeminiResponse>(
@@ -64,6 +77,15 @@ If a field truly cannot be read from the image, omit it rather than guessing.`;
     }
     if (typeof parsed.category === "string" && (EXPENSE_CATEGORIES as readonly string[]).includes(parsed.category)) {
       result.category = parsed.category;
+    }
+    if (
+      kind === "bill" &&
+      typeof parsed.minimumPayment === "number" &&
+      Number.isFinite(parsed.minimumPayment) &&
+      parsed.minimumPayment > 0 &&
+      (result.amount === undefined || parsed.minimumPayment <= result.amount)
+    ) {
+      result.minimumPayment = Math.round(parsed.minimumPayment * 100) / 100;
     }
 
     return Object.keys(result).length > 0 ? result : null;
