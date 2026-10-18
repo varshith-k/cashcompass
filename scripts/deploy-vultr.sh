@@ -29,6 +29,33 @@ if (( available_kb < 4194304 )); then
   echo "Less than 4 GiB free; remove obsolete releases before deploying" >&2
   exit 1
 fi
+
+# Best-effort pre-deploy snapshot via the Vultr API. Skips cleanly without
+# VULTR_API_KEY/VULTR_INSTANCE_ID (unset by default) and never blocks a
+# deploy on failure — this is a safety net, not a dependency. A snapshot
+# covers the whole disk; the PM2/release rollback below only covers the app.
+snapshot_before_deploy() {
+  if [[ -z "${VULTR_API_KEY:-}" || -z "${VULTR_INSTANCE_ID:-}" ]]; then
+    echo "VULTR_API_KEY/VULTR_INSTANCE_ID not set; skipping pre-deploy snapshot"
+    return 0
+  fi
+  local description="pre-deploy-${commit:0:12}-$(date -u +%Y%m%dT%H%M%SZ)"
+  local http_code
+  http_code=$(curl --max-time 15 -s -o /dev/null -w '%{http_code}' \
+    -X POST "https://api.vultr.com/v2/snapshots" \
+    -H "Authorization: Bearer $VULTR_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{\"instance_id\":\"$VULTR_INSTANCE_ID\",\"description\":\"$description\"}" \
+    2>/dev/null) || { echo "Pre-deploy snapshot request failed; continuing deploy" >&2; return 0; }
+  if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
+    echo "Requested pre-deploy snapshot: $description"
+  else
+    echo "Pre-deploy snapshot returned HTTP $http_code; continuing deploy" >&2
+  fi
+  return 0
+}
+snapshot_before_deploy
+
 on_exit() {
   status=$?
   if (( status != 0 )); then printf '%s\n' "$commit" >"$BASE/failed-commit"; fi

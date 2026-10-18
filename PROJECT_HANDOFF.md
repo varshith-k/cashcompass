@@ -12,7 +12,7 @@ The numbered sections below preserve the original product requirements. **Do not
 
 ### Tiger Data monitoring/recovery handoff — October 18, 2026
 
-The separate branch `feature/tiger-data-operations` adds read-only database diagnostics, authenticated Tiger CLI resource-metric sampling, Prometheus templates/eight alert rules, and an isolated PITR verifier/runbook. It starts at main `1536748` and does not merge the separate Nessie PR or change the active IDE checkout. See [operations runbook](docs/operations/TIGER_DATA.md) and [current evidence](docs/operations/evidence/).
+The separate branch `feature/tiger-data-operations` adds read-only database diagnostics, authenticated Tiger CLI resource-metric sampling, Prometheus templates/eight alert rules, and an isolated PITR verifier/runbook. It starts at main `1536748`, incorporates the Vultr snapshot/firewall update `2336853`, and does not merge the separate Nessie PR or change the active IDE checkout. See [operations runbook](docs/operations/TIGER_DATA.md) and [current evidence](docs/operations/evidence/).
 
 Live metadata verifies the compressed financial hypertable, real-time aggregate, successful hourly refresh/12-hour compression policies, and healthy current connection pressure. Authenticated 15-minute CPU/memory/disk reads succeeded. These are one-off checks; installing recurring collection/exporter/alert routing remains separate. The database's observed WAL counters have no failures but cannot prove backup history or a restorable window. Plan/retention/earliest-latest recovery points still require Console confirmation. No cloud fork, schema/data mutation, paid resource, plan change, production restart or cutover was performed.
 

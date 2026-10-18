@@ -4,7 +4,7 @@ Updated October 18, 2026. The original phase delivery was checked October 17; ne
 
 ## Tiger Data operations — October 18, 2026
 
-Implemented separately on `feature/tiger-data-operations`, based on main `1536748`; the shared IDE checkout is left untouched by this task. No Vultr deployment, subscription change, schema/data mutation, or cloud recovery fork was performed.
+Implemented separately on `feature/tiger-data-operations`, based on main `1536748`, incorporating `2336853`; the shared IDE checkout is left untouched by this task. No Vultr deployment, subscription change, schema/data mutation, or cloud recovery fork was performed.
 
 - Live read-only database checks passed: financial hypertable/compression, real-time monthly aggregate, scheduled refresh/compression jobs (successful last runs, no recorded job failures), core schema, and connection pressure. WAL archiving is active with no failures in its observed counters; this does **not** establish backup coverage.
 - Tiger CLI 0.26.0 is authenticated and the matching service is ready. Live 15-minute primary CPU/memory/disk metric reads passed. Sanitized dated reports are in `docs/operations/evidence/`; no credentials, endpoints, or financial records are included.
