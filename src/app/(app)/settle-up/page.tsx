@@ -46,7 +46,7 @@ export default async function SettleUpPage({ searchParams }: { searchParams: Pro
     <div className="space-y-6">
       <PageHeader
         title="Settle Up"
-        description="Track who owes whom with your friends, send reminders, and settle up. Money owed to you counts as uncertain in your forecast, never as guaranteed cash."
+        description="Track who owes whom with your friends, send reminders, and settle up. Money friends owe you is shown in your forecast but never counted as cash you can spend until they pay."
         actions={
           <div className="flex gap-2">
             <SplitBillSheet

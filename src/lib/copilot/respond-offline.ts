@@ -37,7 +37,7 @@ export function respondToTool(name: CopilotTool, args: Record<string, unknown>, 
     const result = checkRepaymentDelay(ctx, { delayDays, counterpartyContains: typeof args.counterpartyContains === "string" ? args.counterpartyContains : undefined });
     if (!result.found) return { reply: "I couldn't find that outstanding repayment. Add or review it in Settle Up first.", assumptions: [], actionLabel: "Open Settle Up", actionHref: "/settle-up" };
     return {
-      reply: `If ${result.counterparty}'s repayment arrives ${delayDays} days late (${formatShortDate(result.newDate!)} instead of ${formatShortDate(result.originalDate!)}), your projected minimum balance is ${formatCurrency(result.minBalance, { cents: true })}. ${result.billsAtRisk} of ${result.totalBills} upcoming bills fall below your buffer when uncertain income is excluded.`,
+      reply: `If ${result.counterparty}'s repayment arrives ${delayDays} days late (${formatShortDate(result.newDate!)} instead of ${formatShortDate(result.originalDate!)}), your projected minimum balance is ${formatCurrency(result.minBalance, { cents: true })}. ${result.billsAtRisk} of ${result.totalBills} upcoming bills fall below your buffer if you leave out money owed to you.`,
       assumptions: assumptionsFor(ctx), actionLabel: "Explore the simulator", actionHref: "/cash-flow",
     };
   }
@@ -56,7 +56,7 @@ export function respondToTool(name: CopilotTool, args: Record<string, unknown>, 
   if (args.savings === true) {
     const check = checkAffordability(ctx, { amount, label: "Savings allocation", date: new Date().toISOString() });
     return {
-      reply: `Reserving ${formatCurrency(amount)} today ${check.affordable ? "keeps your forecast above" : "could put your forecast below"} your ${formatCurrency(check.bufferThreshold)} buffer. Expected minimum: ${formatCurrency(check.minBalance, { cents: true })}; without uncertain income: ${formatCurrency(check.conservativeMinBalance, { cents: true })}. ${check.billsAtRisk}/${check.totalBills} bills at risk.`,
+      reply: `Reserving ${formatCurrency(amount)} today ${check.affordable ? "keeps your forecast above" : "could put your forecast below"} your ${formatCurrency(check.bufferThreshold)} buffer. Expected minimum: ${formatCurrency(check.minBalance, { cents: true })}; without money owed to you: ${formatCurrency(check.conservativeMinBalance, { cents: true })}. ${check.billsAtRisk}/${check.totalBills} bills at risk.`,
       assumptions: assumptionsFor(ctx), actionLabel: "Explore the simulator", actionHref: `/cash-flow?amount=${amount}`,
     };
   }
