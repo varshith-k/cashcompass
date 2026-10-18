@@ -1,0 +1,10 @@
+[Unit]
+Description=Check CashCompass GitHub main every two minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=2min
+Unit=cashcompass-deploy.service
+
+[Install]
+WantedBy=timers.target

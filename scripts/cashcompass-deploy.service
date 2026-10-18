@@ -1,0 +1,12 @@
+[Unit]
+Description=Build and deploy new CashCompass main commits
+After=network-online.target pm2-root.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Environment=HOME=/root
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/opt/cashcompass-deploy/deploy.sh
+TimeoutStartSec=45min
