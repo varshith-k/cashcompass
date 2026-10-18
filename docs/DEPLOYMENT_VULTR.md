@@ -104,3 +104,40 @@ Bills & Payments lets users turn on "Remind me by email" per bill (days before +
 3. Check it: `systemctl start cashcompass-reminders.service && journalctl -u cashcompass-reminders.service -n 5`. The response shows `{"checked":…,"sent":…}`.
 
 Reminders go to each user's own login email. While Resend uses the test sender (no verified domain), only the Resend account owner's address receives them. With a database (`DATABASE_URL`), run `db/schema.sql` again to create the `bill_reminders` table; without one, reminders are kept in memory and reset on redeploy.
+
+## Vultr platform features
+
+Four things worth having on a production instance: pre-deploy snapshots, a cloud firewall, automatic backups, and monitoring. The first two are scripted here; the other two are dashboard toggles this repo doesn't automate.
+
+### Pre-deploy snapshots (automated)
+
+`scripts/deploy-vultr.sh` requests a whole-disk snapshot via the Vultr API right before every deploy, tagged with the commit and timestamp (`pre-deploy-<commit>-<timestamp>`). It's a safety net on top of the existing PM2/release rollback: that rollback only restores the app process if the new build fails its health check, while a snapshot can restore the entire disk if something goes wrong at the OS level.
+
+It's best-effort and non-blocking by design: without `VULTR_API_KEY`/`VULTR_INSTANCE_ID` set, it logs that it's skipping and the deploy proceeds exactly as before. If the Vultr API call itself fails (bad key, network blip, rate limit), it logs the failure and the deploy still proceeds — a flaky API call must never block a real deploy. Verified locally: the skip path and the API-failure path both leave the script exiting `0` and continuing.
+
+To enable it, add `VULTR_API_KEY` and `VULTR_INSTANCE_ID` to `/root/cashcompass/.env.production.local` (values the deploy script reads directly as shell env vars, not through Next.js — export them in the shell that runs the systemd timer, e.g. `/etc/systemd/system/cashcompass-deploy.service`'s `Environment=` lines, since `.env.production.local` is for the Next.js app, not the deploy script itself).
+
+Snapshots aren't free storage — Vultr bills for snapshot storage by the GB-month. Prune old ones periodically from **Products → Snapshots** in the dashboard, or via `DELETE /v2/snapshots/{id}`.
+
+### Cloud firewall (scripted, manual run)
+
+`scripts/vultr-firewall-setup.sh` creates a Cloud Firewall group (`cashcompass-production`) allowing SSH/HTTP/HTTPS and attaches it to the instance. No cost — Vultr Cloud Firewall is free.
+
+Run it by hand, not from the deploy timer:
+
+```sh
+VULTR_API_KEY=... VULTR_INSTANCE_ID=... ./scripts/vultr-firewall-setup.sh            # dry run: prints what it would do
+VULTR_API_KEY=... VULTR_INSTANCE_ID=... ./scripts/vultr-firewall-setup.sh --apply    # actually creates + attaches
+```
+
+It defaults to allowing SSH from anywhere (`0.0.0.0/0`), matching the instance's current unrestricted access — attaching the group is not meant to suddenly cut off SSH. Once it's attached, tighten the SSH rule to your admin IP from the Vultr dashboard (**Products → Firewall → cashcompass-production**) or by editing the rule via the API. **Verify SSH access in a second terminal before closing your current session** — a bad firewall rule can lock you out, and recovering from that needs the Vultr console (serial/VNC access via the dashboard), not SSH.
+
+### Automatic backups (dashboard only, costs money)
+
+Vultr Auto Backups isn't scripted here deliberately: it's a recurring cost (roughly +20% of the instance's monthly price), so enabling it is a billing decision, not a default. To turn it on: **instance → Settings → Backups → Enable**. Vultr then takes a daily backup on its own schedule, independent of deploys.
+
+Auto Backups (scheduled, billed) and the pre-deploy snapshot script above (on-demand, billed separately by storage) are complementary, not duplicates — keep both if the extra cost is acceptable, or just the pre-deploy snapshots if not.
+
+### Monitoring (already included, no setup)
+
+Every Vultr instance ships with CPU, disk, and network graphs at no extra cost — **instance → Overview** in the dashboard already shows them. Nothing in this repo needs to change for that; there's no monitoring API integration here because there's nothing to integrate against the app itself (it's infrastructure-level, not app-level, metrics).
