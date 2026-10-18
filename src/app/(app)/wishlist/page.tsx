@@ -9,6 +9,8 @@ import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { requireOwnerId } from "@/lib/auth/session";
 import { getWishlistGoals } from "@/lib/finance/wishlist-goals";
 
+export const metadata = { title: "Wishlist" };
+
 export default async function WishlistPage() {
   await connection();
 

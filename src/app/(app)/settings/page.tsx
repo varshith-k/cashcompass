@@ -16,6 +16,8 @@ import { listDemoAccounts } from "@/lib/nessie/accounts";
 import { requireSession } from "@/lib/auth/session";
 import { isProfileEditingEnabled } from "@/lib/auth/management";
 
+export const metadata = { title: "Settings" };
+
 export default async function SettingsPage() {
   await connection();
   const session = await requireSession();

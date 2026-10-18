@@ -10,6 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "audit:ui": "node scripts/audit-ui.mjs",
+    "audit:keyboard": "node scripts/audit-keyboard.mjs",
     "test:demo": "node scripts/demo-flow.mjs",
     "test:gemini": "vitest run --mode gemini-live --silent=false --reporter=verbose src/lib/gemini.live.test.ts",
     "test:database": "vitest run --mode database src/lib/storage/database.test.ts",

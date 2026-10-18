@@ -26,6 +26,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const FORECAST_HISTORY_DAYS = 5;
 const FORECAST_TOTAL_DAYS = 35;
 
+export const metadata = { title: "Overview" };
+
 export default async function OverviewPage() {
   await connection();
 

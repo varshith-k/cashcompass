@@ -68,8 +68,7 @@ Gemini settings, APP_BASE_URL, and a server-generated AUTH0_SECRET. Local
 development settings are in the git-ignored `.env.local`; local and production
 cookie secrets are separate.
 
-The remaining login blocker is an Auth0 callback URL mismatch. In the Auth0
-application settings, allow these URLs (preserve any existing entries):
+An earlier report identified an Auth0 callback URL mismatch. The October 17 follow-up public probe now reaches Universal Login with the expected production callback and no detected mismatch error. Full sign-in/callback/logout verification still needs a user-controlled test session. If a mismatch recurs, check these Auth0 application URLs (preserve any existing entries):
 
 | Setting | URLs |
 | --- | --- |

@@ -47,5 +47,6 @@ jobs:
             sleep 1
           done
           npm run test:demo
+          npm run audit:keyboard
           npm run audit:ui
 # Deliberately verifies code only. Deployment requires the server inspection and approval.

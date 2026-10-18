@@ -47,10 +47,11 @@ npm run build
 # TEST_DATABASE_URL=postgresql://postgres@localhost:55433/cashcompass_verification TEST_TIMESCALE=true npm run test:database
 # With the development server running:
 npm run audit:ui
+npm run audit:keyboard
 npm run test:demo
 ```
 
-The UI audit checks nine routes at four widths in both themes, with accessibility scans at mobile and desktop widths. The browser demo checks connected mutations and removes its uniquely named records. It assumes the local keyless demo environment.
+The UI audit checks nine routes at four widths in both themes, with accessibility scans at mobile and desktop widths. The keyboard audit checks skip navigation, menus, dialog focus traps/return, category selection, theme switching, mobile navigation and unique route titles without saving data. The browser demo checks connected mutations and removes its uniquely named records. These browser checks assume the local keyless demo environment; they do not replace real screen-reader or authenticated production testing.
 
 See [phase status, verification, and limitations](docs/PROJECT_STATUS.md) and the original [product handoff](PROJECT_HANDOFF.md). Forecasts use a confirmed balance checkpoint or synchronized Nessie balances; only the keyless demo uses a seeded balance. Savings reserve funds in the model; they do not transfer money. Nessie records are simulated and do not imply Capital One endorsement.
 

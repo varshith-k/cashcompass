@@ -8,6 +8,8 @@ import { getFinancialSnapshot } from "@/lib/finance/snapshot";
 const FORECAST_HISTORY_DAYS = 5;
 const FORECAST_TOTAL_DAYS = 35;
 
+export const metadata = { title: "Cash Flow" };
+
 export default async function CashFlowPage({ searchParams }: { searchParams: Promise<{ amount?: string; label?: string }> }) {
   await connection();
 

@@ -15,7 +15,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "CashCompass",
+  title: { default: "CashCompass", template: "%s | CashCompass" },
   description: "Your money. Your direction.",
 };
 

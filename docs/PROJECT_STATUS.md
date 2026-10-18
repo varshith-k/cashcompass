@@ -27,6 +27,7 @@ Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.
 - Reconciled imported posted activity against synchronized Nessie balances, added a confirmed available-funds checkpoint in Settings, and showed setup guidance for fresh database users.
 - Prepared a nonroot Node 22 Docker image, example Compose configuration, sanitized inventory/environment tools, schema runner, readiness/revision endpoint and verification-only GitHub workflow. These files have not been applied to Vultr.
 - Preserved ordinary `next start` builds for the documented PM2 deployment; Docker explicitly enables standalone output. Prepared a revised deployment script with core-configuration preflight, database-aware readiness and release revision reporting. Its installed server copy must be reviewed/updated separately before the release; changing the repository script does not replace it.
+- Added first-Tab skip navigation and distinct titles for all nine app routes, so keyboard users can bypass repeated navigation and assistive technology can identify route changes. Added a keyboard behavior audit to CI covering menus, modal focus wrapping/restoration, category selection, theme switching and mobile navigation.
 
 - Added transaction editing with retained source provenance and recoverable save errors.
 - Renewed recurring bills after payment, with month-end clamping and duplicate-payment protection.
@@ -51,6 +52,8 @@ Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.
 - Full TimescaleDB schema migration and the Node 22 multistage Docker build pass locally. The minimal runtime uses uid 1001; unused `braces`, `stream-json` and the shadcn CLI are excluded from its traced dependency tree. Live service authentication is a separate pending check.
 - A read-only, capability-restricted local runtime returns readiness 200 against the migrated test database, returns 401 for signed-out identity requests, and redirects the protected dashboard to authentication. It used generated test configuration, not real Auth0 credentials.
 - Public HTTPS smoke check: `/` returns 200, `/overview` returns 307, `/api/auth/me` returns 401, and the new `/api/public/health` returns 404 on the existing deployment. This verifies basic reachability/authentication gating, not signed-in workflows or the new release. GitHub verification runs on draft PR #5; consult its checks for the latest result.
+- Follow-up live Auth0 check reaches Universal Login (HTTP 200) through `/auth/login`, with the expected production callback and no detected callback-mismatch error. No user sign-in, callback exchange or logout was completed, so those checks remain pending.
+- `npm run audit:keyboard` passes: skip link reaches main content, menus support keyboard navigation/Escape/focus return, transaction and mobile dialogs keep Tab/Shift+Tab inside and restore focus, category selection works by keyboard, mobile navigation closes on route selection, and all nine routes have unique titles. This is browser-driven keyboard/semantic verification, not a completed NVDA/VoiceOver session.
 - Automated accessibility checks supplement keyboard interactions and visual inspection; they are not a complete screen-reader certification.
 
 ## Remaining environment and product limits

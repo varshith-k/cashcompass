@@ -6,6 +6,8 @@ import { selectUpcomingBills } from "@/lib/finance/calculations";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { formatCurrency } from "@/lib/format";
 
+export const metadata = { title: "Bills & Payments" };
+
 export default async function BillsPage() {
   await connection();
 

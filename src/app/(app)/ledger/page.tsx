@@ -5,6 +5,8 @@ import { LedgerList } from "@/components/ledger/ledger-list";
 import { selectLedgerEntries } from "@/lib/finance/calculations";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
 
+export const metadata = { title: "Money Ledger" };
+
 export default async function LedgerPage() {
   await connection();
 
