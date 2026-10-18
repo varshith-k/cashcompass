@@ -93,7 +93,7 @@ export function CopilotChat() {
                 {turn.result.comparison.map((item) => <div key={item.label} className="rounded-lg border border-border bg-card p-3 text-xs space-y-1">
                   <p className="font-semibold">{item.label}</p>
                   <p>Expected minimum: {formatCurrency(item.minBalance, { cents: true })}</p>
-                  <p>Without uncertain income: {formatCurrency(item.conservativeMinBalance, { cents: true })}</p>
+                  <p>Without money owed to you: {formatCurrency(item.conservativeMinBalance, { cents: true })}</p>
                   <p>{item.billsAtRisk}/{item.totalBills} bills at risk · {formatCurrency(item.bufferThreshold)} buffer</p>
                   <p className={item.affordable ? "text-positive" : "text-caution"}>{item.affordable ? "Within buffer" : "Review spending"}</p>
                 </div>)}

@@ -120,7 +120,7 @@ export default async function OverviewPage() {
         />
       </div>
 
-      <p className="text-xs text-muted-foreground">Forecast from your opening balance and recorded events. Monthly bills and paychecks repeat. Everyday spending is estimated at {formatCurrency(inputs.dailySpend, { cents: true })}/day from your last 30 days of purchases. The conservative balance excludes uncertain repayments. Savings contributions reserve funds here; no money is transferred.</p>
+      <p className="text-xs text-muted-foreground">Forecast from your opening balance and recorded events. Monthly bills and paychecks repeat. Everyday spending is estimated at {formatCurrency(inputs.dailySpend, { cents: true })}/day from your last 30 days of purchases. The cautious balance leaves out money friends owe you until it is paid. Savings contributions reserve funds here; no money is transferred.</p>
 
       <Card>
         <CardHeader>

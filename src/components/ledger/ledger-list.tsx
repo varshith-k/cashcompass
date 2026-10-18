@@ -1,6 +1,5 @@
 import { ActionForm } from "@/components/ui/action-form";
 import { HandCoins, MessageCircle, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteLedgerEntry, logLedgerPayment } from "@/lib/finance/actions";
@@ -47,14 +46,7 @@ export function LedgerList({
             <li key={entry.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
               <div className="flex-1 min-w-32">
                 <p className="text-sm font-medium truncate">{entry.counterparty}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {entry.certainty === "uncertain" && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-caution/40 text-caution">
-                      Uncertain
-                    </Badge>
-                  )}
-                  <span className="text-xs text-muted-foreground">Expected {formatRelativeDay(entry.date)}</span>
-                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">Expected {formatRelativeDay(entry.date)}</p>
                 {entry.notes && <p className="mt-0.5 text-xs text-muted-foreground truncate">{entry.notes}</p>}
               </div>
 
