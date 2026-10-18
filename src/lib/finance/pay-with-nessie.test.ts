@@ -9,7 +9,7 @@ const state = vi.hoisted(() => ({ events: [] as FinancialEvent[] }));
 const nessie = vi.hoisted(() => ({ createTransfer: vi.fn(), configured: true }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/session", () => ({ requireOwnerId: async () => "auth0|payer", getSession: async () => null }));
-vi.mock("@/lib/nessie/accounts", () => ({ listDemoAccounts: async () => ({ accounts: [{ _id: ME, nickname: "Mine", type: "Checking", balance: 900 }] }) }));
+vi.mock("@/lib/nessie/accounts", () => ({ listUserAccounts: async () => ({ accounts: [{ _id: ME, nickname: "Mine", type: "Checking", balance: 900 }] }) }));
 vi.mock("@/lib/nessie/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/nessie/client")>()),
   isNessieConfigured: () => nessie.configured,
@@ -32,6 +32,7 @@ vi.mock("./repository", () => ({
 }));
 
 import { addFriend } from "./friends";
+import { recordSyncStatus } from "@/lib/nessie/status";
 import { payWithNessieTransfer } from "./settle-up-actions";
 
 const owed = (friendId?: string): FinancialEvent => ({
@@ -46,6 +47,17 @@ beforeEach(() => {
 });
 
 describe("Pay with Nessie", () => {
+  it("ignores stale shared-account sync status and uses only the mapped payer", async () => {
+    const alex = addFriend("auth0|payer", { name: "Alex Own Account", nessieAccountId: ALEX });
+    state.events = [owed(alex.id)];
+    recordSyncStatus("auth0|payer", { added: 0, skipped: 0, accountId: "c".repeat(24) });
+    vi.stubEnv("NESSIE_ACCOUNT_ID", "c".repeat(24));
+    nessie.createTransfer.mockResolvedValue({ _id: "own-payer" });
+    expect((await payWithNessieTransfer("owe-1")).ok).toBe(true);
+    expect(nessie.createTransfer).toHaveBeenCalledWith(ME, expect.any(Object));
+    vi.unstubAllEnvs();
+  });
+
   it("sends a P2P transfer from my account to the friend's and settles the balance, linked to the transfer", async () => {
     const alex = addFriend("auth0|payer", { name: "Alex P2P", nessieAccountId: ALEX });
     state.events = [owed(alex.id)];

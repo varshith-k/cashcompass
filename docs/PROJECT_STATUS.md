@@ -2,6 +2,18 @@
 
 Updated October 18, 2026. The original phase delivery was checked October 17; newer teammate features and the MoneyQuest companion are recorded below. [`PROJECT_HANDOFF.md`](../PROJECT_HANDOFF.md) preserves the requirements and now includes the current feature handoff.
 
+## Per-user Nessie accounts — October 18, 2026
+
+Implemented on `feature/nessie-per-user-accounts`; **not deployed or independently verified against live Nessie**.
+
+- Authenticated app visits automatically prepare a separate fictional Nessie customer and $0 checking account after hydration. Existing users are included. Auth0 login is unchanged and does not wait for Nessie; server rendering/prefetch does not create accounts.
+- Durable `nessie_user_accounts` mapping/checkpoints, unique remote IDs, per-owner PostgreSQL advisory locks, and marker-based recovery prevent shared-account fallback and blind duplicate creation. Uncertain outcomes stop for review if no unique matching object can be found.
+- Settings displays the user's own account/reference balance, shareable sandbox account ID, sync, and setup/recovery feedback. Sync validates ownership; transfers use only the mapped payer, ignoring legacy global IDs and stale sync status. New accounts are empty and unfunded.
+- Additive migration: `db/migrations/20261018_nessie_user_accounts.sql` (also included in `db/schema.sql`). First setup can initialize the table if permitted; otherwise an operator must migrate it before enabling the feature. Existing financial records/shared imports are preserved.
+- Requires Auth0, `NESSIE_API_KEY`, and `DATABASE_URL`. Local presence-only check found `AUTH0_CLIENT_SECRET`, `NESSIE_API_KEY`, and `DATABASE_URL` missing; no values were printed and no live provider objects were created. Current production configuration is unverified.
+- Isolated browser verification uses a fake authenticated session and fake Nessie API with real disposable Postgres: separate users/accounts, automatic setup after hydration, render-only non-creation, reload reuse, empty-account sync, failed-POST recovery without duplicate creation, eight viewport/theme combinations, four axe scans, and no browser runtime errors. This does not verify live Auth0/Nessie.
+- Local verification: lint, typecheck, and production build pass; 215 passing tests plus 4 intentionally skipped live Gemini tests, including actual disposable PostgreSQL DDL/constraints, concurrent locking, committed checkpoint recovery, per-user account selection, malicious selections, stale payer state, and failure cleanup. See [Nessie setup and operational limits](../src/lib/nessie/README.md).
+
 ## MoneyQuest main integration — October 18, 2026
 
 The user authorized merging MoneyQuest into `main`. The merge candidate includes current main through `6ec59a5`, preserving the newer sign-in security, login documentation, interface text, and laptop webcam changes. A push/merge to `main` can activate the documented Vultr auto-deploy timer; a GitHub merge is not by itself proof that production finished deploying.
@@ -26,7 +38,7 @@ The MoneyQuest branch includes GitHub `main` through `56a72d1`, including the ne
 | Phone scanning | Camera/upload controls and laptop-to-phone QR flow; user confirms extracted data before saving. | One-time scan sessions are process-local and expire after ten minutes; live phone/Gemini check pending in this pass. |
 | Bill email reminders | Per-bill scheduling with days-before, local hour/time zone, occurrence tracking, Resend templates, secret-protected cron route, systemd service/timer templates. | Requires email/cron configuration, current schema for durable reminders, and explicit scheduler installation; no live email sent here. |
 | Settle Up and bill splitting | Friends/guest emails, partial repayments, optional email and WhatsApp reminders, equal/custom/Gemini-suggested shares, receipt links, exact-cent validation, and linked receivables. | Confirmation required; optional email requires configuration. New split flows have unit coverage; live Gemini/notification checks are separate. |
-| Nessie sandbox | Account sync/category mapping, account references, P2P transfers, UUID IDs, empty/new-account compatibility. | User reports prior live sync/P2P. Not independently repeated in this pass. |
+| Nessie sandbox | Per-user persisted sandbox customer/$0 checking account provisioning, setup/recovery, owned-account sync and payer validation, categories, P2P, UUID/empty-account compatibility. | Per-user changes are on the feature branch; require Auth0 + Nessie key + DB and live deployment verification. Historical shared-account sync/P2P was user-reported. |
 | Goals and copilot | Weekly reservations/contributions, forecast effects, validated Gemini financial tools/cards, model/offline fallback, purchase links and image extraction. | Planned AutoSave is not a transfer; service quota/configuration affects live AI features. |
 | Tiger Data | Financial-event/reminder/Solana receipt schema, monthly continuous aggregate, and compression of chunks older than 30 days segmented by owner. | Latest schema application, actual database jobs, and durable live behavior require server evidence. Pool currently disables TLS certificate validation while encrypting traffic. |
 | Solana | Devnet wallet adapter, fixed demo rate/recipient, successful confirmed transfer verification, signature claims and ledger settlement. | Real payment proof unresolved: latest user attempt never showed Phantom approval. Do not mark live end-to-end payment complete. |

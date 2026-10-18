@@ -7,6 +7,13 @@ export interface NessieAccount {
   nickname: string;
   type: string;
   balance: number;
+  customer_id?: string;
+}
+
+export interface NessieCustomer {
+  _id: string;
+  first_name: string;
+  last_name: string;
 }
 
 export interface NessiePurchase {
@@ -63,10 +70,8 @@ async function get<T>(path: string, options?: { on404?: T }): Promise<T> {
   const key = requireApiKey();
   const url = `${BASE_URL}${path}${path.includes("?") ? "&" : "?"}key=${encodeURIComponent(key)}`;
   const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15000) });
-  // Unlike purchases/deposits/bills, Nessie's /transfers endpoint returns 404
-  // (not 200 + []) when an account simply has no transfers yet - true for
-  // every brand-new account. Callers that pass on404 treat that as empty
-  // rather than a real failure; everything else still throws on 404.
+  // Some sandbox versions return 404 for empty collections. Sync separately
+  // fetches/validates the account, so a missing account still fails closed.
   if (response.status === 404 && options && "on404" in options) {
     return options.on404 as T;
   }
@@ -81,7 +86,7 @@ export function isNessieConfigured(): boolean {
 }
 
 export function getAccountsForCustomer(customerId: string) {
-  return get<NessieAccount[]>(`/customers/${customerId}/accounts`);
+  return get<NessieAccount[]>(`/customers/${encodeURIComponent(customerId)}/accounts`, { on404: [] });
 }
 
 export function getAccount(accountId: string) {
@@ -89,19 +94,19 @@ export function getAccount(accountId: string) {
 }
 
 export function getAccountPurchases(accountId: string) {
-  return get<NessiePurchase[]>(`/accounts/${accountId}/purchases`);
+  return get<NessiePurchase[]>(`/accounts/${accountId}/purchases`, { on404: [] });
 }
 
 export function getAccountDeposits(accountId: string) {
-  return get<NessieDeposit[]>(`/accounts/${accountId}/deposits`);
+  return get<NessieDeposit[]>(`/accounts/${accountId}/deposits`, { on404: [] });
 }
 
 export function getAccountWithdrawals(accountId: string) {
-  return get<NessieWithdrawal[]>(`/accounts/${accountId}/withdrawals`);
+  return get<NessieWithdrawal[]>(`/accounts/${accountId}/withdrawals`, { on404: [] });
 }
 
 export function getAccountBills(accountId: string) {
-  return get<NessieBill[]>(`/accounts/${accountId}/bills`);
+  return get<NessieBill[]>(`/accounts/${accountId}/bills`, { on404: [] });
 }
 
 export function getMerchant(merchantId: string) {
@@ -156,6 +161,33 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     throw new NessieError(`Nessie request failed: ${response.status} ${path}`);
   }
   return response.json();
+}
+
+export function getCustomers() {
+  return get<NessieCustomer[]>("/customers");
+}
+
+/** Fictional profile only: never forward an Auth0 name, email, or address. */
+export async function createSandboxCustomer(token: string): Promise<NessieCustomer> {
+  const result = await post<{ objectCreated?: NessieCustomer } & Partial<NessieCustomer>>("/customers", {
+    first_name: "CashCompass",
+    last_name: `User${token}`,
+    address: { street_number: "123", street_name: "Campus Ave", city: "Columbia", state: "MO", zip: "65201" },
+  });
+  const created = result.objectCreated ?? result as NessieCustomer;
+  if (!isNessieId(created?._id)) throw new NessieError("Nessie did not return the created customer");
+  return created;
+}
+
+export async function createSandboxAccount(customerId: string, token: string): Promise<NessieAccount> {
+  if (!isNessieId(customerId)) throw new NessieError("Invalid Nessie customer id");
+  const result = await post<{ objectCreated?: NessieAccount } & Partial<NessieAccount>>(
+    `/customers/${encodeURIComponent(customerId)}/accounts`,
+    { type: "Checking", nickname: `CC-${token}`, rewards: 0, balance: 0 },
+  );
+  const created = result.objectCreated ?? result as NessieAccount;
+  if (!isNessieId(created?._id) || created.customer_id !== customerId) throw new NessieError("Nessie did not return the owned account");
+  return created;
 }
 
 /** Sends a sandbox P2P transfer from one account to another. Returns the created transfer. */

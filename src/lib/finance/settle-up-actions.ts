@@ -3,9 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requireOwnerId } from "@/lib/auth/session";
 import { notifyFriend, type NotifyResult } from "@/lib/email/notify-friend";
-import { listDemoAccounts } from "@/lib/nessie/accounts";
+import { listUserAccounts } from "@/lib/nessie/accounts";
 import { createTransfer, isNessieConfigured, isNessieId } from "@/lib/nessie/client";
-import { getSyncStatus } from "@/lib/nessie/status";
 import { addFriend, getFriend, isValidEmail, removeFriend } from "./friends";
 import { settleLedgerAmount } from "./ledger";
 import { getFinancialEventRepository } from "./repository";
@@ -52,7 +51,7 @@ export type TransferResult = { ok: boolean; message: string };
 
 /**
  * Settles a balance you owe a friend with a real Capital One Nessie P2P
- * transfer: from your configured sandbox account to the friend's account,
+ * transfer: from your own mapped sandbox account to the friend's account,
  * then records the payment (linked to the transfer so the next sync matches
  * it instead of importing a duplicate). No account id comes from the browser.
  */
@@ -67,9 +66,9 @@ export async function payWithNessieTransfer(entryId: string): Promise<TransferRe
   const friend = getFriend(ownerId, entry.friendId);
   if (!friend?.nessieAccountId) return { ok: false, message: "Add this friend's Nessie account ID first." };
 
-  const { accounts, error } = await listDemoAccounts();
+  const { accounts, error } = await listUserAccounts();
   if (error) return { ok: false, message: error };
-  const payerId = getSyncStatus(ownerId)?.accountId || process.env.NESSIE_ACCOUNT_ID || accounts[0]?._id;
+  const payerId = accounts[0]?._id;
   if (!payerId || !accounts.some((account) => account._id === payerId)) {
     return { ok: false, message: "Choose your Nessie account in Settings and sync once first." };
   }
@@ -84,8 +83,8 @@ export async function payWithNessieTransfer(entryId: string): Promise<TransferRe
         description: `CashCompass settle up with ${friend.name}`,
       })
     )._id;
-  } catch (error) {
-    console.warn("[settle-up] Nessie transfer failed:", error instanceof Error ? error.message : "unknown error");
+  } catch {
+    console.warn("[settle-up] Nessie transfer failed");
     return { ok: false, message: "Nessie didn't accept the transfer. Nothing was recorded; try again." };
   }
 

@@ -5,7 +5,8 @@ import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { syncNessie } from "@/lib/nessie/actions";
+import { setupNessieAccount, syncNessie } from "@/lib/nessie/actions";
+import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/format";
 import type { NessieAccount } from "@/lib/nessie/client";
 import type { SyncStatus } from "@/lib/nessie/status";
@@ -15,16 +16,32 @@ export function NessieCard({
   initialStatus,
   accounts,
   accountError,
+  canSetup,
 }: {
   isConfigured: boolean;
   initialStatus: SyncStatus | null;
   accounts: NessieAccount[];
   accountError?: string;
+  canSetup: boolean;
 }) {
-  const [accountId, setAccountId] = useState(initialStatus?.accountId ?? accounts[0]?._id ?? "");
-  const [status, setStatus] = useState(initialStatus);
+  const router = useRouter();
+  const [selectedId, setAccountId] = useState("");
+  const accountId = accounts.some((account) => account._id === selectedId) ? selectedId : accounts[0]?._id ?? "";
+  const [lastSync, setStatus] = useState(initialStatus);
+  const status = lastSync?.accountId === accountId ? lastSync : null;
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  async function handleSetup() {
+    setPending(true);
+    setMessage(null);
+    try {
+      const result = await setupNessieAccount();
+      setMessage(result.message);
+      if (result.ok) router.refresh();
+    } catch { setMessage("Unable to prepare your account. Please retry."); }
+    finally { setPending(false); }
+  }
 
   async function handleSync() {
     setPending(true);
@@ -49,15 +66,15 @@ export function NessieCard({
         <CardTitle>Capital One Nessie demo data</CardTitle>
         <Badge
           variant="outline"
-          className={isConfigured ? "border-positive/40 text-positive" : "border-border text-muted-foreground"}
+          className={accounts.length ? "border-positive/40 text-positive" : "border-border text-muted-foreground"}
         >
-          {isConfigured ? (
+          {accounts.length ? (
             <>
-              <CheckCircle2 className="size-3" /> Configured
+              <CheckCircle2 className="size-3" /> Your sandbox account
             </>
           ) : (
             <>
-              <XCircle className="size-3" /> Not connected
+              <XCircle className="size-3" /> {isConfigured ? "Setup needed" : "Not connected"}
             </>
           )}
         </Badge>
@@ -69,11 +86,12 @@ export function NessieCard({
         </p>
 
         {accounts.length > 0 && <div className="space-y-1.5">
-          <label htmlFor="nessie-account" className="text-sm font-medium">Demo account</label>
+          <label htmlFor="nessie-account" className="text-sm font-medium">Your sandbox checking account</label>
           <select id="nessie-account" className="w-full rounded-lg border border-border bg-card p-2 text-sm" value={accountId} onChange={(event) => setAccountId(event.target.value)} disabled={pending}>
             {accounts.map((account) => <option key={account._id} value={account._id}>{account.nickname} · {account.type} · {formatCurrency(account.balance, { cents: true })}</option>)}
           </select>
-          <p className="text-xs text-muted-foreground">Sandbox balances are shown for reference. The forecast uses its disclosed demo opening balance and imported events.</p>
+          <p className="text-xs text-muted-foreground break-all">Account ID: {accountId}. Share this ID with a friend for sandbox P2P transfers.</p>
+          <p className="text-xs text-muted-foreground">New accounts start at $0. Balances are references; forecasts use recorded activity and do not reconcile to this balance.</p>
         </div>}
         {accountError && <p role="alert" className="text-xs text-caution">{accountError}</p>}
         {status && (
@@ -83,7 +101,10 @@ export function NessieCard({
         )}
         {message && <p role="status" className="text-xs text-caution">{message}</p>}
 
-        <Button type="button" variant="outline" size="sm" onClick={handleSync} disabled={pending}>
+        {accounts.length === 0 && canSetup && <Button type="button" variant="outline" size="sm" onClick={handleSetup} disabled={pending}>
+          {pending ? "Preparing…" : "Set up / recover my sandbox account"}
+        </Button>}
+        <Button type="button" variant="outline" size="sm" onClick={handleSync} disabled={pending || !accountId}>
           <RefreshCw className={pending ? "size-3.5 animate-spin" : "size-3.5"} />
           {pending ? "Syncing…" : "Sync Nessie data"}
         </Button>
