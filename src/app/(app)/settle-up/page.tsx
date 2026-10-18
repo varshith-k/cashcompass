@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { ArrowRightLeft, Mail, Phone, Trash2, Users } from "lucide-react";
+import { ArrowRightLeft, Mail, Phone, Radio, Trash2, Users } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { AddFriendSheet } from "@/components/ledger/add-friend-sheet";
 import { SplitBillSheet } from "@/components/ledger/split-bill-sheet";
@@ -56,6 +56,22 @@ export default async function SettleUpPage({ searchParams }: { searchParams: Pro
             />
             <AddFriendSheet />
             <AddLedgerEntrySheet friends={friends.map((f) => ({ id: f.id, name: f.name, hasEmail: Boolean(f.email) }))} />
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              role="link"
+              render={
+                <a
+                  href={process.env.DEEPSPACE_SPLIT_ROOM_URL ?? "https://cashcompass-split-room.app.space/split"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <Radio className="size-4" />
+              Live Split Room
+            </Button>
           </div>
         }
       />
