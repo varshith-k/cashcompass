@@ -24,7 +24,7 @@ export async function syncNessie(selectedAccountId?: string) {
 
   try {
     const result = await syncNessieAccount(accountId, { friends: await getFriends(ownerId) });
-    recordSyncStatus(ownerId, result);
+    await recordSyncStatus(ownerId, result);
     revalidatePath("/", "layout");
     return { ok: true as const, ...result };
   } catch (error) {

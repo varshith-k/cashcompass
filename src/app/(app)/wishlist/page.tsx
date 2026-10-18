@@ -9,11 +9,13 @@ import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { requireOwnerId } from "@/lib/auth/session";
 import { getWishlistGoals } from "@/lib/finance/wishlist-goals";
 
+export const metadata = { title: "Wishlist" };
+
 export default async function WishlistPage() {
   await connection();
 
   const events = await getFinancialEventRepository().listEvents();
-  const goals = getWishlistGoals(await requireOwnerId());
+  const goals = await getWishlistGoals(await requireOwnerId());
 
   return (
     <div>

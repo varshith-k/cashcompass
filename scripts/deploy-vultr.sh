@@ -95,15 +95,17 @@ for envfile in .env .env.local .env.production .env.production.local; do
   fi
 done
 cd "$release"
+export CASHCOMPASS_BUILD_SHA="$commit"
 npm ci --legacy-peer-deps --no-audit --no-fund
+NODE_ENV=production node scripts/check-environment.mjs --core-only
 npm run test --if-present
 npm run build
 
 healthy() {
   local port=$1 code
   for attempt in $(seq 1 30); do
-    code=$(curl --max-time 3 -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/" || true)
-    if [[ "$code" =~ ^[23][0-9][0-9]$ ]]; then return 0; fi
+    code=$(curl --max-time 12 -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/api/public/health" || true)
+    if [[ "$code" == 200 ]]; then return 0; fi
     sleep 2
   done
   return 1
@@ -135,7 +137,7 @@ const config = { apps: [{
   script: path.join(release, 'node_modules/next/dist/bin/next'),
   interpreter: path.join(base, 'node/bin/node'),
   args: ['start', '--hostname', '127.0.0.1', '-p', '8000'],
-  env: { NODE_ENV: 'production', PATH: process.env.PATH },
+  env: { NODE_ENV: 'production', PATH: process.env.PATH, CASHCOMPASS_BUILD_SHA: process.env.CASHCOMPASS_BUILD_SHA },
 }] };
 fs.writeFileSync(path.join(release, 'ecosystem.config.cjs'), 'module.exports = ' + JSON.stringify(config) + ';\n');
 NODE

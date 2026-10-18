@@ -1,9 +1,10 @@
 "use server";
+import { updatePlanningProfile } from "@/lib/storage/profile";
 
 import { revalidatePath } from "next/cache";
 import { nextMonthlyDate } from "./dates";
 import { requireOwnerId, requireSession } from "@/lib/auth/session";
-import { getFinancialEventRepository } from "./repository";
+import { getFinancialEventRepository, withFinancialTransaction } from "./repository";
 import { settleLedgerAmount } from "./ledger";
 import { shareBalance, unshareEvent } from "./shared-balances";
 import { findOrAddFriend, getFriend, isValidEmail } from "./friends";
@@ -46,6 +47,8 @@ function parseDate(raw: FormDataEntryValue | null): string {
 }
 
 export async function createTransaction(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   const direction = parseDirection(formData.get("direction"));
   // Only income can be marked recurring here — an upcoming, not-yet-received
   // paycheck (or other recurring income) rather than something already in
@@ -68,9 +71,13 @@ export async function createTransaction(formData: FormData) {
 
   await getFinancialEventRepository().createEvent(input);
   revalidatePath("/", "layout");
+
+  });
 }
 
 export async function updateTransaction(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   const repo = getFinancialEventRepository();
   const id = String(formData.get("id"));
   const original = (await repo.listEvents()).find((event) => event.id === id && event.record === "actual");
@@ -83,6 +90,8 @@ export async function updateTransaction(formData: FormData) {
     counterparty: String(formData.get("counterparty") || "").trim() || "Unknown",
   });
   revalidatePath("/", "layout");
+
+  });
 }
 
 /**
@@ -100,14 +109,24 @@ async function deleteMatching(formData: FormData, matches: (event: FinancialEven
 }
 
 export async function deleteTransaction(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   await deleteMatching(formData, (e) => e.record === "actual", "Transaction not found");
+
+  });
 }
 
 export async function deleteUpcomingIncome(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   await deleteMatching(formData, (e) => e.record === "planned" && e.direction === "income", "Upcoming income not found");
+
+  });
 }
 
 export async function createBill(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   const amount = parseAmount(formData.get("amount"));
   const category = String(formData.get("category") || "Other");
   // Credit card bills: amount is the statement balance; the minimum payment is optional.
@@ -132,19 +151,27 @@ export async function createBill(formData: FormData) {
 
   await getFinancialEventRepository().createEvent(input);
   revalidatePath("/", "layout");
+
+  });
 }
 
 export async function deleteBill(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   await deleteMatching(
     formData,
     (e) => e.record === "planned" && e.direction === "expense" && !["Savings", "Repayment"].includes(e.category),
     "Bill not found",
   );
   await getReminderStore().remove(await requireOwnerId(), String(formData.get("id")));
+
+  });
 }
 
 /** Logs an already-paid purchase from a receipt (Bills & Payments → Receipts). */
 export async function createReceipt(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   const notes = String(formData.get("notes") ?? "").trim().slice(0, 500);
   await getFinancialEventRepository().createEvent({
     date: parseDate(formData.get("date")),
@@ -160,13 +187,21 @@ export async function createReceipt(formData: FormData) {
     ...(notes ? { notes } : {}),
   });
   revalidatePath("/", "layout");
+
+  });
 }
 
 export async function deleteReceipt(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   await deleteMatching(formData, (e) => e.isReceipt === true && e.record === "actual", "Receipt not found");
+
+  });
 }
 
 export async function markBillPaid(formData: FormData): Promise<BillPaidUndo> {
+  return withFinancialTransaction(async () => {
+
   const id = String(formData.get("id"));
   const repo = getFinancialEventRepository();
   const original = (await repo.listEvents()).find((event) => event.id === id);
@@ -184,6 +219,8 @@ export async function markBillPaid(formData: FormData): Promise<BillPaidUndo> {
   }
   revalidatePath("/", "layout");
   return { id, counterparty: original.counterparty, originalDate: original.date, originalCertainty: original.certainty, nextId };
+
+  });
 }
 
 /**
@@ -192,6 +229,8 @@ export async function markBillPaid(formData: FormData): Promise<BillPaidUndo> {
  * touches the signed-in user's own records (the repository is owner-scoped).
  */
 export async function undoMarkBillPaid(undo: BillPaidUndo) {
+  return withFinancialTransaction(async () => {
+
   const repo = getFinancialEventRepository();
   const events = await repo.listEvents();
   const paid = events.find((event) => event.id === undo?.id);
@@ -213,49 +252,65 @@ export async function undoMarkBillPaid(undo: BillPaidUndo) {
     await getReminderStore().move(await requireOwnerId(), next.id, paid.id);
   }
   revalidatePath("/", "layout");
+
+  });
 }
 
 export async function updateBudgetLimits(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   const ownerId = await requireOwnerId();
   const limits: Record<string, number> = {};
-  for (const budget of getBudgets(ownerId)) {
+  for (const budget of await getBudgets(ownerId)) {
     const raw = formData.get(`limit_${budget.category}`);
     const value = Number(raw);
     if (Number.isFinite(value) && value >= 0) {
       limits[budget.category] = Math.round(value * 100) / 100;
     }
   }
-  setBudgetLimits(ownerId, limits);
+  await setBudgetLimits(ownerId, limits);
   revalidatePath("/", "layout");
+
+  });
 }
 
 export async function createWishlistGoal(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   const ownerId = await requireOwnerId();
   const name = String(formData.get("name") || "").trim();
   if (!name) throw new Error("Goal name is required");
-  if (getWishlistGoals(ownerId).some((goal) => goal.name.toLowerCase() === name.toLowerCase())) throw new Error("Use a different goal name");
+  if ((await getWishlistGoals(ownerId)).some((goal) => goal.name.toLowerCase() === name.toLowerCase())) throw new Error("Use a different goal name");
 
-  addWishlistGoal(ownerId, {
+  await addWishlistGoal(ownerId, {
     name,
     targetAmount: parseAmount(formData.get("targetAmount")),
     targetDate: parseDate(formData.get("targetDate")),
   });
   revalidatePath("/", "layout");
+
+  });
 }
 
 export async function deleteWishlistGoal(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   const ownerId = await requireOwnerId();
   const id = String(formData.get("id"));
-  const goal = getWishlistGoals(ownerId).find((item) => item.id === id);
+  const goal = (await getWishlistGoals(ownerId)).find((item) => item.id === id);
   if (goal) {
     const repo = getFinancialEventRepository();
     for (const event of (await repo.listEvents()).filter((e) => e.category === "Savings" && e.record === "planned" && e.counterparty === goal.name)) await repo.deleteEvent(event.id);
   }
-  removeWishlistGoal(ownerId, id);
+  await removeWishlistGoal(ownerId, id);
   revalidatePath("/", "layout");
+
+  });
 }
 
 export async function createLedgerEntry(formData: FormData): Promise<NotifyResult | null> {
+  return withFinancialTransaction(async () => {
+
   const session = await requireSession();
   const ownerId = session.user.id;
   const direction = parseDirection(formData.get("direction"));
@@ -295,11 +350,17 @@ export async function createLedgerEntry(formData: FormData): Promise<NotifyResul
     console.warn("[settle-up] added email failed:", error instanceof Error ? error.message : "unknown error");
     return null;
   }
+
+  });
 }
 
 export async function deleteLedgerEntry(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   await deleteMatching(formData, (e) => e.category === "Repayment" && e.record === "planned", "Ledger entry not found");
   await unshareEvent(await requireOwnerId(), String(formData.get("id")));
+
+  });
 }
 
 export async function logLedgerPayment(formData: FormData) {
@@ -309,8 +370,10 @@ export async function logLedgerPayment(formData: FormData) {
 }
 
 export async function planWishlistSavings(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   const ownerId = await requireOwnerId();
-  const goal = getWishlistGoals(ownerId).find((item) => item.id === String(formData.get("goalId")));
+  const goal = (await getWishlistGoals(ownerId)).find((item) => item.id === String(formData.get("goalId")));
   if (!goal) throw new Error("Goal not found");
   const weeklyAmount = parseAmount(formData.get("weeklyAmount"));
   const repo = getFinancialEventRepository();
@@ -329,12 +392,16 @@ export async function planWishlistSavings(formData: FormData) {
     remaining = Math.round((remaining - amount) * 100) / 100;
   }
   revalidatePath("/", "layout");
+
+  });
 }
 
 export async function addWishlistContribution(formData: FormData) {
+  return withFinancialTransaction(async () => {
+
   const ownerId = await requireOwnerId();
   const goalName = String(formData.get("goalName") || "").trim();
-  if (!getWishlistGoals(ownerId).some((goal) => goal.name === goalName)) throw new Error("Goal not found");
+  if (!(await getWishlistGoals(ownerId)).some((goal) => goal.name === goalName)) throw new Error("Goal not found");
   const repo = getFinancialEventRepository();
   const amount = parseAmount(formData.get("amount"));
   // Reserving funds now replaces that amount of scheduled future reserves.
@@ -347,5 +414,18 @@ export async function addWishlistContribution(formData: FormData) {
     toConsume = Math.round((toConsume - event.amount) * 100) / 100;
   }
   await repo.createEvent({ date: new Date().toISOString(), amount, direction: "expense", record: "actual", certainty: "certain", recurrence: "one-time", source: "manual", category: "Savings", counterparty: goalName });
+  revalidatePath("/", "layout");
+
+  });
+}
+
+export async function saveBalanceCheckpoint(formData: FormData) {
+  const balance = Number(formData.get("balance"));
+  if (!Number.isFinite(balance) || balance < 0 || balance > 9999999999.99) throw new Error("Enter a valid balance");
+  await withFinancialTransaction(async (ownerId) => {
+    const events = await getFinancialEventRepository().listEvents();
+    const signedPosted = events.filter((event) => event.record === "actual" && event.date.slice(0, 10) <= new Date().toISOString().slice(0, 10)).reduce((sum, event) => sum + (event.direction === "income" ? event.amount : -event.amount), 0);
+    await updatePlanningProfile(ownerId, (profile) => { profile.openingBalance = Math.round((balance - signedPosted) * 100) / 100; });
+  });
   revalidatePath("/", "layout");
 }

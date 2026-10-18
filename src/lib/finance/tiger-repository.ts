@@ -1,4 +1,5 @@
 import "server-only";
+import { withDatabaseClient } from "@/lib/storage/transaction";
 import { randomUUID } from "node:crypto";
 import { Pool, type PoolClient } from "pg";
 import type { FinancialEventStore } from "./repository";
@@ -76,12 +77,7 @@ function toFinancialEvent(row: FinancialEventRow): FinancialEvent {
  */
 export class TigerDataFinancialEventStore implements FinancialEventStore {
   private async withClient<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-    const client = await getPool().connect();
-    try {
-      return await fn(client);
-    } finally {
-      client.release();
-    }
+    return withDatabaseClient(fn);
   }
 
   async listEvents(ownerId: string): Promise<FinancialEvent[]> {

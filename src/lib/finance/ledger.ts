@@ -2,7 +2,7 @@ import "server-only";
 import { revalidatePath } from "next/cache";
 import { requireOwnerId } from "@/lib/auth/session";
 import { notifyFriend } from "@/lib/email/notify-friend";
-import { getEventStoreForJobs, getFinancialEventRepository } from "./repository";
+import { getEventStoreForJobs, getFinancialEventRepository, withFinancialTransaction } from "./repository";
 import { getSharedBalanceStore } from "./shared-balances";
 import type { FinancialEvent, FinancialEventUpdate, NewFinancialEvent } from "./types";
 
@@ -26,6 +26,7 @@ export async function settleLedgerAmount(
     sourceRecordId?: string;
   },
 ) {
+  const payment = await withFinancialTransaction(async () => {
   const repo = getFinancialEventRepository();
   const events = await repo.listEvents();
   const original = events.find((event) => event.id === id);
@@ -39,6 +40,10 @@ export async function settleLedgerAmount(
 
   const remaining = original.amount;
   await applyLedgerPayment(repo, original, amountPaid, options);
+  return { original, amountPaid, remaining };
+  });
+  const { original, remaining } = payment;
+  amountPaid = payment.amountPaid;
   await mirrorSharedPayment(await requireOwnerId(), original.id, amountPaid, amountPaid >= remaining);
 
   revalidatePath("/", "layout");

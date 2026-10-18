@@ -20,7 +20,8 @@ import {
   sumByDirection,
 } from "@/lib/finance/calculations";
 import { forecastInputs } from "@/lib/finance/forecast-inputs";
-import { getFinancialEventRepository } from "@/lib/finance/repository";
+import { getFinancialSnapshot } from "@/lib/finance/snapshot";
+import { BalanceSetupNotice } from "@/components/dashboard/balance-setup-notice";
 import { getWishlistGoals } from "@/lib/finance/wishlist-goals";
 import { requireOwnerId } from "@/lib/auth/session";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
@@ -29,11 +30,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default async function OverviewPage() {
   await connection();
 
-  const events = await getFinancialEventRepository().listEvents();
+  const { events, balanceBasis } = await getFinancialSnapshot();
   const upcomingBills = selectUpcomingBills(events);
   const recentTransactions = selectRecentTransactions(events);
 
-  const inputs = forecastInputs(events);
+  const inputs = { ...forecastInputs(events), openingBalance: balanceBasis.openingBalance };
   const startDate = new Date();
   startDate.setUTCDate(startDate.getUTCDate() - inputs.historyDays);
 
@@ -71,13 +72,14 @@ export default async function OverviewPage() {
   );
 
   const nextBill = upcomingBills[0];
-  const primaryGoal = getWishlistGoals(await requireOwnerId())[0];
+  const primaryGoal = (await getWishlistGoals(await requireOwnerId()))[0];
   const savingsProgressPct = primaryGoal
     ? Math.min(100, Math.round((savingsProgressForGoal(events, primaryGoal.name) / primaryGoal.targetAmount) * 100))
     : 0;
 
   return (
     <div className="space-y-6">
+      {balanceBasis.source === "unconfigured" && <BalanceSetupNotice />}
       <HeroOverview
         availableBalance={currentBalance}
         safeToSpend={safeToSpend}
@@ -120,7 +122,7 @@ export default async function OverviewPage() {
         />
       </div>
 
-      <p className="text-xs text-muted-foreground">Forecast from your opening balance and recorded events. Monthly bills and paychecks repeat. Everyday spending is estimated at {formatCurrency(inputs.dailySpend, { cents: true })}/day from your last 30 days of purchases. The cautious balance leaves out money friends owe you until it is paid. Savings contributions reserve funds here; no money is transferred.</p>
+      <p className="text-xs text-muted-foreground">{balanceBasis.description} Monthly bills and paychecks repeat. Everyday spending is estimated at {formatCurrency(inputs.dailySpend, { cents: true })}/day from your last 30 days of purchases. The cautious balance leaves out money friends owe you until it is paid. Savings contributions reserve funds here; no money is transferred.</p>
 
       <Card>
         <CardHeader>

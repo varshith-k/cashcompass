@@ -6,6 +6,8 @@ import { UpcomingIncomeList } from "@/components/transactions/upcoming-income-li
 import { selectRecentTransactions, selectUpcomingIncome } from "@/lib/finance/calculations";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
 
+export const metadata = { title: "Transactions" };
+
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   await connection();
 

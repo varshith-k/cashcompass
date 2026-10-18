@@ -12,6 +12,9 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Never let an inherited deployment DSN turn unit fixtures into live writes.
+    // Database tests explicitly opt into their validated local TEST_DATABASE_URL.
+    env: { DATABASE_URL: "" },
     include: ["src/**/*.test.ts"],
   },
 });

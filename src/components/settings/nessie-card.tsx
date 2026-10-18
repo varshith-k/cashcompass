@@ -73,7 +73,7 @@ export function NessieCard({
           <select id="nessie-account" className="w-full rounded-lg border border-border bg-card p-2 text-sm" value={accountId} onChange={(event) => setAccountId(event.target.value)} disabled={pending}>
             {accounts.map((account) => <option key={account._id} value={account._id}>{account.nickname} · {account.type} · {formatCurrency(account.balance, { cents: true })}</option>)}
           </select>
-          <p className="text-xs text-muted-foreground">Sandbox balances are shown for reference. The forecast uses its disclosed demo opening balance and imported events.</p>
+          <p className="text-xs text-muted-foreground">Synchronizing reconciles the forecast with these simulated account balances. Posted imports already reflected in a balance are not counted twice.</p>
         </div>}
         {accountError && <p role="alert" className="text-xs text-caution">{accountError}</p>}
         {status && (

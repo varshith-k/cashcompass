@@ -1,5 +1,7 @@
 # Automatic deployment on Vultr
 
+> This guide records the previously reported server setup. The current release branch has not authenticated to independently confirm it. Before merging the production-readiness release, review/install its updated deployment script, configure durable storage, back up and migrate the intended database, and verify core readiness. No server changes are authorized from this session until findings are presented and approved.
+
 ## Active server setup
 
 CashCompass runs at https://cashcompass.club on Vultr instance 66.42.81.135.
@@ -50,14 +52,14 @@ new release. To change settings, edit the files in `/root/cashcompass` and
 deploy again. Existing releases are retained for recovery: monitor disk space
 and remove obsolete releases only after checking the current/previous links.
 The HTTP health check verifies server startup, not sign-in or finance workflows.
-In-memory budgets, goals, and other process-local data reset on deployment.
+The production-readiness release persists budgets, goals, checkpoints, account snapshots and sync state in `planning_profiles` alongside financial events and receipts. It requires `DATABASE_URL` and the updated schema. Earlier process-local data resets on deployment and has no durable migration source after a restart.
 
 Changes to the deployment scripts in GitHub do not install themselves into
 systemd: upload revised scripts/units explicitly and reload systemd.
 
 ## Production configuration
 
-Commit `671a5b5718e31744ed2b731b39f78a17fe60939c` is deployed. The HTTPS
+The earlier server report recorded commit `671a5b5718e31744ed2b731b39f78a17fe60939c` as deployed. Recheck the current release before making changes. The HTTPS
 homepage returns 200, signed-out `/api/auth/me` returns 401, and `/overview`
 redirects signed-out visitors to login.
 
@@ -66,8 +68,7 @@ Gemini settings, APP_BASE_URL, and a server-generated AUTH0_SECRET. Local
 development settings are in the git-ignored `.env.local`; local and production
 cookie secrets are separate.
 
-The remaining login blocker is an Auth0 callback URL mismatch. In the Auth0
-application settings, allow these URLs (preserve any existing entries):
+An earlier report identified an Auth0 callback URL mismatch. The October 17 follow-up public probe now reaches Universal Login with the expected production callback and no detected mismatch error. Full sign-in/callback/logout verification still needs a user-controlled test session. If a mismatch recurs, check these Auth0 application URLs (preserve any existing entries):
 
 | Setting | URLs |
 | --- | --- |

@@ -153,3 +153,10 @@ CREATE TABLE IF NOT EXISTS shared_balances (
   UNIQUE (from_owner_id, from_event_id)
 );
 CREATE INDEX IF NOT EXISTS shared_balances_to_email_idx ON shared_balances (to_email, status);
+
+-- Durable per-user planning, balance checkpoints, and synchronization state.
+CREATE TABLE IF NOT EXISTS planning_profiles (
+  owner_id text PRIMARY KEY,
+  data jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);

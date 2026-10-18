@@ -1,4 +1,5 @@
 import "server-only";
+import { assertStorageConfigured, withOwnerTransaction } from "@/lib/storage/transaction";
 import { requireOwnerId } from "@/lib/auth/session";
 import type { FinancialEvent, FinancialEventUpdate, NewFinancialEvent } from "./types";
 import { DemoFinancialEventStore } from "./demo-repository";
@@ -42,6 +43,7 @@ export interface FinancialEventStore {
 let cachedStore: FinancialEventStore | null = null;
 
 function getStore(): FinancialEventStore {
+  assertStorageConfigured();
   if (!cachedStore) {
     cachedStore = process.env.DATABASE_URL
       ? new TigerDataFinancialEventStore()
@@ -65,13 +67,16 @@ const userScopedRepository: FinancialEventRepository = {
     return getStore().listEvents(await requireOwnerId());
   },
   async createEvent(input) {
-    return getStore().createEvent(await requireOwnerId(), input);
+    const ownerId = await requireOwnerId();
+    return withOwnerTransaction(ownerId, () => getStore().createEvent(ownerId, input));
   },
   async updateEvent(id, patch) {
-    return getStore().updateEvent(await requireOwnerId(), id, patch);
+    const ownerId = await requireOwnerId();
+    return withOwnerTransaction(ownerId, () => getStore().updateEvent(ownerId, id, patch));
   },
   async deleteEvent(id) {
-    return getStore().deleteEvent(await requireOwnerId(), id);
+    const ownerId = await requireOwnerId();
+    return withOwnerTransaction(ownerId, () => getStore().deleteEvent(ownerId, id));
   },
   async getMonthlyCategorySpend() {
     return getStore().getMonthlyCategorySpend(await requireOwnerId());
@@ -80,4 +85,10 @@ const userScopedRepository: FinancialEventRepository = {
 
 export function getFinancialEventRepository(): FinancialEventRepository {
   return userScopedRepository;
+}
+
+/** Authenticated unit of work; nested repository/planning writes share its transaction. */
+export async function withFinancialTransaction<T>(work: (ownerId: string) => Promise<T>): Promise<T> {
+  const ownerId = await requireOwnerId();
+  return withOwnerTransaction(ownerId, () => work(ownerId));
 }

@@ -1,10 +1,12 @@
 "use server";
 
 import { requireOwnerId } from "@/lib/auth/session";
+import { withOwnerTransaction } from "@/lib/storage/transaction";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
-import { claimSettlement, releaseSettlement } from "./receipts";
+import { claimSettlement } from "./receipts";
 import { settleLedgerAmount } from "@/lib/finance/ledger";
-import { SOLANA_DEMO_RECIPIENT, usdToLamports } from "./config";
+import { settlementRecipient } from "./server-config";
+import { usdToLamports } from "./config";
 import { verifySolanaTransfer } from "./verify";
 import type { SolanaPaymentVerification } from "./types";
 
@@ -30,21 +32,19 @@ export async function settleLedgerWithSolana(
   if (!original || original.record !== "planned" || original.category !== "Repayment" || original.direction !== "expense") throw new Error("Outstanding payable ledger entry not found");
   if (amountOwedUsd > original.amount) throw new Error("Payment exceeds the outstanding amount");
   const expectedLamports = usdToLamports(amountOwedUsd);
-  const result = await verifySolanaTransfer(signature, SOLANA_DEMO_RECIPIENT, expectedLamports);
+  const result = await verifySolanaTransfer(signature, settlementRecipient(), expectedLamports);
 
   if (!result.verified) {
     return result;
   }
 
-  if (!await claimSettlement(signature, ownerId, ledgerEntryId)) {
-    return { ...result, verified: false, reason: "This transaction has already been used for a settlement" };
-  }
-  try {
+  return withOwnerTransaction(ownerId, async () => {
+    const current = (await getFinancialEventRepository().listEvents()).find((event) => event.id === ledgerEntryId);
+    if (!current || current.direction !== "expense" || current.record !== "planned" || current.category !== "Repayment") throw new Error("Outstanding payable ledger entry not found");
+    if (!await claimSettlement(signature, ownerId, ledgerEntryId)) {
+      return { ...result, verified: false, reason: "This transaction has already been used for a settlement" };
+    }
     await settleLedgerAmount(ledgerEntryId, amountOwedUsd, { counterpartyNote: `Solana devnet · ${signature.slice(0, 8)}…` });
-  } catch (error) {
-    await releaseSettlement(signature, ownerId);
-    throw error;
-  }
-
-  return result;
+    return result;
+  });
 }

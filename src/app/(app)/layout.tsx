@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth/session";
 import { AuthProvider } from "@/lib/auth/provider";
+import { settlementRecipient } from "@/lib/solana/server-config";
 import { SolanaProvider } from "@/lib/solana/provider";
 import { AppShell } from "@/components/shell/app-shell";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
@@ -17,7 +18,7 @@ export default async function AppLayout({
 
   return (
     <AuthProvider session={session}>
-      <SolanaProvider>
+      <SolanaProvider recipientAddress={settlementRecipient()}>
         <AppShell reminders={reminders} nessieConnected={isNessieConfigured()}>{children}</AppShell>
       </SolanaProvider>
     </AuthProvider>

@@ -1,50 +1,17 @@
 import "server-only";
-
-export interface WishlistGoal {
-  id: string;
-  name: string;
-  targetAmount: number;
-  targetDate: string; // ISO
+import { getPlanningProfile, updatePlanningProfile } from "@/lib/storage/profile";
+export interface WishlistGoal { id: string; name: string; targetAmount: number; targetDate: string }
+export async function getWishlistGoals(ownerId: string): Promise<WishlistGoal[]> {
+  return (await getPlanningProfile(ownerId)).goals;
 }
-
-function isoDaysFromToday(days: number) {
-  const date = new Date();
-  date.setUTCHours(0, 0, 0, 0);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString();
+export async function addWishlistGoal(ownerId: string, input: Omit<WishlistGoal, "id">): Promise<WishlistGoal> {
+  return updatePlanningProfile(ownerId, (profile) => {
+    if (!input.name.trim() || profile.goals.some((goal) => goal.name.toLowerCase() === input.name.toLowerCase())) throw new Error("Use a unique goal name");
+    const goal = { ...input, id: crypto.randomUUID() };
+    profile.goals.push(goal);
+    return goal;
+  });
 }
-
-/**
- * Same in-memory-for-the-process-lifetime pattern as demo-repository.ts,
- * kept per user (keyed by Auth0 `sub`).
- */
-const stores = new Map<string, WishlistGoal[]>();
-
-function storeFor(ownerId: string) {
-  let goals = stores.get(ownerId);
-  if (!goals) {
-    goals = [
-      { id: "goal-miami", name: "Miami Trip Goal", targetAmount: 900, targetDate: isoDaysFromToday(70) },
-    ];
-    stores.set(ownerId, goals);
-  }
-  return goals;
-}
-
-export function getWishlistGoals(ownerId: string): WishlistGoal[] {
-  return storeFor(ownerId);
-}
-
-export function addWishlistGoal(ownerId: string, input: Omit<WishlistGoal, "id">): WishlistGoal {
-  const goal: WishlistGoal = { ...input, id: crypto.randomUUID() };
-  storeFor(ownerId).push(goal);
-  return goal;
-}
-
-export function deleteWishlistGoal(ownerId: string, id: string) {
-  const goals = storeFor(ownerId);
-  const index = goals.findIndex((goal) => goal.id === id);
-  if (index !== -1) {
-    goals.splice(index, 1);
-  }
+export async function deleteWishlistGoal(ownerId: string, id: string) {
+  await updatePlanningProfile(ownerId, (profile) => { profile.goals = profile.goals.filter((goal) => goal.id !== id); });
 }

@@ -69,7 +69,7 @@ export async function payWithNessieTransfer(entryId: string): Promise<TransferRe
 
   const { accounts, error } = await listDemoAccounts();
   if (error) return { ok: false, message: error };
-  const payerId = getSyncStatus(ownerId)?.accountId || process.env.NESSIE_ACCOUNT_ID || accounts[0]?._id;
+  const payerId = (await getSyncStatus(ownerId))?.accountId || process.env.NESSIE_ACCOUNT_ID || accounts[0]?._id;
   if (!payerId || !accounts.some((account) => account._id === payerId)) {
     return { ok: false, message: "Choose your Nessie account in Settings and sync once first." };
   }
