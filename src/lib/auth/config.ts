@@ -15,3 +15,12 @@ export function isAuth0Configured(env: NodeJS.ProcessEnv = process.env): boolean
 export function isDemoAuthMode(env: NodeJS.ProcessEnv = process.env): boolean {
   return !isAuth0Configured(env) && env.NODE_ENV !== "production";
 }
+
+/**
+ * Set AUTH0_MFA_REQUIRED=true once Auth0's "Require Multi-factor Auth" policy
+ * is Always (docs/AUTH0_SETUP.md §7). Auth0 enforces it; this only tells
+ * Settings what to show.
+ */
+export function isMfaRequired(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.AUTH0_MFA_REQUIRED === "true" && isAuth0Configured(env);
+}

@@ -46,47 +46,6 @@ async function getManagementToken(): Promise<string> {
   return cachedToken.value;
 }
 
-/**
- * Opt-in with AUTH0_LOGIN_SECURITY=true once the post-login Action is
- * deployed and the app has the `read:users` and `update:users` scopes
- * (docs/AUTH0_SETUP.md §7).
- */
-export function isLoginSecurityEnabled(): boolean {
-  return process.env.AUTH0_LOGIN_SECURITY === "true" && isAuth0Configured();
-}
-
-function userUrl(userId: string): string {
-  return `https://${managementDomain()}/api/v2/users/${encodeURIComponent(userId)}`;
-}
-
-/** The user's saved login-security choice (raw app_metadata value) and whether their email is verified. */
-export async function getAuth0LoginSecurity(userId: string): Promise<{ level: unknown; emailVerified: boolean }> {
-  const token = await getManagementToken();
-  const response = await fetch(`${userUrl(userId)}?fields=app_metadata%2Cemail_verified&include_fields=true`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw new Error(`Management API user read failed with status ${response.status}`);
-  }
-  const body = (await response.json()) as { app_metadata?: { login_security?: unknown }; email_verified?: boolean };
-  return { level: body.app_metadata?.login_security, emailVerified: body.email_verified === true };
-}
-
-/** Saves the choice in app_metadata, which users can't edit themselves; the Action reads it at login. */
-export async function setAuth0LoginSecurity(userId: string, level: string): Promise<void> {
-  const token = await getManagementToken();
-  const response = await fetch(userUrl(userId), {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ app_metadata: { login_security: level } }),
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw new Error(`Management API user update failed with status ${response.status}`);
-  }
-}
-
 /** Sets the user's display name in Auth0. `userId` is the Auth0 `sub` from the verified session. */
 export async function updateAuth0UserName(userId: string, name: string): Promise<void> {
   const token = await getManagementToken();
