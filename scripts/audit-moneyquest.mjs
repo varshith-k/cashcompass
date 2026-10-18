@@ -6,7 +6,7 @@ import path from "node:path";
 import { chromium } from "playwright";
 
 const base = process.env.BASE_URL || "http://localhost:3101";
-const expectedLaunch = process.env.MONEYQUEST_EXPECT_LAUNCH_URL;
+const expectedLaunch = process.env.MONEYQUEST_EXPECT_LAUNCH_URL || "https://www.roblox.com/games/73262786586748";
 const screenshots = process.env.MONEYQUEST_SCREENSHOT_DIR || path.join(os.tmpdir(), "cashcompass-moneyquest-ui");
 const axe = fs.readFileSync(new URL(import.meta.resolve("axe-core/axe.min.js")), "utf8");
 fs.mkdirSync(screenshots, { recursive: true });
@@ -28,15 +28,12 @@ try {
       await main.getByRole("heading", { name: "MoneyQuest.", exact: true }).waitFor();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       assert.ok(overflow <= 1, `Horizontal overflow at ${width}px in ${theme}: ${overflow}px`);
-      const launch = main.getByRole("link", { name: /Play MoneyQuest on Roblox/ });
-      if (expectedLaunch) {
-        assert.equal(await launch.getAttribute("href"), expectedLaunch);
-        assert.equal(await launch.getAttribute("target"), "_blank");
-        assert.match(await launch.getAttribute("rel"), /noopener/);
-      } else {
-        assert.equal(await launch.count(), 0, "Unpublished games cannot have a fake launch link");
-        await main.getByText("Game publishing in progress", { exact: true }).waitFor();
-      }
+      const launch = main.getByRole("link", { name: /Open MoneyQuest on Roblox/ });
+      assert.equal(await launch.getAttribute("href"), expectedLaunch);
+      assert.equal(await launch.getAttribute("target"), "_blank");
+      assert.match(await launch.getAttribute("rel"), /noopener/);
+      assert.equal(await main.getByText("Game publishing in progress", { exact: true }).count(), 0);
+      await main.getByText("Opens the game’s Roblox page in a new tab. Sign-in, age, and playtester restrictions may apply.", { exact: true }).waitFor();
       assert.equal(await main.getByRole("link", { name: "Try the real What-If Simulator" }).getAttribute("href"), "/cash-flow");
       if (width >= 1024) {
         const nav = page.locator("aside nav");

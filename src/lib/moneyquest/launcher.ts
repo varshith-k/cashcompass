@@ -1,3 +1,6 @@
+// Owner-supplied MoneyQuest page. Public navigation does not guarantee join access.
+export const MONEYQUEST_EXPERIENCE_URL = "https://www.roblox.com/games/73262786586748/CashCompass-MoneyQuest";
+
 /** Accept only a direct Roblox experience link; never a redirect or custom URI. */
 export function moneyQuestExperienceUrl(value: string | undefined): string | null {
   if (!value?.trim()) return null;
@@ -14,4 +17,9 @@ export function moneyQuestExperienceUrl(value: string | undefined): string | nul
   } catch {
     return null;
   }
+}
+
+/** The deployed launcher works without editing private server environment files. */
+export function getMoneyQuestExperienceUrl(override: string | undefined): string {
+  return moneyQuestExperienceUrl(override) ?? moneyQuestExperienceUrl(MONEYQUEST_EXPERIENCE_URL)!;
 }
