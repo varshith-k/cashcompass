@@ -39,6 +39,10 @@ export function WebcamCaptureDialog({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    // Resets state left over from a previous open (error/ready) before
+    // starting the camera sync below; the initial open already defaults
+    // to "starting", so this only matters on re-open.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("starting");
     setErrorMessage(null);
 
