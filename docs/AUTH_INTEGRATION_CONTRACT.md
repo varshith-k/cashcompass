@@ -141,10 +141,10 @@ The proxy is the first gate. **Route Handlers and Server Actions must still call
 
 Nessie is simulated banking and is **separate from Auth0**. Neither system sees the other's credentials.
 
-1. Map users to Nessie customers **on the server only**. Use a table `auth0Sub → nessieCustomerId`, or a single shared `NESSIE_DEMO_CUSTOMER_ID` for the hackathon.
-2. Nessie routes use `withSession`, look up that user's Nessie customer id, and never trust a customer or account id sent by the client.
-3. Synced records are stored with `ownerId = user.id`, `source = "nessie"` and a dedupe key such as `nessieTransactionId`. Upsert on `(ownerId, nessieTransactionId)` so re-syncs never duplicate. Users who share the demo customer each get their own copy.
-4. Auth doesn't touch the forecast or simulation engine. It only supplies `user.id`.
+1. Authenticated app visits invoke `setupNessieAccount` after hydration. The server derives the owner from the verified Auth0 session and durably maps it to a separate Nessie customer and $0 checking account in `nessie_user_accounts`. Login does not wait for the sandbox.
+2. Reads, sync, and payments resolve the owner's stored account and validate the remote customer. Browser account IDs are checked against that mapping. Global legacy IDs are never an authorization fallback.
+3. Synced records retain `ownerId = user.id`, `source = "nessie"`, and the account/type/remote-record dedupe key. Historical shared-account imports are preserved; new users do not inherit that history.
+4. Provisioning uses committed checkpoints and per-owner PostgreSQL advisory locks. Uncertain creation requests recover by a pseudonymous marker, or stop for review without creating another object. No database means no provisioning; demo sessions cannot create accounts. See [Nessie implementation and rollout](../src/lib/nessie/README.md).
 
 ## 7. Environment
 

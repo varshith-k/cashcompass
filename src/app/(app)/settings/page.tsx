@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/shell/page-header";
 import { AccountCard } from "@/components/settings/account-card";
 import { NessieCard } from "@/components/settings/nessie-card";
 import { isNessieConfigured } from "@/lib/nessie/client";
-import { listDemoAccounts } from "@/lib/nessie/accounts";
+import { listUserAccounts } from "@/lib/nessie/accounts";
 import { requireSession } from "@/lib/auth/session";
 import { isProfileEditingEnabled } from "@/lib/auth/management";
 import { isMfaRequired } from "@/lib/auth/config";
@@ -24,7 +24,7 @@ export default async function SettingsPage() {
   const snapshot = await getFinancialSnapshot();
   const { balanceBasis: basis, events } = snapshot;
   const available = computeAvailableBalance(basis.openingBalance, events);
-  const { accounts, error } = await listDemoAccounts();
+  const { accounts, error } = await listUserAccounts();
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -59,7 +59,7 @@ export default async function SettingsPage() {
           <p className="text-xs text-muted-foreground">Updates your forecast without creating a transaction. Recorded activity after this checkpoint adjusts the balance. Synchronizing Nessie uses its latest simulated account balances instead.</p>
         </CardContent>
       </Card>
-      <NessieCard accounts={accounts} accountError={error} isConfigured={isNessieConfigured()} initialStatus={snapshot.profile.syncStatus} />
+      <NessieCard canSetup={session.source === "auth0" && isNessieConfigured() && Boolean(process.env.DATABASE_URL)} accounts={accounts} accountError={error} isConfigured={isNessieConfigured()} initialStatus={snapshot.profile.syncStatus} />
     </div>
   );
 }
