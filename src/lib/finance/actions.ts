@@ -5,9 +5,11 @@ import { nextMonthlyDate } from "./dates";
 import { requireOwnerId } from "@/lib/auth/session";
 import { getFinancialEventRepository } from "./repository";
 import { settleLedgerAmount } from "./ledger";
+import { getFriend } from "./friends";
+import { notifyFriend, type NotifyResult } from "@/lib/email/notify-friend";
 import { getBudgets, setBudgetLimits } from "./budgets";
 import { getWishlistGoals, addWishlistGoal, deleteWishlistGoal as removeWishlistGoal } from "./wishlist-goals";
-import type { EventCertainty, EventDirection, NewFinancialEvent } from "./types";
+import type { EventCertainty, EventDirection, FinancialEvent, NewFinancialEvent } from "./types";
 
 /** Everything needed to reverse a "Mark paid" (returned to the Bills list for its Undo button). */
 export interface BillPaidUndo {
@@ -73,10 +75,22 @@ export async function updateTransaction(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
-export async function deleteTransaction(formData: FormData) {
+/**
+ * Deletes only a record of the expected kind, so one form can't remove a
+ * different type of record by id (the repository already limits this to
+ * the signed-in user's own records).
+ */
+async function deleteMatching(formData: FormData, matches: (event: FinancialEvent) => boolean, notFound: string) {
   const id = String(formData.get("id"));
-  await getFinancialEventRepository().deleteEvent(id);
+  const repo = getFinancialEventRepository();
+  const event = (await repo.listEvents()).find((e) => e.id === id);
+  if (!event || !matches(event)) throw new Error(notFound);
+  await repo.deleteEvent(id);
   revalidatePath("/", "layout");
+}
+
+export async function deleteTransaction(formData: FormData) {
+  await deleteMatching(formData, (e) => e.record === "actual", "Transaction not found");
 }
 
 export async function createBill(formData: FormData) {
@@ -97,9 +111,11 @@ export async function createBill(formData: FormData) {
 }
 
 export async function deleteBill(formData: FormData) {
-  const id = String(formData.get("id"));
-  await getFinancialEventRepository().deleteEvent(id);
-  revalidatePath("/", "layout");
+  await deleteMatching(
+    formData,
+    (e) => e.record === "planned" && e.direction === "expense" && !["Savings", "Repayment"].includes(e.category),
+    "Bill not found",
+  );
 }
 
 export async function markBillPaid(formData: FormData): Promise<BillPaidUndo> {
@@ -188,9 +204,12 @@ export async function deleteWishlistGoal(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
-export async function createLedgerEntry(formData: FormData) {
+export async function createLedgerEntry(formData: FormData): Promise<NotifyResult | null> {
+  const ownerId = await requireOwnerId();
   const direction = parseDirection(formData.get("direction"));
-  await getFinancialEventRepository().createEvent({
+  // A saved friend supplies the name, phone and email; otherwise a typed name.
+  const friend = getFriend(ownerId, String(formData.get("friendId") || "") || undefined);
+  const created = await getFinancialEventRepository().createEvent({
     date: parseDate(formData.get("date")),
     amount: parseAmount(formData.get("amount")),
     direction,
@@ -201,16 +220,22 @@ export async function createLedgerEntry(formData: FormData) {
     recurrence: "one-time",
     source: "manual",
     category: "Repayment",
-    counterparty: String(formData.get("counterparty") || "").trim() || "Unknown",
-    counterpartyPhone: String(formData.get("phone") || "").trim() || undefined,
+    counterparty: friend?.name ?? (String(formData.get("counterparty") || "").trim().slice(0, 60) || "Unknown"),
+    counterpartyPhone: friend?.phone ?? (String(formData.get("phone") || "").trim() || undefined),
+    friendId: friend?.id,
   });
   revalidatePath("/", "layout");
+  if (!friend || formData.get("notify") !== "on") return null;
+  try {
+    return await notifyFriend("added", created);
+  } catch (error) {
+    console.warn("[settle-up] added email failed:", error instanceof Error ? error.message : "unknown error");
+    return null;
+  }
 }
 
 export async function deleteLedgerEntry(formData: FormData) {
-  const id = String(formData.get("id"));
-  await getFinancialEventRepository().deleteEvent(id);
-  revalidatePath("/", "layout");
+  await deleteMatching(formData, (e) => e.category === "Repayment" && e.record === "planned", "Ledger entry not found");
 }
 
 export async function logLedgerPayment(formData: FormData) {

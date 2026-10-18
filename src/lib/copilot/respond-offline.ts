@@ -4,11 +4,15 @@ import { checkAffordability, checkRepaymentDelay, compareBuyTimings, spendingBre
 import type { CopilotResult } from "./types";
 
 export type CopilotTool = "check_affordability" | "check_repayment_delay" | "suggest_savings_plan" | "spending_breakdown";
-const ASSUMPTIONS = [
-  "Demo forecast from a seeded opening balance and recorded events; unlisted daily spending is excluded.",
-  "Monthly bills repeat. Expected repayments may not arrive; affordability also checks the balance without that income.",
-  "Comparisons cover the visible forecast only and do not change your records.",
-];
+function assumptionsFor(ctx: ForecastContext) {
+  return [
+    ctx.dailySpend
+      ? `Includes about ${formatCurrency(ctx.dailySpend, { cents: true })}/day of everyday spending, estimated from your last 30 days of purchases.`
+      : "No recent everyday spending is recorded, so none is projected.",
+    "Monthly bills and paychecks repeat. Expected repayments may not arrive; affordability also checks the balance without that income.",
+    "Comparisons cover the visible forecast only and do not change your records.",
+  ];
+}
 
 function positiveAmount(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0.01 || value > 9999999999.99) throw new Error("Invalid purchase amount");
@@ -31,10 +35,10 @@ export function respondToTool(name: CopilotTool, args: Record<string, unknown>, 
     const delayDays = args.delayDays ?? 5;
     if (typeof delayDays !== "number" || !Number.isInteger(delayDays) || delayDays < 0 || delayDays > 365) throw new Error("Delay must be between 0 and 365 days");
     const result = checkRepaymentDelay(ctx, { delayDays, counterpartyContains: typeof args.counterpartyContains === "string" ? args.counterpartyContains : undefined });
-    if (!result.found) return { reply: "I couldn't find that outstanding repayment. Add or review it in your ledger first.", assumptions: [], actionLabel: "Review ledger", actionHref: "/ledger" };
+    if (!result.found) return { reply: "I couldn't find that outstanding repayment. Add or review it in Settle Up first.", assumptions: [], actionLabel: "Open Settle Up", actionHref: "/settle-up" };
     return {
       reply: `If ${result.counterparty}'s repayment arrives ${delayDays} days late (${formatShortDate(result.newDate!)} instead of ${formatShortDate(result.originalDate!)}), your projected minimum balance is ${formatCurrency(result.minBalance, { cents: true })}. ${result.billsAtRisk} of ${result.totalBills} upcoming bills fall below your buffer when uncertain income is excluded.`,
-      assumptions: ASSUMPTIONS, actionLabel: "Explore the simulator", actionHref: "/cash-flow",
+      assumptions: assumptionsFor(ctx), actionLabel: "Explore the simulator", actionHref: "/cash-flow",
     };
   }
   if (name === "suggest_savings_plan") {
@@ -53,19 +57,41 @@ export function respondToTool(name: CopilotTool, args: Record<string, unknown>, 
     const check = checkAffordability(ctx, { amount, label: "Savings allocation", date: new Date().toISOString() });
     return {
       reply: `Reserving ${formatCurrency(amount)} today ${check.affordable ? "keeps your forecast above" : "could put your forecast below"} your ${formatCurrency(check.bufferThreshold)} buffer. Expected minimum: ${formatCurrency(check.minBalance, { cents: true })}; without uncertain income: ${formatCurrency(check.conservativeMinBalance, { cents: true })}. ${check.billsAtRisk}/${check.totalBills} bills at risk.`,
-      assumptions: ASSUMPTIONS, actionLabel: "Explore the simulator", actionHref: `/cash-flow?amount=${amount}`,
+      assumptions: assumptionsFor(ctx), actionLabel: "Explore the simulator", actionHref: `/cash-flow?amount=${amount}`,
     };
   }
   const { now, afterPayday } = compareBuyTimings(ctx, { amount, label });
+  const what = label === "this purchase" ? `Spending ${formatCurrency(amount)}` : `Buying ${label} for ${formatCurrency(amount)}`;
+  const risk = !now.affordable && now.billsAtRisk > 0 ? ` and puts ${now.billsAtRisk} of ${now.totalBills} upcoming bills at risk` : "";
   return {
-    reply: `Buying ${label} for ${formatCurrency(amount)} today ${now.affordable ? "keeps your forecast above" : "could reduce your forecast below"} your ${formatCurrency(now.bufferThreshold)} buffer. ${!afterPayday ? "No future payday is recorded for comparison." : afterPayday.affordable ? "Waiting until payday keeps that buffer intact." : "Waiting until payday still needs a closer look at your obligations."}`,
-    assumptions: ASSUMPTIONS,
+    reply: `${what} today ${now.affordable ? "keeps your forecast above" : "could take your forecast below"} your ${formatCurrency(now.bufferThreshold)} buffer${risk}. ${!afterPayday ? "No future payday is recorded for comparison." : afterPayday.affordable ? "Waiting until payday keeps that buffer intact." : "Waiting until payday still needs a closer look at your obligations."}`,
+    assumptions: assumptionsFor(ctx),
     comparison: [
       { label: "Buy today", ...now },
       ...(afterPayday ? [{ label: "Buy after payday", ...afterPayday }] : []),
     ],
     actionLabel: "Compare in the simulator", actionHref: `/cash-flow?amount=${amount}&label=${encodeURIComponent(label)}`,
   };
+}
+
+/**
+ * Pulls the item name out of a purchase question, e.g. "Can I afford a
+ * MacBook for $1,200?" or "buy AirPods for 199 dollars" -> "MacBook" /
+ * "AirPods". Falls back to "this purchase" rather than guessing.
+ */
+export function purchaseLabel(message: string, amountMatch: RegExpMatchArray | null): string {
+  const named = message.match(/\b(?:buy|afford|get|purchase)\s+(?:(?:a|an|the|some|new|my)\s+)?([A-Za-z][\w'’ -]{0,40}?)\s+(?:for|at|costing|that costs)\s+\$?\s*\d/i);
+  if (named) return named[1].trim();
+  if (amountMatch?.index !== undefined) {
+    const after = message
+      .slice(amountMatch.index + amountMatch[0].length)
+      .replace(/^\s*(?:dollars?|bucks|usd)\b/i, "")
+      .replace(/\b(?:today|now|tomorrow|after|before|this|next|on|right)\b.*$/i, "")
+      .replace(/[?.!,]+/g, "")
+      .trim();
+    if (/^[A-Za-z]/.test(after) && after.split(/\s+/).length <= 5) return after;
+  }
+  return "this purchase";
 }
 
 const WORD_NUMBERS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
@@ -86,9 +112,21 @@ export function respondOffline(message: string, ctx: ForecastContext): CopilotRe
     const goal = ctx.wishlistGoals.find((g) => g.name.toLowerCase().split(/\W+/).some((w) => w.length > 3 && lower.includes(w)));
     return run("suggest_savings_plan", { goalNameContains: goal?.name });
   }
-  if (amount && ["afford", "buy", "rent", "purchase"].some((word) => lower.includes(word))) {
-    const label = amountMatch ? message.slice(amountMatch.index! + amountMatch[0].length).trim().replace(/\s+(today|now|after).*$/i, "").replace(/[?.!]+$/, "") : "this purchase";
-    return run("check_affordability", { amount, label: label || "this purchase" });
+  if (amount && ["afford", "buy", "get", "rent", "purchase"].some((word) => lower.includes(word))) {
+    return run("check_affordability", { amount, label: purchaseLabel(message, amountMatch) });
+  }
+  if (["afford", "buy", "rent", "purchase", "enough"].some((word) => lower.includes(word))) {
+    // A purchase question without an amount: say what it would be checked against.
+    const rent = ctx.events
+      .filter((e) => e.category === "Housing" && e.record === "planned")
+      .sort((a, b) => a.date.localeCompare(b.date))[0];
+    return {
+      reply: `Tell me the amount and I'll check it against your bills, for example “Can I afford $1,200 today?”.${rent ? ` Your next rent payment is ${formatCurrency(rent.amount, { cents: true })} to ${rent.counterparty} on ${formatShortDate(rent.date)}.` : ""}`,
+      assumptions: [],
+      actionLabel: "Open the simulator",
+      actionHref: "/cash-flow",
+      engine: "offline",
+    };
   }
   return { reply: "I can compare buying now versus payday, test a late repayment, plan savings, or review spending. Ask with a specific amount or choose a suggested prompt.", assumptions: [], engine: "offline" };
 }

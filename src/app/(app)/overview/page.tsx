@@ -12,20 +12,19 @@ import {
   computeForecast,
   computeAvailableBalance,
   computeSafeToSpend,
+  findNextPayday,
+  safeToSpendWindow,
   savingsProgressForGoal,
   selectRecentTransactions,
   selectUpcomingBills,
   sumByDirection,
 } from "@/lib/finance/calculations";
-import { DEMO_PREFERRED_BUFFER, DEMO_STARTING_BALANCE } from "@/lib/finance/demo-data";
+import { forecastInputs } from "@/lib/finance/forecast-inputs";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { getWishlistGoals } from "@/lib/finance/wishlist-goals";
 import { requireOwnerId } from "@/lib/auth/session";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const FORECAST_HISTORY_DAYS = 5;
-const FORECAST_TOTAL_DAYS = 35;
 
 export default async function OverviewPage() {
   await connection();
@@ -34,34 +33,33 @@ export default async function OverviewPage() {
   const upcomingBills = selectUpcomingBills(events);
   const recentTransactions = selectRecentTransactions(events);
 
+  const inputs = forecastInputs(events);
   const startDate = new Date();
-  startDate.setUTCDate(startDate.getUTCDate() - FORECAST_HISTORY_DAYS);
+  startDate.setUTCDate(startDate.getUTCDate() - inputs.historyDays);
 
-  const forecast = computeForecast(DEMO_STARTING_BALANCE, events, {
-    days: FORECAST_TOTAL_DAYS,
+  const forecast = computeForecast(inputs.openingBalance, events, {
+    days: inputs.forecastDays,
     startDate,
-    lowBalanceThreshold: DEMO_PREFERRED_BUFFER,
+    lowBalanceThreshold: inputs.bufferThreshold,
+    dailySpend: inputs.dailySpend,
   });
 
-  const todayIndex = FORECAST_HISTORY_DAYS;
-  const currentBalance = computeAvailableBalance(DEMO_STARTING_BALANCE, events);
+  const todayIndex = inputs.historyDays;
+  const currentBalance = computeAvailableBalance(inputs.openingBalance, events);
 
   const upcomingBillsTotal = upcomingBills.reduce((sum, bill) => sum + bill.amount, 0);
-  const savingsEarmarks = events.filter((e) => e.category === "Savings" && e.record === "planned").reduce(
-    (sum, e) => sum + e.amount,
-    0,
-  );
-
+  // Safe to Spend only holds back what falls due before the next paycheck.
+  const window = safeToSpendWindow(events, inputs.dailySpend);
   const { safeToSpend } = computeSafeToSpend({
     availableBalance: currentBalance,
-    upcomingBills: upcomingBillsTotal,
-    savingsEarmarks,
-    preferredBuffer: DEMO_PREFERRED_BUFFER,
+    upcomingBills: window.bills,
+    savingsEarmarks: window.savings,
+    debtsOwed: window.debtsOwed,
+    everydaySpending: window.everydaySpending,
+    preferredBuffer: inputs.bufferThreshold,
   });
 
-  const nextPayday = events.filter(
-    (e) => e.category === "Payroll" && e.record === "planned" && e.date.slice(0, 10) >= new Date().toISOString().slice(0, 10),
-  ).sort((a, b) => a.date.localeCompare(b.date))[0];
+  const nextPayday = findNextPayday(events);
 
   const monthlyIncome = sumByDirection(
     events.filter((e) => e.record === "actual" && e.date.startsWith(new Date().toISOString().slice(0, 7))),
@@ -83,11 +81,15 @@ export default async function OverviewPage() {
       <HeroOverview
         availableBalance={currentBalance}
         safeToSpend={safeToSpend}
-        reservedForBills={upcomingBillsTotal}
+        reservedForBills={window.bills}
         nextPaydayDate={nextPayday?.date ?? null}
         nextPaydayAmount={nextPayday?.amount ?? 0}
-        savingsEarmarks={savingsEarmarks}
-        preferredBuffer={DEMO_PREFERRED_BUFFER}
+        savingsEarmarks={window.savings}
+        debtsOwed={window.debtsOwed}
+        everydaySpending={window.everydaySpending}
+        dailySpend={inputs.dailySpend}
+        windowEndDate={window.endDate}
+        preferredBuffer={inputs.bufferThreshold}
         outlook={forecast.slice(todayIndex).some((p) => p.isLowBalanceRisk) ? "tight" : "on-track"}
       />
 
@@ -118,14 +120,14 @@ export default async function OverviewPage() {
         />
       </div>
 
-      <p className="text-xs text-muted-foreground">Demo forecast: starts with a seeded opening balance and recorded events. Monthly bills repeat; unlisted everyday spending is excluded. The conservative balance excludes uncertain repayments. Savings contributions reserve funds here; no money is transferred.</p>
+      <p className="text-xs text-muted-foreground">Forecast from your opening balance and recorded events. Monthly bills and paychecks repeat. Everyday spending is estimated at {formatCurrency(inputs.dailySpend, { cents: true })}/day from your last 30 days of purchases. The conservative balance excludes uncertain repayments. Savings contributions reserve funds here; no money is transferred.</p>
 
       <Card>
         <CardHeader>
           <CardTitle>Cash-flow forecast</CardTitle>
         </CardHeader>
         <CardContent>
-          <ForecastChart points={forecast} bufferThreshold={DEMO_PREFERRED_BUFFER} todayIndex={todayIndex} />
+          <ForecastChart points={forecast} bufferThreshold={inputs.bufferThreshold} todayIndex={todayIndex} />
         </CardContent>
       </Card>
 

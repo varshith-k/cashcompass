@@ -28,6 +28,8 @@ export interface ForecastContext {
   forecastDays: number;
   historyDays: number;
   nextPaydayDate: string | null;
+  /** Estimated everyday spending per day (see estimateDailySpend); 0 if omitted. */
+  dailySpend?: number;
 }
 
 function startDateFor(historyDays: number) {
@@ -56,6 +58,7 @@ export function checkAffordability(
     days: ctx.forecastDays,
     startDate: startDateFor(ctx.historyDays),
     lowBalanceThreshold: ctx.bufferThreshold,
+    dailySpend: ctx.dailySpend,
   });
   const summary = summarizeForecast(points.slice(ctx.historyDays));
   const bills = selectUpcomingBills(ctx.events);
@@ -107,6 +110,7 @@ export function checkRepaymentDelay(
     days: ctx.forecastDays,
     startDate: startDateFor(ctx.historyDays),
     lowBalanceThreshold: ctx.bufferThreshold,
+    dailySpend: ctx.dailySpend,
   });
   const summary = summarizeForecast(points.slice(ctx.historyDays));
   const bills = selectUpcomingBills(ctx.events);

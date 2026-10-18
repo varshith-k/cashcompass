@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
-import { Inter, Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import "./globals.css";
 
-const inter = Inter({
+// Self-hosted (SIL OFL, see src/app/fonts/*-OFL.txt) so builds never depend
+// on reaching Google Fonts, e.g. on restricted venue Wi-Fi.
+const inter = localFont({
+  src: "./fonts/InterVariable-latin.woff2",
   variable: "--font-inter",
-  subsets: ["latin"],
+  weight: "100 900",
+  display: "swap",
 });
 
-const manrope = Manrope({
+const manrope = localFont({
+  src: "./fonts/ManropeVariable-latin.woff2",
   variable: "--font-manrope",
-  subsets: ["latin"],
+  weight: "200 800",
+  display: "swap",
 });
 
 export const metadata: Metadata = {

@@ -41,6 +41,8 @@ interface WhatIfSimulatorProps {
   forecastDays: number;
   historyDays: number;
   nextPaydayDate: string | null;
+  /** Estimated everyday spending per day. */
+  dailySpend: number;
   initialAmount?: string;
   initialLabel?: string;
 }
@@ -52,6 +54,7 @@ export function WhatIfSimulator({
   forecastDays,
   historyDays,
   nextPaydayDate,
+  dailySpend,
   initialAmount = "150",
   initialLabel = "",
 }: WhatIfSimulatorProps) {
@@ -86,8 +89,9 @@ export function WhatIfSimulator({
         days: forecastDays,
         lowBalanceThreshold: bufferThreshold,
         startDate: new Date(startDate),
+        dailySpend,
       }),
-    [openingBalance, events, startDate, forecastDays, bufferThreshold],
+    [openingBalance, events, startDate, forecastDays, bufferThreshold, dailySpend],
   );
 
   const { scenarioEvents, assumptions, suggestedAction } = useMemo(() => {
@@ -151,8 +155,9 @@ export function WhatIfSimulator({
         days: forecastDays,
         lowBalanceThreshold: bufferThreshold,
         startDate: new Date(startDate),
+        dailySpend,
       }),
-    [openingBalance, scenarioEvents, startDate, forecastDays, bufferThreshold],
+    [openingBalance, scenarioEvents, startDate, forecastDays, bufferThreshold, dailySpend],
   );
 
   const baselineSummary = summarizeForecast(baselinePoints.slice(todayIndex));
@@ -178,7 +183,7 @@ export function WhatIfSimulator({
         <CardTitle>What-if simulator</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        <p className="text-xs text-muted-foreground">Demo forecast from a seeded opening balance. Monthly bills repeat; other income and expenses appear only on recorded dates. Unlisted daily spending is excluded; uncertain repayments may not arrive. Results cover the visible forecast only.</p>
+        <p className="text-xs text-muted-foreground">Forecast from your opening balance and recorded events. Monthly bills and paychecks repeat; everyday spending is estimated at {formatCurrency(dailySpend, { cents: true })}/day from your last 30 days. Uncertain repayments may not arrive. Results cover the visible forecast only.</p>
         <div className="flex flex-wrap gap-1.5">
           {SCENARIOS.map((s) => (
             <Button

@@ -26,6 +26,7 @@ interface FinancialEventRow {
   counterparty: string;
   scenario_id: string | null;
   counterparty_phone: string | null;
+  friend_id: string | null;
   source_record_id: string | null;
 }
 
@@ -43,6 +44,7 @@ function toFinancialEvent(row: FinancialEventRow): FinancialEvent {
     counterparty: row.counterparty,
     scenarioId: row.scenario_id ?? undefined,
     counterpartyPhone: row.counterparty_phone ?? undefined,
+    friendId: row.friend_id ?? undefined,
     sourceRecordId: row.source_record_id ?? undefined,
   };
 }
@@ -71,7 +73,7 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
     return this.withClient(async (client) => {
       const result = await client.query<FinancialEventRow>(
         `SELECT id, event_date, amount, direction, record, certainty,
-                recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id
+                recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id, friend_id
          FROM financial_events
          WHERE owner_id = $1
          ORDER BY event_date`,
@@ -86,8 +88,8 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
       const result = await client.query<FinancialEventRow>(
         `INSERT INTO financial_events
            (id, owner_id, event_date, amount, direction, record, certainty,
-            recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            recurrence, source, category, counterparty, scenario_id, counterparty_phone, source_record_id, friend_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          RETURNING *`,
         [
           randomUUID(),
@@ -104,6 +106,7 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
           input.scenarioId ?? null,
           input.counterpartyPhone ?? null,
           input.sourceRecordId ?? null,
+          input.friendId ?? null,
         ],
       );
       return toFinancialEvent(result.rows[0]);
@@ -124,6 +127,7 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
         counterparty: "counterparty",
         scenarioId: "scenario_id",
         counterpartyPhone: "counterparty_phone",
+        friendId: "friend_id",
         sourceRecordId: "source_record_id",
       };
 

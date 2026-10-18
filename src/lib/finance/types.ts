@@ -26,6 +26,8 @@ export interface FinancialEvent {
   scenarioId?: string;
   /** Ledger entries only — lets "remind to pay" use a real WhatsApp link instead of a fabricated one. */
   counterpartyPhone?: string;
+  /** Settle Up entries only: the friend this balance is with (see friends.ts), for email notifications. */
+  friendId?: string;
 }
 
 export type NewFinancialEvent = Omit<FinancialEvent, "id">;
@@ -33,9 +35,15 @@ export type FinancialEventUpdate = Partial<NewFinancialEvent>;
 
 export interface SafeToSpendInput {
   availableBalance: number;
+  /** Bills due before the next payday. */
   upcomingBills: number;
+  /** Planned savings due before the next payday. */
   savingsEarmarks: number;
   preferredBuffer: number;
+  /** Money the user owes others (ledger), due before the next payday. */
+  debtsOwed?: number;
+  /** Estimated everyday spending until the next payday. */
+  everydaySpending?: number;
 }
 
 export interface SafeToSpendResult {

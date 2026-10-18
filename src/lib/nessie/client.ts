@@ -47,6 +47,8 @@ export interface NessieBill {
 export interface NessieMerchant {
   _id: string;
   name: string;
+  /** Merchant tags such as ["Food"]; not always present. */
+  category?: string[] | string;
 }
 
 class NessieError extends Error {}

@@ -9,6 +9,7 @@ import {
   getAccountWithdrawals,
   getMerchant,
 } from "./client";
+import { categorizeExpense } from "./categorize";
 
 /** Stable remote ids preserve separate identical purchases. Natural keys migrate old imports. */
 function findExisting(existing: FinancialEvent[], candidate: NewFinancialEvent): FinancialEvent | undefined {
@@ -35,34 +36,36 @@ export async function syncNessieAccount(accountId: string) {
     getAccountBills(accountId),
   ]);
 
-  const merchantNames = new Map<string, string>();
-  async function merchantName(merchantId: string): Promise<string> {
-    if (!merchantNames.has(merchantId)) {
+  const merchants = new Map<string, { name: string; category?: string[] | string }>();
+  async function merchantInfo(merchantId: string) {
+    if (!merchants.has(merchantId)) {
       try {
         const merchant = await getMerchant(merchantId);
-        merchantNames.set(merchantId, merchant.name);
+        merchants.set(merchantId, { name: merchant.name, category: merchant.category });
       } catch {
-        merchantNames.set(merchantId, "Merchant");
+        merchants.set(merchantId, { name: "Merchant" });
       }
     }
-    return merchantNames.get(merchantId)!;
+    return merchants.get(merchantId)!;
   }
 
   const candidates: NewFinancialEvent[] = [];
 
   for (const purchase of purchases) {
     if (["cancelled", "canceled", "failed"].includes(purchase.status ?? "")) continue;
+    const merchant = await merchantInfo(purchase.merchant_id);
     candidates.push({
       sourceRecordId: `${accountId}/purchase/${purchase._id}`,
       date: new Date(purchase.purchase_date).toISOString(),
       amount: purchase.amount,
       direction: "expense",
-      record: purchase.status === "pending" ? "planned" : "actual",
+      // A pending card purchase is money already committed, not a bill to pay later.
+      record: "actual",
       certainty: "certain",
       recurrence: "one-time",
       source: "nessie",
-      category: "Other",
-      counterparty: await merchantName(purchase.merchant_id),
+      category: categorizeExpense(merchant.category, merchant.name, purchase.description),
+      counterparty: merchant.name,
     });
   }
 
@@ -89,11 +92,11 @@ export async function syncNessieAccount(accountId: string) {
       date: new Date(withdrawal.transaction_date).toISOString(),
       amount: withdrawal.amount,
       direction: "expense",
-      record: withdrawal.status === "pending" ? "planned" : "actual",
+      record: "actual",
       certainty: "certain",
       recurrence: "one-time",
       source: "nessie",
-      category: "Other",
+      category: categorizeExpense(withdrawal.description),
       counterparty: withdrawal.description || "Withdrawal",
     });
   }
@@ -109,7 +112,7 @@ export async function syncNessieAccount(accountId: string) {
       certainty: "certain",
       recurrence: bill.recurring_date ? "recurring" : "one-time",
       source: "nessie",
-      category: "Utilities",
+      category: categorizeExpense(bill.payee, bill.nickname) === "Other" ? "Utilities" : categorizeExpense(bill.payee, bill.nickname),
       counterparty: bill.payee || bill.nickname,
     });
   }

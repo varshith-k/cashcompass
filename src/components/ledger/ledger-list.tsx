@@ -8,6 +8,7 @@ import type { FinancialEvent } from "@/lib/finance/types";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
 import { buildWhatsAppReminderLink } from "@/lib/whatsapp";
 import { PayWithSolanaDialog } from "./pay-with-solana-dialog";
+import { SendReminderButton } from "./send-reminder-button";
 
 function reminderMessage(entry: FinancialEvent): string {
   return `Hi ${entry.counterparty}! Friendly reminder from CashCompass: you owe ${formatCurrency(entry.amount, { cents: true })}, expected ${formatRelativeDay(entry.date).toLowerCase()}. No rush, just a nudge 🙂`;
@@ -18,12 +19,15 @@ export function LedgerList({
   entries,
   emptyText,
   allowSolanaSettlement = false,
+  emailableFriendIds = [],
 }: {
   title: string;
   entries: FinancialEvent[];
   emptyText: string;
   /** Only "You owe" entries are payable by the signed-in user — the other list is money owed to them. */
   allowSolanaSettlement?: boolean;
+  /** Friends with an email address, who can be sent reminders. */
+  emailableFriendIds?: string[];
 }) {
   return (
     <div>
@@ -71,6 +75,10 @@ export function LedgerList({
                   size="sm"
                   className="shrink-0 text-positive border-positive/30 hover:bg-positive/10"
                 />
+              )}
+
+              {entry.direction === "income" && entry.friendId && emailableFriendIds.includes(entry.friendId) && (
+                <SendReminderButton entryId={entry.id} friendName={entry.counterparty} />
               )}
 
               <ActionForm action={logLedgerPayment} className="flex items-center gap-2 shrink-0">
