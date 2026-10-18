@@ -28,9 +28,10 @@ export function PhoneScanPanel({ onResult, onClose }: { onResult: (result: ScanB
 
     async function start() {
       try {
-        const { token, expiresAt } = await startPhoneScan();
+        const { token, expiresAt, phoneOrigin } = await startPhoneScan();
         if (cancelled) return;
-        const url = `${window.location.origin}/scan/${token}`;
+        // In development the server supplies the laptop's Wi-Fi address (phones can't open localhost).
+        const url = `${phoneOrigin ?? window.location.origin}/scan/${token}`;
         setLink(url);
         setQrSvg(await QRCode.toString(url, { type: "svg", margin: 1, width: 192, errorCorrectionLevel: "M" }));
         setStatus("waiting");
@@ -103,11 +104,18 @@ export function PhoneScanPanel({ onResult, onClose }: { onResult: (result: ScanB
             <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
             {status === "processing" ? "Photo received, reading the bill…" : "Waiting for your phone… (link works once, for 10 minutes)"}
           </p>
-          {onLocalhost && (
+          {/^https?:\/\/(localhost|127\.0\.0\.1)/.test(link) ? (
             <p className="text-xs text-caution">
-              You&apos;re on localhost, which your phone can&apos;t open. Open this app on your laptop using the &quot;Network&quot; address that{" "}
-              <code>npm run dev</code> prints (e.g. http://192.168.x.x:3000), or use the live site.
+              This link points to localhost, which your phone can&apos;t open, and no Wi-Fi address was found for this
+              computer. Connect to Wi-Fi or use the live site.
             </p>
+          ) : (
+            onLocalhost && (
+              <p className="text-xs text-muted-foreground">
+                Dev mode: your phone must be on the same Wi-Fi as this laptop. If the page won&apos;t load, allow Node.js
+                through the firewall for private networks.
+              </p>
+            )
           )}
         </>
       )}
