@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   CalendarClock,
+  Gamepad2,
   HandCoins,
   LayoutDashboard,
   PiggyBank,
@@ -23,6 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Bills & Payments", href: "/bills", icon: CalendarClock },
   { label: "Budgets", href: "/budgets", icon: PiggyBank },
   { label: "Cash Flow", href: "/cash-flow", icon: TrendingUp },
+  { label: "MoneyQuest", href: "/moneyquest", icon: Gamepad2 },
   { label: "Settle Up", href: "/settle-up", icon: HandCoins },
   { label: "Wishlist & Goals", href: "/wishlist", icon: Target },
   { label: "AI Copilot", href: "/copilot", icon: Sparkles },

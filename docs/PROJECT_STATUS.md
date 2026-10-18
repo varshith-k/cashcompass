@@ -2,6 +2,18 @@
 
 Checked October 17, 2026. This is the current delivery record; `PROJECT_HANDOFF.md` preserves the original requirements.
 
+## MoneyQuest companion — October 18, 2026
+
+Implemented separately on `feature/moneyquest-roblox`; this does not mark the existing integration phases live-verified or deploy a change to main.
+
+- Added `/moneyquest` and a shared sidebar entry after Cash Flow. Mobile More includes it; the bottom bar retains Overview, Cash Flow, and AI Copilot.
+- Added a validated `NEXT_PUBLIC_ROBLOX_MONEYQUEST_URL` launcher. Missing/invalid configuration displays “Game publishing in progress.” No experience ID or publication is fabricated.
+- Added `roblox/moneyquest`: original four-station 3D neighborhood, six financial choices plus final review, server-controlled integer-cents simulation, deterministic scheduled events, 0–100 scoring, results, and replay. No real finance data or credentials cross into Roblox.
+- Rojo 7.7.1 builds `roblox/moneyquest/build/MoneyQuest.rbxlx`. All six Luau source files compile; the pure engine, scorer, request protocol, and tests pass static analysis. Standalone Luau verifies 324 full paths with 4,261 assertions.
+- Website verification: lint, typecheck, and production build pass; 143 unit tests pass, with four live-service tests skipped. A separate credential-free local preview passes eight responsive/theme combinations, axe accessibility, desktop order, mobile More/bottom-bar checks, and navigation to the unchanged Cash Flow simulator. A production-mode HTTP check confirms both routes fail closed without Auth0. No live Auth0 sign-in or Roblox launch was performed in this pass.
+- **Still requires owner action:** Studio runtime/UI/replication playtesting, publishing/releasing with a Roblox account, testing access from Roblox Player, entering the genuine published URL, and approved website deployment. A built place file is not a Studio playtest or prize-eligibility confirmation.
+- Exact import, manual script placement, test paths, publishing, configuration, and limitations: [`roblox/moneyquest/README.md`](../roblox/moneyquest/README.md).
+
 ## Phase status
 
 | Phase | Status | Evidence |
