@@ -5,15 +5,15 @@ import { EditBudgetsSheet } from "@/components/budgets/edit-budgets-sheet";
 import { InsightCard } from "@/components/dashboard/insight-card";
 import { requireOwnerId } from "@/lib/auth/session";
 import { getBudgets } from "@/lib/finance/budgets";
-import { spendByCategoryThisMonth } from "@/lib/finance/calculations";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
 import { formatCurrency } from "@/lib/format";
 
 export default async function BudgetsPage() {
   await connection();
 
-  const events = await getFinancialEventRepository().listEvents();
-  const spendByCategory = spendByCategoryThisMonth(events);
+  // Reads the Tiger Data continuous aggregate directly in DB mode, instead
+  // of fetching every event and summing in JS - see repository.ts.
+  const spendByCategory = await getFinancialEventRepository().getMonthlyCategorySpend();
   const budgets = getBudgets(await requireOwnerId());
 
   const budgetsWithSpend = budgets.map((budget) => ({
