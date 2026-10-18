@@ -54,4 +54,4 @@ Every repository call is scoped to the signed-in user. `getFinancialEventReposit
 - `demo-repository.ts`, `budgets.ts`, `wishlist-goals.ts` and `../nessie/status.ts` keep one in-memory copy per user. Each new user starts from the demo seed.
 - Signed-out calls redirect to login.
 
-If you already ran an older `db/schema.sql`, recreate the table. It now has `owner_id text NOT NULL`, and the primary key is `(id, event_date)`, which TimescaleDB requires for hypertables.
+For older installations, compare the deployed schema and apply reviewed additive migrations. Do not drop/recreate a populated financial table. Verify a usable recovery point before structural changes. The current owner column is `owner_id text NOT NULL`, and the key is `(id, event_date)`. See [monitoring, backup coverage, and recovery drills](../../../docs/operations/TIGER_DATA.md).

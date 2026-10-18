@@ -2,6 +2,19 @@
 
 Updated October 18, 2026. The original phase delivery was checked October 17; newer teammate features and the MoneyQuest companion are recorded below. [`PROJECT_HANDOFF.md`](../PROJECT_HANDOFF.md) preserves the requirements and now includes the current feature handoff.
 
+## Tiger Data operations — October 18, 2026
+
+Implemented separately on `feature/tiger-data-operations`, based on main `1536748`; the shared IDE checkout is left untouched by this task. No Vultr deployment, subscription change, schema/data mutation, or cloud recovery fork was performed.
+
+- Live read-only database checks passed: financial hypertable/compression, real-time monthly aggregate, scheduled refresh/compression jobs (successful last runs, no recorded job failures), core schema, and connection pressure. WAL archiving is active with no failures in its observed counters; this does **not** establish backup coverage.
+- Tiger CLI 0.26.0 is authenticated and the matching service is ready. Live 15-minute primary CPU/memory/disk metric reads passed. Sanitized dated reports are in `docs/operations/evidence/`; no credentials, endpoints, or financial records are included.
+- Added `tiger:health`, `tiger:metrics`, eight Prometheus alert rules/template plus synthetic rule checks, and `tiger:recovery:check` for isolated timestamp recovery validation. Monitoring templates are prepared; no recurring collector, exporter, or notification routing was installed.
+- Recovery verification rejects the protected database as a drill target, enforces read-only transactions, checks before/after markers bracketing the requested UTC target, and compares schema/bounded content fingerprints. Local unit/SQL fixtures test the verifier; they are not a live cloud PITR success.
+- **Pending:** actual plan, backup history/retention and recoverable UTC range from Console; plan/provider exporter availability; approval of temporary drill/fork cost/configuration and cleanup; actual cloud PITR proof. A cloud service's generic capabilities are not evidence of this account's configured protection.
+- Verification: 13 operations tests pass including disposable PostgreSQL SQL/read-only enforcement; eight Prometheus rules and configuration syntax validate, and synthetic exporter/CPU alert tests pass. Existing main suite passes 178 tests with four live-service tests skipped; lint passes.
+- Runbook, backup coverage boundaries, private CLI setup and step-by-step isolated drill: [Tiger Data operations](operations/TIGER_DATA.md). Existing process-local state and external providers are not restored by a database backup.
+
+
 ## MoneyQuest main integration — October 18, 2026
 
 The user authorized merging MoneyQuest into `main`. The merge candidate includes current main through `6ec59a5`, preserving the newer sign-in security, login documentation, interface text, and laptop webcam changes. A push/merge to `main` can activate the documented Vultr auto-deploy timer; a GitHub merge is not by itself proof that production finished deploying.

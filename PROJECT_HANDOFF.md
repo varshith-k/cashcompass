@@ -10,6 +10,14 @@ This document is the source of truth for handing CashCompass to another model or
 
 The numbered sections below preserve the original product requirements. **Do not restart implementation from the historical initial-repository section.** The app already exists. The current MoneyQuest delivery branch is `feature/moneyquest-roblox`; it incorporates GitHub `main` through `56a72d1` and the MoneyQuest implementation from `3279ac9`. Other remote feature branches are not automatically merged by this handoff.
 
+### Tiger Data monitoring/recovery handoff — October 18, 2026
+
+The separate branch `feature/tiger-data-operations` adds read-only database diagnostics, authenticated Tiger CLI resource-metric sampling, Prometheus templates/eight alert rules, and an isolated PITR verifier/runbook. It starts at main `1536748` and does not merge the separate Nessie PR or change the active IDE checkout. See [operations runbook](docs/operations/TIGER_DATA.md) and [current evidence](docs/operations/evidence/).
+
+Live metadata verifies the compressed financial hypertable, real-time aggregate, successful hourly refresh/12-hour compression policies, and healthy current connection pressure. Authenticated 15-minute CPU/memory/disk reads succeeded. These are one-off checks; installing recurring collection/exporter/alert routing remains separate. The database's observed WAL counters have no failures but cannot prove backup history or a restorable window. Plan/retention/earliest-latest recovery points still require Console confirmation. No cloud fork, schema/data mutation, paid resource, plan change, production restart or cutover was performed.
+
+Recovery tooling checks three distinct hosts (protected source, temporary drill source, recovered fork), only reads the two isolated targets, and requires bracketing before/after markers plus matching schema and bounded row fingerprints. Thirteen operations tests (including disposable SQL/read-only enforcement), eight validated Prometheus rules, and synthetic alert tests verify tooling only; main's existing 178-test suite and lint pass. The runbook prepares a two-service drill with explicit cost/configuration/lifetime review before creation. No live PITR success is claimed. Database backups do not include process-local planning/friends, provider configuration/state, server env secrets or Roblox publication state.
+
 ### Delivered feature inventory
 
 | Area | Implemented behavior | Verification / operational boundary |
