@@ -21,6 +21,7 @@ export function LedgerList({
   allowSolanaSettlement = false,
   emailableFriendIds = [],
   nessieFriendIds = [],
+  shareNotes = {},
 }: {
   title: string;
   entries: FinancialEvent[];
@@ -31,6 +32,8 @@ export function LedgerList({
   emailableFriendIds?: string[];
   /** Friends with a Nessie account, who can be paid by P2P transfer. */
   nessieFriendIds?: string[];
+  /** Per entry id: how it's shared with the other person's CashCompass, if it is. */
+  shareNotes?: Record<string, string>;
 }) {
   return (
     <div>
@@ -48,6 +51,7 @@ export function LedgerList({
                 <p className="text-sm font-medium truncate">{entry.counterparty}</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">Expected {formatRelativeDay(entry.date)}</p>
                 {entry.notes && <p className="mt-0.5 text-xs text-muted-foreground truncate">{entry.notes}</p>}
+                {shareNotes[entry.id] && <p className="mt-0.5 text-xs text-interactive truncate">{shareNotes[entry.id]}</p>}
               </div>
 
               <p className="text-sm font-medium tabular-nums shrink-0">

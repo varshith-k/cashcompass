@@ -28,7 +28,7 @@ export async function notifyFriend(
 ): Promise<NotifyResult> {
   const session = await getSession();
   if (!session) return { status: "no-email" };
-  const friend = getFriend(session.user.id, entry.friendId);
+  const friend = await getFriend(session.user.id, entry.friendId);
   if (!friend?.email) return { status: "no-email" };
 
   const reminderKey = `${session.user.id}:${entry.id}`;

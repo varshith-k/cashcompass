@@ -47,7 +47,7 @@ beforeEach(() => {
 
 describe("Pay with Nessie", () => {
   it("sends a P2P transfer from my account to the friend's and settles the balance, linked to the transfer", async () => {
-    const alex = addFriend("auth0|payer", { name: "Alex P2P", nessieAccountId: ALEX });
+    const alex = await addFriend("auth0|payer", { name: "Alex P2P", nessieAccountId: ALEX });
     state.events = [owed(alex.id)];
     nessie.createTransfer.mockResolvedValue({ _id: "tx123" });
 
@@ -59,7 +59,7 @@ describe("Pay with Nessie", () => {
   });
 
   it("records nothing when Nessie rejects the transfer", async () => {
-    const alex = addFriend("auth0|payer", { name: "Alex Rejected", nessieAccountId: ALEX });
+    const alex = await addFriend("auth0|payer", { name: "Alex Rejected", nessieAccountId: ALEX });
     state.events = [owed(alex.id)];
     nessie.createTransfer.mockRejectedValue(new Error("400"));
 

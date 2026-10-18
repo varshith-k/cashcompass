@@ -62,7 +62,7 @@ beforeEach(() => {
 describe("createSplit", () => {
   it("turns a receipt into balances the others owe you, linked to it, without a second expense", async () => {
     state.events = [receipt()];
-    const alex = addFriend("auth0|splitter", { name: "Alex Split", email: "alex@example.com" });
+    const alex = await addFriend("auth0|splitter", { name: "Alex Split", email: "alex@example.com" });
     const res = await createSplit({
       receiptId: "r1",
       dueDate: "2026-10-25",
@@ -99,7 +99,7 @@ describe("createSplit", () => {
     });
     expect(res.ok).toBe(true);
     expect(state.events.filter((e) => e.isReceipt)).toEqual([expect.objectContaining({ counterparty: "Publix", amount: 60, notes: "potatoes, milk" })]);
-    expect(getFriends("auth0|splitter").find((f) => f.name === "Priya Split")?.email).toBe("priya@example.com");
+    expect((await getFriends("auth0|splitter")).find((f) => f.name === "Priya Split")?.email).toBe("priya@example.com");
   });
 
   it("writes nothing when one person's details are invalid", async () => {

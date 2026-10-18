@@ -6,6 +6,7 @@ type Auth0ProfileLike = {
   nickname?: unknown;
   email?: unknown;
   picture?: unknown;
+  email_verified?: unknown;
 };
 
 function text(value: unknown): string | undefined {
@@ -47,5 +48,6 @@ export function toAuthUser(profile: Auth0ProfileLike | null | undefined): AuthUs
   };
   const avatarUrl = text(profile.picture);
   if (avatarUrl) user.avatarUrl = avatarUrl;
+  if (profile.email_verified === true && email) user.emailVerified = true;
   return user;
 }
