@@ -100,3 +100,69 @@ export function getAccountBills(accountId: string) {
 export function getMerchant(merchantId: string) {
   return get<NessieMerchant>(`/merchants/${merchantId}`);
 }
+
+/** Nessie P2P transfer between two accounts (`type` is "p2p"). */
+export interface NessieTransfer {
+  _id: string;
+  type?: string;
+  transaction_date: string;
+  status?: string;
+  medium?: string;
+  payer_id: string;
+  payee_id: string;
+  amount: number;
+  description?: string;
+}
+
+/** Nessie object ids are 24 hex characters; anything else is rejected before a request is made. */
+export function isNessieId(value: unknown): value is string {
+  return typeof value === "string" && /^[a-f0-9]{24}$/i.test(value);
+}
+
+/** Transfers the account sent (payer) and received (payee), de-duplicated by id. */
+export async function getAccountTransfers(accountId: string): Promise<NessieTransfer[]> {
+  const [sent, received] = await Promise.all([
+    get<NessieTransfer[]>(`/accounts/${encodeURIComponent(accountId)}/transfers?type=payer`),
+    get<NessieTransfer[]>(`/accounts/${encodeURIComponent(accountId)}/transfers?type=payee`),
+  ]);
+  const byId = new Map<string, NessieTransfer>();
+  for (const transfer of [...sent, ...received]) byId.set(transfer._id, transfer);
+  return [...byId.values()];
+}
+
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const key = requireApiKey();
+  const url = `${BASE_URL}${path}${path.includes("?") ? "&" : "?"}key=${encodeURIComponent(key)}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) {
+    throw new NessieError(`Nessie request failed: ${response.status} ${path}`);
+  }
+  return response.json();
+}
+
+/** Sends a sandbox P2P transfer from one account to another. Returns the created transfer. */
+export async function createTransfer(
+  payerAccountId: string,
+  transfer: { payeeAccountId: string; amount: number; description: string },
+): Promise<NessieTransfer> {
+  if (!isNessieId(payerAccountId) || !isNessieId(transfer.payeeAccountId)) throw new NessieError("Invalid Nessie account id");
+  const result = await post<{ objectCreated?: NessieTransfer } & Partial<NessieTransfer>>(
+    `/accounts/${encodeURIComponent(payerAccountId)}/transfers`,
+    {
+      medium: "balance",
+      payee_id: transfer.payeeAccountId,
+      amount: Math.round(transfer.amount * 100) / 100,
+      transaction_date: new Date().toISOString().slice(0, 10),
+      description: transfer.description.slice(0, 120),
+    },
+  );
+  const created = result.objectCreated ?? (result as NessieTransfer);
+  if (!created?._id) throw new NessieError("Nessie did not return the created transfer");
+  return created;
+}

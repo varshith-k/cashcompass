@@ -3,8 +3,8 @@
  * One-time seed script for a Capital One Nessie sandbox demo customer.
  *
  * Creates a customer, one checking account (~$2,000), a merchant, a few
- * recent purchases, a Friday paycheck deposit, and a rent bill due the next
- * Tuesday — the "you can afford the coffee, not rent on Tuesday" story that
+ * recent purchases, a Friday paycheck deposit, a rent bill due the next
+ * Tuesday, and a roommate account that sends a real P2P rent-split transfer — the "you can afford the coffee, not rent on Tuesday" story that
  * CashCompass's forecast is built to surface.
  *
  * Usage:
@@ -157,20 +157,48 @@ async function main() {
     payment_amount: 1200,
   });
 
-  console.log("Seeding roommate repayment (modeled as a deposit — Nessie's");
-  console.log("transfer endpoint isn't read by src/lib/nessie/sync.ts today):");
-  await nessie("POST", `/accounts/${accountId}/deposits`, {
+  // A second customer + account for the roommate, so the rent split is a real
+  // Nessie peer-to-peer transfer (synced by src/lib/nessie/sync.ts) rather
+  // than a deposit standing in for one.
+  console.log("Creating the roommate's customer and account...");
+  const roommate = await nessie("POST", "/customers", {
+    first_name: "Sam",
+    last_name: "Roommate",
+    address: {
+      street_number: "123",
+      street_name: "Campus Ave",
+      city: "Columbia",
+      state: "MO",
+      zip: "65201",
+    },
+  });
+  const roommateCustomerId = roommate.objectCreated?._id ?? roommate._id;
+  const roommateAccount = await nessie("POST", `/customers/${roommateCustomerId}/accounts`, {
+    type: "Checking",
+    nickname: "Sam's Checking",
+    rewards: 0,
+    balance: 1000,
+  });
+  const roommateAccountId = roommateAccount.objectCreated?._id ?? roommateAccount._id;
+  console.log("  roommate account id:", roommateAccountId);
+
+  console.log("Sending the roommate's rent-split P2P transfer...");
+  await nessie("POST", `/accounts/${roommateAccountId}/transfers`, {
     medium: "balance",
-    transaction_date: nextWeekday(2),
-    status: "pending",
+    payee_id: accountId,
     amount: 150,
-    description: "Roommate transfer — rent split",
+    transaction_date: daysAgo(1),
+    description: "Rent split",
   });
 
   console.log("\nDone. Add these to .env.local (and your production env):\n");
   console.log(`NESSIE_CUSTOMER_ID=${customerId}`);
   console.log(`NESSIE_ACCOUNT_ID=${accountId}`);
-  console.log("\nThen in CashCompass: Settings -> select the account -> Sync.");
+  console.log("\nThen in CashCompass:");
+  console.log("  1. Settle Up -> Add friend -> Sam, with this Nessie account ID:");
+  console.log(`     ${roommateAccountId}`);
+  console.log("  2. Settings -> select the account -> Sync. The rent split arrives as a P2P transfer from Sam.");
+  console.log("  3. Add a balance you owe Sam, then use \"Pay with Nessie\" to settle it with a real transfer.");
 }
 
 main().catch((error) => {

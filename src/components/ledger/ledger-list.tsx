@@ -9,6 +9,7 @@ import { formatCurrency, formatRelativeDay } from "@/lib/format";
 import { buildWhatsAppReminderLink } from "@/lib/whatsapp";
 import { PayWithSolanaDialog } from "./pay-with-solana-dialog";
 import { SendReminderButton } from "./send-reminder-button";
+import { PayWithNessieButton } from "./pay-with-nessie-button";
 
 function reminderMessage(entry: FinancialEvent): string {
   return `Hi ${entry.counterparty}! Friendly reminder from CashCompass: you owe ${formatCurrency(entry.amount, { cents: true })}, expected ${formatRelativeDay(entry.date).toLowerCase()}. No rush, just a nudge 🙂`;
@@ -20,6 +21,7 @@ export function LedgerList({
   emptyText,
   allowSolanaSettlement = false,
   emailableFriendIds = [],
+  nessieFriendIds = [],
 }: {
   title: string;
   entries: FinancialEvent[];
@@ -28,6 +30,8 @@ export function LedgerList({
   allowSolanaSettlement?: boolean;
   /** Friends with an email address, who can be sent reminders. */
   emailableFriendIds?: string[];
+  /** Friends with a Nessie account, who can be paid by P2P transfer. */
+  nessieFriendIds?: string[];
 }) {
   return (
     <div>
@@ -97,6 +101,10 @@ export function LedgerList({
                   Log payment
                 </Button>
               </ActionForm>
+
+              {entry.direction === "expense" && entry.friendId && nessieFriendIds.includes(entry.friendId) && (
+                <PayWithNessieButton entryId={entry.id} friendName={entry.counterparty} amount={entry.amount} />
+              )}
 
               {allowSolanaSettlement && (
                 <PayWithSolanaDialog

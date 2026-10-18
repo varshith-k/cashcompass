@@ -12,7 +12,11 @@ import { getFinancialEventRepository } from "./repository";
 export async function settleLedgerAmount(
   id: string,
   amountPaid: number,
-  options?: { counterpartyNote?: string },
+  options?: {
+    counterpartyNote?: string;
+    /** Nessie transfer key (`<account>/transfer/<id>`), so the next sync matches instead of duplicating. */
+    sourceRecordId?: string;
+  },
 ) {
   const repo = getFinancialEventRepository();
   const events = await repo.listEvents();
@@ -31,7 +35,14 @@ export async function settleLedgerAmount(
     : original.counterparty;
 
   if (amountPaid >= remaining) {
-    await repo.updateEvent(id, { record: "actual", certainty: "certain", date: new Date().toISOString(), amount: remaining, counterparty });
+    await repo.updateEvent(id, {
+      record: "actual",
+      certainty: "certain",
+      date: new Date().toISOString(),
+      amount: remaining,
+      counterparty,
+      ...(options?.sourceRecordId ? { sourceRecordId: options.sourceRecordId, source: "nessie" as const } : {}),
+    });
   } else {
     await repo.createEvent({
       date: new Date().toISOString(),
@@ -44,7 +55,7 @@ export async function settleLedgerAmount(
       category: "Repayment",
       counterparty,
       // Links each partial payment to the ledger entry it reduces.
-      sourceRecordId: `ledger/${original.id}`,
+      sourceRecordId: options?.sourceRecordId ?? `ledger/${original.id}`,
       friendId: original.friendId,
     });
     await repo.updateEvent(id, { amount: Math.round((remaining - amountPaid) * 100) / 100 });

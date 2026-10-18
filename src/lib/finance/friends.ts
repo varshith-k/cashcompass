@@ -5,6 +5,8 @@ export interface Friend {
   name: string;
   email?: string;
   phone?: string;
+  /** Their Capital One Nessie sandbox account, for P2P transfers. */
+  nessieAccountId?: string;
 }
 
 /** Demo friends match the demo Settle Up entries (see demo-data.ts). example.com never delivers mail. */
