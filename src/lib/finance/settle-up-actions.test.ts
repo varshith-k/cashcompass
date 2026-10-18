@@ -77,4 +77,13 @@ describe("Settle Up actions", () => {
     expect(getFriends("auth0|settle-test").find((f) => f.name === "Jo Park")?.email).toBe("jo@example.com");
     expect((await addFriendAction(idle, form({ name: "jo park" }))).status).toBe("error");
   });
+
+  it("accepts both Nessie account id formats (current UUIDs and legacy 24-hex) and rejects others", async () => {
+    const idle = { status: "idle" as const, message: "" };
+    const uuid = "3f2b8c1e-9d4a-4b6f-a1c2-7e5d9f0b1a2c";
+    expect((await addFriendAction(idle, form({ name: "Uuid Friend", nessieAccountId: uuid.toUpperCase() }))).status).toBe("saved");
+    expect(getFriends("auth0|settle-test").find((f) => f.name === "Uuid Friend")?.nessieAccountId).toBe(uuid);
+    expect((await addFriendAction(idle, form({ name: "Hex Friend", nessieAccountId: "0123456789abcdef01234567" }))).status).toBe("saved");
+    expect((await addFriendAction(idle, form({ name: "Bad Friend", nessieAccountId: "12345" }))).status).toBe("error");
+  });
 });
