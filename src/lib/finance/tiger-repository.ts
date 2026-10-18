@@ -170,6 +170,25 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
       const setClause = entries.map(([key], index) => `${columns[key]} = $${index + 3}`).join(", ");
       const values = entries.map(([, value]) => value);
 
+      // Timescale cannot UPDATE a partition key into another chunk. A single
+      // delete/insert statement moves the complete row atomically, retaining
+      // its ID, owner, links and any other stored fields. An insert failure
+      // rolls back the deletion as part of the same statement.
+      if (patch.date !== undefined) {
+        const storedPatch = Object.fromEntries(entries.map(([key, value]) => [columns[key], value]));
+        const moved = await client.query<FinancialEventRow>(
+          `WITH removed AS (
+             DELETE FROM financial_events WHERE id = $1 AND owner_id = $2 RETURNING *
+           )
+           INSERT INTO financial_events
+           SELECT (jsonb_populate_record(NULL::financial_events, to_jsonb(removed) || $3::jsonb)).*
+           FROM removed RETURNING *`,
+          [id, ownerId, JSON.stringify(storedPatch)],
+        );
+        if (!moved.rows[0]) throw new Error(`Financial event ${id} not found`);
+        return toFinancialEvent(moved.rows[0]);
+      }
+
       const result = await client.query<FinancialEventRow>(
         `UPDATE financial_events SET ${setClause} WHERE id = $1 AND owner_id = $2 RETURNING *`,
         [id, ownerId, ...values],
