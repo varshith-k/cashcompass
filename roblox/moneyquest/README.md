@@ -8,7 +8,7 @@ A separate Roblox financial-literacy mini-game, written in Luau. The CashCompass
 
 Implemented: original procedural 3D neighborhood, four interactive stations, six financial decision challenges, a day-30 review, HUD, forecasts, server-controlled finance calculations, transparent scoring, and replay. The Rojo place builds locally, Luau syntax checks pass, and all **324 complete decision paths** pass **4,261 assertions** in standalone Luau. Engine, scorer, protocol, and tests also pass `luau-analyze`.
 
-**Studio playtesting and publishing are still required.** A generated `.rbxlx` is a build artifact, not proof of successful Studio execution. No experience ID has been invented or published. The website defaults to “Game publishing in progress.” A configured URL is validated structurally; its publication status, availability, and ownership must be checked manually.
+**Studio playtesting and public release are still required.** A generated `.rbxlx` is a build artifact, not proof of successful Studio execution. The owner supplied the real saved experience URL, [CashCompass: MoneyQuest](https://www.roblox.com/games/73262786586748/CashCompass-MoneyQuest), and confirmed it is still restricted to Playtesters/the new-account waiting period. Place ID: `73262786586748`; the public place lookup resolves universe ID `10771656737`. Anonymous playability returned `GuestProhibited`, which alone does not distinguish private access from a sign-in requirement. Public Player access has not been verified. Keep the launcher in “Game publishing in progress” until release/access is confirmed. No ID was fabricated.
 
 ## Open the place now
 
@@ -137,6 +137,18 @@ The default sky image in Creator Hub is Roblox's automatically assigned experien
 5. Allow Roblox's image moderation to finish before expecting it to appear to other players.
 
 These are the [official Roblox icon upload steps](https://create.roblox.com/docs/production/publishing/experience-icons). Uploading an icon and public-release eligibility are separate; the new-account waiting period still applies.
+
+## Upload the wide game thumbnail
+
+Upload **`assets/moneyquest-thumbnail.jpg`**: 1920×1080 (16:9), approximately 540 KB, below Roblox's 3 MB Home thumbnail limit. The original generated PNG and exact prompt are preserved alongside it. This is promotional key art, not a claimed screenshot of Studio/Player gameplay. It uses the existing compass branding and the game's bank/store/apartment/advisor theme.
+
+1. Open **CashCompass: MoneyQuest** in Creator Hub.
+2. Navigate to **Configurations → Places** and select the start place.
+3. Choose **Thumbnails** in that place's left navigation.
+4. Select **Experience Detail Page**, upload `moneyquest-thumbnail.jpg`, and save the changes. Follow any activation controls shown.
+5. If you also want it on Roblox Home, use the **Home Page** tab to upload/activate it there and save. Image moderation applies.
+
+See [Roblox's thumbnail documentation](https://create.roblox.com/docs/production/publishing/thumbnails). Uploading marketing images does not remove the account's public-release waiting period. A thumbnail upload and a configured website launcher are separate actions.
 
 ## Publish with your Roblox account
 
