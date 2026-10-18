@@ -34,8 +34,31 @@ fi
 # VULTR_API_KEY/VULTR_INSTANCE_ID (unset by default) and never blocks a
 # deploy on failure — this is a safety net, not a dependency. A snapshot
 # covers the whole disk; the PM2/release rollback below only covers the app.
+#
+# This script's own shell environment never has these set (systemd doesn't
+# export them, and nothing sources .env files into bash) — the values live
+# in SOURCE's env files for Next.js to read at runtime. So: prefer an
+# explicit shell env var if one happens to be set, otherwise read the same
+# env files the release itself gets (same precedence as the copy loop
+# below), and only skip if neither has it.
+read_env_value() {
+  local key=$1 file
+  for file in .env.production.local .env.production .env.local .env; do
+    if [[ -f "$SOURCE/$file" ]]; then
+      local value
+      value=$(grep -m1 "^${key}=" "$SOURCE/$file" 2>/dev/null | cut -d= -f2- | xargs || true)
+      [[ -n "$value" ]] && { printf '%s' "$value"; return 0; }
+    fi
+  done
+  return 1
+}
+
 snapshot_before_deploy() {
-  if [[ -z "${VULTR_API_KEY:-}" || -z "${VULTR_INSTANCE_ID:-}" ]]; then
+  local vultr_key="${VULTR_API_KEY:-}" vultr_instance="${VULTR_INSTANCE_ID:-}"
+  [[ -z "$vultr_key" ]] && vultr_key=$(read_env_value VULTR_API_KEY || true)
+  [[ -z "$vultr_instance" ]] && vultr_instance=$(read_env_value VULTR_INSTANCE_ID || true)
+
+  if [[ -z "$vultr_key" || -z "$vultr_instance" ]]; then
     echo "VULTR_API_KEY/VULTR_INSTANCE_ID not set; skipping pre-deploy snapshot"
     return 0
   fi
@@ -43,9 +66,9 @@ snapshot_before_deploy() {
   local http_code
   http_code=$(curl --max-time 15 -s -o /dev/null -w '%{http_code}' \
     -X POST "https://api.vultr.com/v2/snapshots" \
-    -H "Authorization: Bearer $VULTR_API_KEY" \
+    -H "Authorization: Bearer $vultr_key" \
     -H "Content-Type: application/json" \
-    -d "{\"instance_id\":\"$VULTR_INSTANCE_ID\",\"description\":\"$description\"}" \
+    -d "{\"instance_id\":\"$vultr_instance\",\"description\":\"$description\"}" \
     2>/dev/null) || { echo "Pre-deploy snapshot request failed; continuing deploy" >&2; return 0; }
   if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
     echo "Requested pre-deploy snapshot: $description"
