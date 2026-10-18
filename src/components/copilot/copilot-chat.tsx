@@ -87,7 +87,7 @@ export function CopilotChat() {
                 turn.role === "user" ? "bg-primary text-primary-foreground" : "bg-accent",
               )}
             >
-              {turn.result?.engine && <p className="text-xs text-muted-foreground mb-1">{turn.result.engine === "gemini" ? "Gemini · verified calculations" : turn.result.engine === "fallback" ? "Gemini unavailable · local calculation fallback" : "Local calculation mode · Gemini not connected"}</p>}
+              {turn.result?.engine && <p className="text-xs text-muted-foreground mb-1">{turn.result.engine === "gemini" ? turn.result.kind === "guidance" ? "Gemini · CashCompass guide" : "Gemini · verified calculations" : turn.result.engine === "fallback" ? "Local response · Gemini fallback" : "Local calculation mode · Gemini not connected"}</p>}
               <p className="leading-relaxed">{turn.content}</p>
               {turn.result?.comparison && <div className="grid sm:grid-cols-2 gap-2 mt-3">
                 {turn.result.comparison.map((item) => <div key={item.label} className="rounded-lg border border-border bg-card p-3 text-xs space-y-1">

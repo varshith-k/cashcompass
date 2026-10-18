@@ -3,7 +3,7 @@ import { formatCurrency, formatShortDate } from "@/lib/format";
 import { checkAffordability, checkRepaymentDelay, compareBuyTimings, spendingBreakdown, suggestSavingsPlan, type ForecastContext } from "./tools";
 import type { CopilotResult } from "./types";
 
-export type CopilotTool = "check_affordability" | "check_repayment_delay" | "suggest_savings_plan" | "spending_breakdown";
+export type CopilotTool = "check_affordability" | "check_repayment_delay" | "suggest_savings_plan" | "spending_breakdown" | "explain_capabilities";
 function assumptionsFor(ctx: ForecastContext) {
   return [
     ctx.dailySpend
@@ -21,6 +21,16 @@ function positiveAmount(value: unknown): number {
 
 /** All financial prose and cards come from deterministic tool results. */
 export function respondToTool(name: CopilotTool, args: Record<string, unknown>, ctx: ForecastContext): CopilotResult {
+  if (name === "explain_capabilities") {
+    const replies = {
+      greeting: "Hi! I’m your CashCompass copilot. I can check a purchase against your upcoming bills, compare buying today versus payday, plan savings, or review spending. What would you like to check?",
+      capabilities: "I can compare buying now versus payday, test a late repayment, plan savings, or review spending. Try “Can I afford $200 today?” or choose a suggested prompt.",
+      purchase_amount: "How much does the purchase cost? Tell me the amount and I’ll compare it with your upcoming bills and cash-flow buffer.",
+      unsupported: "I’m here to help with your CashCompass finances. Try asking about an upcoming purchase, a late repayment, savings, or this month’s spending.",
+    };
+    if (typeof args.reason !== "string" || !Object.hasOwn(replies, args.reason)) throw new Error("Invalid guidance reason");
+    return { reply: replies[args.reason as keyof typeof replies], assumptions: [], kind: "guidance" };
+  }
   if (name === "spending_breakdown") {
     const { overBudget, topCategories } = spendingBreakdown(spendByCategoryThisMonth(ctx.events), ctx.budgets);
     return {

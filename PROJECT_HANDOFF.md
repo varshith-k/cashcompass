@@ -12,6 +12,8 @@ The numbered sections below preserve the original product requirements. **Do not
 
 ### Delivered feature inventory
 
+Gemini follow-up (October 18): a validated guidance tool now handles greetings, capability questions, missing purchase amounts, and off-topic requests; successful guidance is no longer labeled as an API outage. Financial tools remain deterministic. Six local live Gemini checks passed, including the screenshot's two conversational messages and synthetic bill-photo extraction; 192 unit tests and lint passed. Deployment is pending. Build validation encountered a Turbopack worker-port permission failure, then an existing `/api/auth/me` route context type error under Webpack; neither is claimed as a successful production build for this follow-up. See [copilot boundary](src/lib/copilot/README.md).
+
 | Area | Implemented behavior | Verification / operational boundary |
 | --- | --- | --- |
 | Application shell | Shared desktop/mobile navigation, light/dark themes, account menu, reminder navigation, responsive charts and accessible tables, loading/error feedback, self-hosted fonts. | MoneyQuest uses the same navigation; bottom bar remains Overview, Cash Flow, AI Copilot, and More. |
