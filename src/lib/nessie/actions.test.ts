@@ -7,6 +7,8 @@ vi.mock("./mapping-store", () => ({ getNessieMappingStore: () => "trusted-server
 vi.mock("./provisioning", async (original) => ({ ...await original<typeof import("./provisioning")>(), provisionUserAccount: state.provision }));
 vi.mock("./sync", () => ({ syncNessieAccount: state.sync }));
 vi.mock("./client", async (original) => ({ ...await original<typeof import("./client")>(), isNessieConfigured: () => state.configured }));
+vi.mock("@/lib/finance/friends", () => ({ getFriends: async () => [] }));
+vi.mock("./status", () => ({ recordSyncStatus: vi.fn(async () => {}) }));
 import { setupNessieAccount, syncNessie } from "./actions";
 
 beforeEach(() => {

@@ -1,6 +1,6 @@
 # Automatic deployment on Vultr
 
-> This guide records the previously reported server setup. The current release branch has not authenticated to independently confirm it. Before merging the production-readiness release, review/install its updated deployment script, configure durable storage, back up and migrate the intended database, and verify core readiness. No server changes are authorized from this session until findings are presented and approved.
+> The October 18 consolidated release is authorized for deployment. Production uses the existing nginx/PM2/systemd timer. Its installed deploy script remains separate from the repository copy; install updates explicitly to enable schema migrations and database readiness checks. The public `/api/public/health` endpoint reports readiness and the deployed revision (full SHA with the updated installer, release-directory SHA prefix with the existing installer).
 
 ## Active server setup
 
@@ -51,7 +51,7 @@ Environment files stay on the server and are copied with mode 600 into each
 new release. To change settings, edit the files in `/root/cashcompass` and
 deploy again. Existing releases are retained for recovery: monitor disk space
 and remove obsolete releases only after checking the current/previous links.
-The HTTP health check verifies server startup, not sign-in or finance workflows.
+The updated repository script checks database readiness; the previously installed script checks HTTP startup. Neither verifies a complete signed-in workflow.
 The production-readiness release persists budgets, goals, checkpoints, account snapshots and sync state in `planning_profiles` alongside financial events and receipts. It requires `DATABASE_URL` and the updated schema. Earlier process-local data resets on deployment and has no durable migration source after a restart.
 
 Changes to the deployment scripts in GitHub do not install themselves into
@@ -59,7 +59,7 @@ systemd: upload revised scripts/units explicitly and reload systemd.
 
 ## Production configuration
 
-The earlier server report recorded commit `671a5b5718e31744ed2b731b39f78a17fe60939c` as deployed. Recheck the current release before making changes. The HTTPS
+User-provided server logs confirmed `3fa93059a6560d637c2efd784bd78f3d6de36c85` before this consolidated release. Check `/api/public/health` for the new revision after rollout. The HTTPS
 homepage returns 200, signed-out `/api/auth/me` returns 401, and `/overview`
 redirects signed-out visitors to login.
 

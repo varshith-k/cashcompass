@@ -7,7 +7,8 @@ const notify = vi.hoisted(() => vi.fn(async () => ({ status: "sent", to: "sam@ex
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/session", () => ({ requireOwnerId: async () => "auth0|settle-test", requireSession: async () => ({ user: { id: "auth0|settle-test", name: "Settle Tester", email: "settle@example.com" } }) }));
 vi.mock("@/lib/email/notify-friend", () => ({ notifyFriend: notify }));
-vi.mock("./repository", () => ({
+vi.mock("./repository", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./repository")>(),
   getFinancialEventRepository: () => ({
     listEvents: async () => state.events.map((e) => ({ ...e })),
     createEvent: async (input: NewFinancialEvent) => {

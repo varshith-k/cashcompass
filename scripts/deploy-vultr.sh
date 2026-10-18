@@ -99,6 +99,7 @@ export CASHCOMPASS_BUILD_SHA="$commit"
 npm ci --legacy-peer-deps --no-audit --no-fund
 NODE_ENV=production node scripts/check-environment.mjs --core-only
 npm run test --if-present
+npm run db:migrate
 npm run build
 
 healthy() {

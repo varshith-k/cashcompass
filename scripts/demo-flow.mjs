@@ -29,7 +29,7 @@ try {
   await page.getByLabel("Amount", { exact: true }).waitFor();
   assert.equal(await page.getByLabel("Amount", { exact: true }).inputValue(), "1200");
   await page.getByRole("button", { name: "Buy after payday", exact: true }).click();
-  await page.getByText("Scenario minimum without uncertain repayments:", { exact: false }).waitFor();
+  await page.getByText("Scenario minimum without money owed to you:", { exact: false }).waitFor();
   console.log("PASS dashboard → copilot → reversible purchase comparison");
 
   await visit("/transactions");

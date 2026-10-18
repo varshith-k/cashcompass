@@ -81,7 +81,8 @@ SELECT
   sum(amount) AS total
 FROM financial_events
 WHERE record = 'actual'
-GROUP BY owner_id, month, category, direction;
+GROUP BY owner_id, month, category, direction
+WITH NO DATA;
 
 -- Safe to re-run: fixes an existing installation created before this
 -- setting was added above (IF NOT EXISTS skips the CREATE either way).

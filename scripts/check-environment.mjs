@@ -15,7 +15,4 @@ for (const [group, names] of Object.entries(groups)) {
     if ((group === "core" || (!coreOnly && group === "integrations")) && !present) missing = true;
   }
 }
-const account = Boolean(process.env.NESSIE_CUSTOMER_ID || process.env.NESSIE_ACCOUNT_ID);
-console.log(`integrations: Nessie account/customer selection: ${account ? "present" : "missing"}`);
-if (!account && !coreOnly) missing = true;
 process.exitCode = missing ? 1 : 0;

@@ -15,7 +15,8 @@ vi.mock("@/lib/nessie/client", async (importOriginal) => ({
   isNessieConfigured: () => nessie.configured,
   createTransfer: nessie.createTransfer,
 }));
-vi.mock("./repository", () => ({
+vi.mock("./repository", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./repository")>(),
   getFinancialEventRepository: () => ({
     listEvents: async () => state.events.map((e) => ({ ...e })),
     createEvent: async (input: NewFinancialEvent) => {
@@ -48,9 +49,9 @@ beforeEach(() => {
 
 describe("Pay with Nessie", () => {
   it("ignores stale shared-account sync status and uses only the mapped payer", async () => {
-    const alex = addFriend("auth0|payer", { name: "Alex Own Account", nessieAccountId: ALEX });
+    const alex = await addFriend("auth0|payer", { name: "Alex Own Account", nessieAccountId: ALEX });
     state.events = [owed(alex.id)];
-    recordSyncStatus("auth0|payer", { added: 0, skipped: 0, accountId: "c".repeat(24) });
+    await recordSyncStatus("auth0|payer", { added: 0, skipped: 0, accountId: "c".repeat(24) });
     vi.stubEnv("NESSIE_ACCOUNT_ID", "c".repeat(24));
     nessie.createTransfer.mockResolvedValue({ _id: "own-payer" });
     expect((await payWithNessieTransfer("owe-1")).ok).toBe(true);

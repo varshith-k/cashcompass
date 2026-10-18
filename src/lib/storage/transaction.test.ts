@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DemoFinancialEventStore } from "@/lib/finance/demo-repository";
 import { getBudgets, setBudgetLimits } from "@/lib/finance/budgets";
 import { claimSettlement } from "@/lib/solana/receipts";
-import { withOwnerTransaction } from "./transaction";
+import { afterTransactionCommit, withOwnerTransaction } from "./transaction";
 
 const expense = { date: new Date().toISOString(), amount: 25, direction: "expense" as const, record: "actual" as const, certainty: "certain" as const, recurrence: "one-time" as const, source: "manual" as const, category: "Dining", counterparty: "Rollback test" };
 describe("memory transaction parity", () => {
@@ -32,4 +32,26 @@ describe("memory transaction parity", () => {
   it("rejects cross-owner operations inside a transaction", async () => {
     await expect(withOwnerTransaction("alice-transaction", () => setBudgetLimits("bob-transaction", { Dining: 1 }))).rejects.toThrow("owner mismatch");
   });
+});
+
+it("runs nested payment side effects after commit and discards them on rollback", async () => {
+  const owner = crypto.randomUUID();
+  const other = crypto.randomUUID();
+  const seen: string[] = [];
+  await withOwnerTransaction(owner, async () => {
+    await withOwnerTransaction(owner, async () => {
+      await afterTransactionCommit(async () => {
+        // A different owner is valid only outside the payer transaction.
+        await setBudgetLimits(other, { Dining: 77 });
+        seen.push("committed");
+      });
+    });
+    expect(seen).toEqual([]);
+  });
+  expect(seen).toEqual(["committed"]);
+  await expect(withOwnerTransaction(owner, async () => {
+    await afterTransactionCommit(async () => { seen.push("rolled back"); });
+    throw new Error("rollback");
+  })).rejects.toThrow("rollback");
+  expect(seen).toEqual(["committed"]);
 });

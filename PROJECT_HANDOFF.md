@@ -1,5 +1,17 @@
 # CashCompass — Project Handoff
 
+## Consolidated release — October 18, 2026
+
+Combines the remaining production-readiness, per-user Nessie, and Tiger operations branches while retaining the latest Gemini guidance, paycheck entry, shared balances, MoneyQuest, and Solana payment recovery.
+
+- Budgets, goals, balance checkpoints, imported account snapshots, and sync state persist in `planning_profiles`. Existing process-memory planning cannot be recovered after a restart.
+- Auth0 users create their own $0 Nessie sandbox account from the setup banner or Settings. Legacy shared-account environment values no longer grant access to a shared bank account. Existing imported records are retained; new sync/P2P operations use the user's mapping.
+- Financial mutations serialize per owner; event, planning, and Solana receipt writes share one transaction. Shared-payment mirroring and payment emails run after commit. Mirroring remains best-effort.
+- `/api/public/health` checks authentication configuration and required database tables without returning credentials. Updated deploy tooling runs migrations and checks readiness before switching PM2; installed server scripts require an explicit update.
+- Validation: 231 unit tests; 8 persistence/concurrency tests; 8 Timescale payment/Nessie mapping integration tests; 13 operational tests; lint, typecheck, production dependency audit (zero high/critical), and Docker production build passed. Local browser verification is recorded in the release PR.
+- Historical Tiger PITR evidence remains distinct from the owner's later report of successful testing in another session. No new cloud recovery or wallet transfer is performed by this release.
+
+
 > **Your money. Your direction.**
 
 Implementation has progressed beyond this original handoff. See [current phase status and verification](docs/PROJECT_STATUS.md) for the delivery record, including the October 18, 2026 feature inventory below.

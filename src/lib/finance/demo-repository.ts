@@ -1,4 +1,5 @@
 import "server-only";
+import { spendByCategoryThisMonth } from "./calculations";
 import type { FinancialEventStore } from "./repository";
 import type { FinancialEvent, FinancialEventUpdate, NewFinancialEvent } from "./types";
 import { getDemoEvents } from "./demo-data";

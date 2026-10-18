@@ -91,6 +91,7 @@ try {
   await page.keyboard.press("Enter");
   await page.waitForURL("**/budgets");
   await drawer.waitFor({ state: "hidden" });
+  await page.waitForFunction(() => document.title === "Budgets | CashCompass");
   assert.equal(await page.title(), "Budgets | CashCompass");
   console.log("PASS mobile drawer: focus trap, Escape, focus return, keyboard route selection");
 

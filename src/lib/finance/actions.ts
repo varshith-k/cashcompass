@@ -309,7 +309,6 @@ export async function deleteWishlistGoal(formData: FormData) {
 }
 
 export async function createLedgerEntry(formData: FormData): Promise<NotifyResult | null> {
-  return withFinancialTransaction(async () => {
 
   const session = await requireSession();
   const ownerId = session.user.id;
@@ -351,7 +350,6 @@ export async function createLedgerEntry(formData: FormData): Promise<NotifyResul
     return null;
   }
 
-  });
 }
 
 export async function deleteLedgerEntry(formData: FormData) {

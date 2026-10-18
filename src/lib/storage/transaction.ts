@@ -7,6 +7,7 @@ interface Transaction {
   client?: PoolClient;
   memory: Map<string, unknown>;
   rollback: (() => void)[];
+  afterCommit: (() => Promise<void>)[];
 }
 const context = new AsyncLocalStorage<Transaction>();
 const memory = new Map<string, unknown>();
@@ -35,6 +36,20 @@ export function onTransactionRollback(callback: () => void) {
   context.getStore()?.rollback.push(callback);
 }
 
+/** Defer cross-owner side effects until the outermost transaction has committed. */
+export async function afterTransactionCommit(callback: () => Promise<void>) {
+  const transaction = context.getStore();
+  if (transaction) transaction.afterCommit.push(callback);
+  else await callback();
+}
+
+async function runAfterCommit(transaction: Transaction) {
+  for (const callback of transaction.afterCommit) {
+    try { await callback(); }
+    catch { console.warn("[database] A post-commit notification could not be completed."); }
+  }
+}
+
 export async function withDatabaseClient<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
   const existing = context.getStore()?.client;
   if (existing) return work(existing);
@@ -59,11 +74,13 @@ export async function withOwnerTransaction<T>(ownerId: string, work: () => Promi
     return work();
   }
   if (process.env.DATABASE_URL) {
-    return withDatabaseClient(async (client) => {
+    const transaction: Transaction = { ownerId, memory: new Map(), rollback: [], afterCommit: [] };
+    const result = await withDatabaseClient(async (client) => {
       await client.query("BEGIN");
       try {
         await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [ownerId]);
-        const result = await context.run({ ownerId, client, memory: new Map(), rollback: [] }, work);
+        transaction.client = client;
+        const result = await context.run(transaction, work);
         await client.query("COMMIT");
         return result;
       } catch (error) {
@@ -71,17 +88,19 @@ export async function withOwnerTransaction<T>(ownerId: string, work: () => Promi
         throw error;
       }
     });
+    await runAfterCommit(transaction);
+    return result;
   }
   const previous = locks.get(ownerId) ?? Promise.resolve();
   let unlock!: () => void;
   const lock = new Promise<void>((resolve) => { unlock = resolve; });
   locks.set(ownerId, lock);
   await previous;
-  const transaction: Transaction = { ownerId, memory: new Map(), rollback: [] };
+  const transaction: Transaction = { ownerId, memory: new Map(), rollback: [], afterCommit: [] };
+  let result: T;
   try {
-    const result = await context.run(transaction, work);
+    result = await context.run(transaction, work);
     for (const [key, value] of transaction.memory) memory.set(key, structuredClone(value));
-    return result;
   } catch (error) {
     for (const undo of transaction.rollback.reverse()) undo();
     throw error;
@@ -89,4 +108,6 @@ export async function withOwnerTransaction<T>(ownerId: string, work: () => Promi
     unlock();
     if (locks.get(ownerId) === lock) locks.delete(ownerId);
   }
+  await runAfterCommit(transaction);
+  return result;
 }

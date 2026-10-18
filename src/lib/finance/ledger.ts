@@ -1,4 +1,5 @@
 import "server-only";
+import { afterTransactionCommit } from "@/lib/storage/transaction";
 import { revalidatePath } from "next/cache";
 import { requireOwnerId } from "@/lib/auth/session";
 import { notifyFriend } from "@/lib/email/notify-friend";
@@ -44,9 +45,9 @@ export async function settleLedgerAmount(
   });
   const { original, remaining } = payment;
   amountPaid = payment.amountPaid;
-  await mirrorSharedPayment(await requireOwnerId(), original.id, amountPaid, amountPaid >= remaining);
-
-  revalidatePath("/", "layout");
+  const ownerId = await requireOwnerId();
+  await afterTransactionCommit(async () => {
+  await mirrorSharedPayment(ownerId, original.id, amountPaid, amountPaid >= remaining);
 
   // Let the friend know (best-effort: an email problem never undoes the payment).
   try {
@@ -54,6 +55,8 @@ export async function settleLedgerAmount(
   } catch (error) {
     console.warn("[settle-up] payment email failed:", error instanceof Error ? error.message : "unknown error");
   }
+  });
+  revalidatePath("/", "layout");
 }
 
 /** Records a payment against an open ledger entry: settles it, or reduces it and logs the partial payment. */

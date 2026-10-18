@@ -39,12 +39,12 @@ function event(overrides: Partial<FinancialEvent>): FinancialEvent {
   };
 }
 
-function demoContext(): ForecastContext {
+async function demoContext(): Promise<ForecastContext> {
   const events = getDemoEvents();
   return {
     events,
-    budgets: getBudgets("demo-test"),
-    wishlistGoals: getWishlistGoals("demo-test"),
+    budgets: await getBudgets("demo-test"),
+    wishlistGoals: await getWishlistGoals("demo-test"),
     openingBalance: DEMO_STARTING_BALANCE,
     bufferThreshold: DEMO_PREFERRED_BUFFER,
     forecastDays: 35,
@@ -55,8 +55,8 @@ function demoContext(): ForecastContext {
 }
 
 describe("demo data tells the CashCompass story", () => {
-  it("has $2,250 today, but a $1,200 purchase today puts rent at risk while after payday is safe", () => {
-    const ctx = demoContext();
+  it("has $2,250 today, but a $1,200 purchase today puts rent at risk while after payday is safe", async () => {
+    const ctx = await demoContext();
     expect(computeAvailableBalance(ctx.openingBalance, ctx.events)).toBe(2250);
     const { now, afterPayday } = compareBuyTimings(ctx, { amount: 1200, label: "MacBook" });
     expect(now.affordable).toBe(false);
@@ -64,8 +64,8 @@ describe("demo data tells the CashCompass story", () => {
     expect(afterPayday?.affordable).toBe(true);
   });
 
-  it("is on track without the purchase (no buffer breach in the baseline forecast)", () => {
-    const ctx = demoContext();
+  it("is on track without the purchase (no buffer breach in the baseline forecast)", async () => {
+    const ctx = await demoContext();
     const start = new Date();
     start.setUTCDate(start.getUTCDate() - ctx.historyDays);
     const points = computeForecast(ctx.openingBalance, ctx.events, { days: ctx.forecastDays, startDate: start, lowBalanceThreshold: ctx.bufferThreshold, dailySpend: ctx.dailySpend });
@@ -140,12 +140,12 @@ describe("offline copilot wording", () => {
     expect(purchaseLabel(message, message.match(/\$?\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)/))).toBe(label);
   });
 
-  it("never says 'Buying this purchase'", () => {
-    expect(respondOffline("Can I afford $40 today?", demoContext()).reply).toMatch(/^Spending \$40 today/);
+  it("never says 'Buying this purchase'", async () => {
+    expect(respondOffline("Can I afford $40 today?", await demoContext()).reply).toMatch(/^Spending \$40 today/);
   });
 
-  it("answers a rent question without an amount with the real next rent payment", () => {
-    const reply = respondOffline("Will I have enough money for rent after this purchase?", demoContext()).reply;
+  it("answers a rent question without an amount with the real next rent payment", async () => {
+    const reply = respondOffline("Will I have enough money for rent after this purchase?", await demoContext()).reply;
     expect(reply).toContain("Tell me the amount");
     expect(reply).toContain("Lakeview Apartments");
   });
