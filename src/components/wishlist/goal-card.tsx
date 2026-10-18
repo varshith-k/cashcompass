@@ -68,7 +68,7 @@ export function GoalCard({
 
         <p className="text-xs text-muted-foreground">
           {reached
-            ? "Goal reached — earmarked, not yet transferred."
+            ? "Goal reached: earmarked, not yet transferred."
             : daysLeft < 0 ? "Target date passed. This goal needs a new target date." : `Plan ${formatCurrency(recommendedWeekly)}/week toward ${formatShortDate(goal.targetDate)}; compare the schedule in Cash Flow before reserving funds.`}
         </p>
 

@@ -24,8 +24,8 @@ interface HeroOverviewProps {
 
 const OUTLOOK_COPY: Record<HeroOverviewProps["outlook"], string> = {
   "on-track": "On track through your next payday",
-  tight: "Tight — a few days run close to your buffer",
-  "at-risk": "At risk — a bill may not be covered",
+  tight: "Tight: a few days run close to your buffer",
+  "at-risk": "At risk: a bill may not be covered",
 };
 
 export function HeroOverview({

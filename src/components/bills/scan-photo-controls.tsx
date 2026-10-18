@@ -41,11 +41,11 @@ export function ScanPhotoControls({
 
   function apply(result: ScanBillResult) {
     if (!result.ok) {
-      setMessage(result.message ?? "Couldn't read that photo — fill in the form manually.");
+      setMessage(result.message ?? "Couldn't read that photo. Fill in the form manually.");
       return;
     }
     onFields(result.fields!);
-    setMessage("Pulled these fields from the photo — double-check before saving.");
+    setMessage("Pulled these fields from the photo. Double-check before saving.");
   }
 
   async function handlePhoto(original: File) {

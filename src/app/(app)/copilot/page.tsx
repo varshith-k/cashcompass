@@ -6,7 +6,7 @@ export default function CopilotPage() {
     <div>
       <PageHeader
         title="AI Copilot"
-        description="Ask whether a purchase is affordable, grounded in your real forecast — never invented."
+        description="Ask whether a purchase is affordable, grounded in your real forecast, never invented."
       />
       <CopilotChat />
     </div>
