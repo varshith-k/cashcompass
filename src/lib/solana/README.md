@@ -61,3 +61,9 @@ to change for any of the above.
 Settlement checks a session-owned, outstanding payable ledger entry before network access. On-chain verification requires a confirmed/finalized, successful transaction and a matching system transfer for the expected amount and recipient. A transaction signature can be claimed only once across users. `receipts.ts` uses a database primary key when `DATABASE_URL` is set and process memory otherwise. Run the updated `db/schema.sql` before using database settlement.
 
 Mocked tests cover confirmation, failed transactions, amount/recipient mismatch, multi-transfer transactions, and duplicate claims. No wallet authorization or live devnet broadcast was performed during local verification. Receipt claims and ledger mutations are separate operations; production needs atomic settlement/reconciliation for process crashes. This remains an explicit devnet demo with a fixed rate and recipient.
+
+## Recover a transfer that was sent but not recorded
+
+Do not send it again. Open the same ledger entry, paste the full transaction signature from Phantom into “Already sent SOL?”, and choose “Retry verification — no new transfer”. The server repeats chain verification and the normal owner-scoped settlement checks. Newly submitted signatures are saved locally before confirmation; closing or reloading the dialog retains verification-only mode. Storage can be unavailable/cleared, so keep the Explorer link. A signature alone is not proof of success. The original log's Timescale cross-chunk date update failure is fixed by an atomic row move in the Tiger repository.
+
+Regression checks: `TIGER_TEST_DATABASE_URL` enables the local-only Timescale integration suite against an empty disposable database. `node scripts/audit-solana-recovery.mjs` targets a local demo server and intercepts every verification action and RPC; it never sends SOL.

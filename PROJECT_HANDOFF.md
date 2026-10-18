@@ -6,6 +6,14 @@ Implementation has progressed beyond this original handoff. See [current phase s
 
 This document is the source of truth for handing CashCompass to another model or developer before implementation begins. It records the product direction, requirements, design language, technical expectations, demo strategy, and phased delivery plan.
 
+## Solana settlement recording fix — October 18, 2026
+
+The supplied production log identifies SQLSTATE 23514 while settling a verified devnet transfer: changing the planned event date to the payment date crossed a Timescale chunk boundary. Read-only constraint inspection confirmed the failing time interval. A public-chain lookup found the matching logged transaction finalized without an on-chain error; ledger recording had failed afterward. No user payment or production financial data was changed during diagnosis.
+
+The Tiger repository now atomically deletes/reinserts date-changing rows in one SQL statement, preserving their ID, owner and all stored links/fields; an insert failure rolls back the deletion. The dialog retains submitted signatures in local browser storage, offers verification-only retries across close/reload, and accepts an existing signature from Phantom. It labels preparation and wallet approval separately, checks confirmation errors, and avoids displaying raw server exceptions when recording fails.
+
+Verification: 195 default unit tests pass; three opt-in local Timescale tests reproduce the original constraint failure, verify a successful cross-chunk move, assert rollback on invalid replacement, and check owner isolation. Lint and the Webpack production build pass. A local keyboard browser check with aborted verification actions confirms invalid input is blocked, signatures survive close/reload, and retries produce zero wallet/RPC sends. This is behavior evidence, not a visual CSS audit or a new live payment. No database migration is needed. Previously failed real transactions still require re-verification through the signed-in UI after deployment; sending more SOL is unnecessary.
+
 ## Current implementation handoff — October 18, 2026
 
 The numbered sections below preserve the original product requirements. **Do not restart implementation from the historical initial-repository section.** The app already exists. The current MoneyQuest delivery branch is `feature/moneyquest-roblox`; it incorporates GitHub `main` through `56a72d1` and the MoneyQuest implementation from `3279ac9`. Other remote feature branches are not automatically merged by this handoff.

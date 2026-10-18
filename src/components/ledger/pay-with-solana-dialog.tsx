@@ -7,6 +7,8 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -17,10 +19,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { settleLedgerWithSolana } from "@/lib/solana/actions";
-import { SOLANA_DEMO_RECIPIENT, SOLANA_DEMO_USD_PER_SOL } from "@/lib/solana/config";
+import { explorerUrl as transactionUrl, SOLANA_DEMO_RECIPIENT, SOLANA_DEMO_USD_PER_SOL } from "@/lib/solana/config";
 import { formatCurrency } from "@/lib/format";
 
-type Step = "idle" | "sending" | "verifying" | "success" | "error";
+type Step = "idle" | "preparing" | "sending" | "verifying" | "success" | "error";
 
 export function PayWithSolanaDialog({
   ledgerEntryId,
@@ -35,6 +37,9 @@ export function PayWithSolanaDialog({
   const [step, setStep] = useState<Step>("idle");
   const [error, setError] = useState<string | null>(null);
   const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
+  const [pendingSignature, setPendingSignature] = useState("");
+  const [existingSignature, setExistingSignature] = useState("");
+  const storageKey = `cashcompass:solana-pending:${ledgerEntryId}`;
 
   const { connection } = useConnection();
   const { connected, publicKey, sendTransaction } = useWallet();
@@ -42,7 +47,34 @@ export function PayWithSolanaDialog({
   const router = useRouter();
 
   const demoSol = amountUsd / SOLANA_DEMO_USD_PER_SOL;
-  const busy = step === "sending" || step === "verifying";
+  const busy = step === "preparing" || step === "sending" || step === "verifying";
+
+  function rememberSignature(signature: string) {
+    setPendingSignature(signature);
+    setExplorerUrl(transactionUrl(signature));
+    try { localStorage.setItem(storageKey, signature); } catch { /* Retain in memory if storage is unavailable. */ }
+  }
+
+  async function recordPayment(signature: string) {
+    setStep("verifying");
+    setError(null);
+    rememberSignature(signature);
+    try {
+      const result = await settleLedgerWithSolana(ledgerEntryId, amountUsd, signature);
+      if (!result.verified) {
+        setStep("error");
+        setError(`${result.reason ?? "Verification is not complete"}. No new transfer was sent. Check this transaction on Explorer before retrying verification.`);
+        return;
+      }
+      try { localStorage.removeItem(storageKey); } catch { /* Storage is optional. */ }
+      setExplorerUrl(result.explorerUrl);
+      setStep("success");
+      router.refresh();
+    } catch {
+      setStep("error");
+      setError("CashCompass could not verify or record this transaction. Keep its signature and retry verification; do not send another payment.");
+    }
+  }
 
   function reset() {
     setStep("idle");
@@ -51,12 +83,22 @@ export function PayWithSolanaDialog({
   }
 
   async function handlePay() {
+    const signatureToCheck = pendingSignature || existingSignature.trim();
+    if (signatureToCheck) {
+      if (!/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(signatureToCheck)) {
+        setStep("error");
+        setError("Enter the transaction signature from Phantom, not a wallet address or Explorer URL.");
+        return;
+      }
+      await recordPayment(signatureToCheck);
+      return;
+    }
     if (!connected || !publicKey) {
       setWalletModalVisible(true);
       return;
     }
 
-    setStep("sending");
+    setStep("preparing");
     setError(null);
 
     try {
@@ -76,22 +118,18 @@ export function PayWithSolanaDialog({
         }),
       );
 
+      setStep("sending");
       const signature = await sendTransaction(transaction, connection);
+      rememberSignature(signature);
 
       setStep("verifying");
-      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-
-      const result = await settleLedgerWithSolana(ledgerEntryId, amountUsd, signature);
-
-      if (!result.verified) {
+      const confirmation = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+      if (confirmation.value.err) {
         setStep("error");
-        setError(result.reason ?? "Payment could not be verified on-chain");
+        setError("The submitted transaction failed on-chain. Check it on Explorer; no ledger payment was recorded.");
         return;
       }
-
-      setExplorerUrl(result.explorerUrl);
-      setStep("success");
-      router.refresh();
+      await recordPayment(signature);
     } catch (err) {
       setStep("error");
       setError(err instanceof Error ? err.message : "The devnet payment failed");
@@ -103,7 +141,12 @@ export function PayWithSolanaDialog({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) reset();
+        if (next) {
+          try {
+            const saved = localStorage.getItem(storageKey);
+            if (saved) rememberSignature(saved);
+          } catch { /* Storage is optional. */ }
+        } else reset();
       }}
     >
       <DialogTrigger render={<Button type="button" size="sm" variant="outline" />}>
@@ -137,6 +180,20 @@ export function PayWithSolanaDialog({
           </p>
         </div>
 
+        {step !== "success" && (
+          <div className="space-y-2 text-sm">
+            {pendingSignature ? (
+              <p>A transaction signature is saved. The button below only retries verification; it does not send more SOL.</p>
+            ) : (
+              <>
+                <Label htmlFor={`signature-${ledgerEntryId}`}>Already sent SOL? Paste its transaction signature</Label>
+                <Input id={`signature-${ledgerEntryId}`} value={existingSignature} onChange={(event) => setExistingSignature(event.target.value)} disabled={busy} placeholder="Transaction signature from Phantom" />
+              </>
+            )}
+            {pendingSignature && <a href={transactionUrl(pendingSignature)} target="_blank" rel="noreferrer" className="underline">Check submitted transaction on Solana Explorer</a>}
+          </div>
+        )}
+
         {step === "error" && error && (
           <div className="flex items-start gap-2 rounded-lg border border-critical/30 bg-critical/5 p-3 text-sm text-critical">
             <CircleAlert className="size-4 mt-0.5 shrink-0" />
@@ -164,8 +221,10 @@ export function PayWithSolanaDialog({
               {busy ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  {step === "sending" ? "Sending…" : "Verifying…"}
+                  {step === "preparing" ? "Preparing transaction…" : step === "sending" ? "Approve in wallet…" : "Verifying…"}
                 </>
+              ) : pendingSignature || existingSignature.trim() ? (
+                "Retry verification — no new transfer"
               ) : connected ? (
                 "Send devnet payment"
               ) : (
