@@ -27,6 +27,11 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
   const bills = selectUpcomingBills(events);
   const upcomingTotal = bills.reduce((sum, bill) => sum + bill.amount, 0);
   const receipts = events.filter((e) => e.isReceipt && e.record === "actual").sort((a, b) => b.date.localeCompare(a.date));
+  // Who each receipt was split with (balances created by Split a bill link back via sourceRecordId).
+  const splits: Record<string, string[]> = {};
+  for (const e of events) {
+    if (e.sourceRecordId?.startsWith("split/")) (splits[e.sourceRecordId.slice(6)] ??= []).push(e.counterparty);
+  }
   const reminders = Object.fromEntries(
     (await getReminderStore().listForOwner(ownerId)).map((r) => [r.billId, { daysBefore: r.daysBefore, hour: r.hour }]),
   );
@@ -60,7 +65,7 @@ export default async function BillsPage({ searchParams }: { searchParams: Promis
         ))}
       </nav>
 
-      {active === "upcoming" ? <BillsTable bills={bills} reminders={reminders} /> : <ReceiptsList receipts={receipts} />}
+      {active === "upcoming" ? <BillsTable bills={bills} reminders={reminders} /> : <ReceiptsList receipts={receipts} splits={splits} />}
     </div>
   );
 }
