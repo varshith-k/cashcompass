@@ -6,6 +6,7 @@ import {
   getAccountBills,
   getAccountDeposits,
   getAccountPurchases,
+  getAccountTransfers,
   getAccountWithdrawals,
   getMerchant,
 } from "./client";
@@ -24,16 +25,24 @@ function findExisting(existing: FinancialEvent[], candidate: NewFinancialEvent):
   );
 }
 
-export async function syncNessieAccount(accountId: string) {
+/** Friends that may own the other side of a P2P transfer. */
+export interface TransferFriend {
+  id: string;
+  name: string;
+  nessieAccountId?: string;
+}
+
+export async function syncNessieAccount(accountId: string, options: { friends?: TransferFriend[] } = {}) {
   const repo = getFinancialEventRepository();
   const existing = await repo.listEvents();
 
-  const [account, purchases, deposits, withdrawals, bills] = await Promise.all([
+  const [account, purchases, deposits, withdrawals, bills, transfers] = await Promise.all([
     getAccount(accountId),
     getAccountPurchases(accountId),
     getAccountDeposits(accountId),
     getAccountWithdrawals(accountId),
     getAccountBills(accountId),
+    getAccountTransfers(accountId),
   ]);
 
   const merchants = new Map<string, { name: string; category?: string[] | string }>();
@@ -114,6 +123,40 @@ export async function syncNessieAccount(accountId: string) {
       source: "nessie",
       category: categorizeExpense(bill.payee, bill.nickname) === "Other" ? "Utilities" : categorizeExpense(bill.payee, bill.nickname),
       counterparty: bill.payee || bill.nickname,
+    });
+  }
+
+  // Peer-to-peer transfers: money sent to / received from another account.
+  // Filed as settle-up payments (category Repayment), linked to the friend who
+  // owns the other account when known.
+  const accountNames = new Map<string, string>();
+  async function otherAccountName(otherId: string): Promise<string> {
+    if (!accountNames.has(otherId)) {
+      try {
+        accountNames.set(otherId, (await getAccount(otherId)).nickname || `Nessie account ••${otherId.slice(-4)}`);
+      } catch {
+        accountNames.set(otherId, `Nessie account ••${otherId.slice(-4)}`);
+      }
+    }
+    return accountNames.get(otherId)!;
+  }
+  for (const transfer of transfers) {
+    if (["cancelled", "canceled", "failed"].includes(transfer.status ?? "")) continue;
+    const outgoing = transfer.payer_id === accountId;
+    const otherId = outgoing ? transfer.payee_id : transfer.payer_id;
+    const friend = options.friends?.find((f) => f.nessieAccountId && f.nessieAccountId === otherId);
+    candidates.push({
+      sourceRecordId: `${accountId}/transfer/${transfer._id}`,
+      date: new Date(transfer.transaction_date).toISOString(),
+      amount: transfer.amount,
+      direction: outgoing ? "expense" : "income",
+      record: "actual",
+      certainty: "certain",
+      recurrence: "one-time",
+      source: "nessie",
+      category: "Repayment",
+      counterparty: friend?.name ?? (await otherAccountName(otherId)),
+      ...(friend ? { friendId: friend.id } : {}),
     });
   }
 

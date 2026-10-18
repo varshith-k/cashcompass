@@ -6,6 +6,7 @@ import { isNessieConfigured } from "./client";
 import { syncNessieAccount } from "./sync";
 import { listDemoAccounts } from "./accounts";
 import { recordSyncStatus } from "./status";
+import { getFriends } from "@/lib/finance/friends";
 
 export async function syncNessie(selectedAccountId?: string) {
   // Each user syncs the shared demo account into their own records
@@ -22,7 +23,7 @@ export async function syncNessie(selectedAccountId?: string) {
   }
 
   try {
-    const result = await syncNessieAccount(accountId);
+    const result = await syncNessieAccount(accountId, { friends: getFriends(ownerId) });
     recordSyncStatus(ownerId, result);
     revalidatePath("/", "layout");
     return { ok: true as const, ...result };

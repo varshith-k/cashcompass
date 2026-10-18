@@ -8,7 +8,7 @@ vi.mock("@/lib/finance/repository", () => ({ getFinancialEventRepository: () => 
 }) }));
 vi.mock("./client", () => ({
   getAccount: async () => ({ _id: "account", nickname: "Test", balance: 500 }),
-  getAccountPurchases: vi.fn(), getAccountDeposits: async () => [], getAccountWithdrawals: async () => [], getAccountBills: async () => [], getMerchant: async () => ({ name: "Coffee" }),
+  getAccountPurchases: vi.fn(), getAccountDeposits: async () => [], getAccountWithdrawals: async () => [], getAccountBills: async () => [], getAccountTransfers: vi.fn(async () => []), getMerchant: async () => ({ name: "Coffee" }),
 }));
 import { getAccountPurchases } from "./client";
 import { syncNessieAccount } from "./sync";

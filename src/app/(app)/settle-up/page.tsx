@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { Mail, Phone, Trash2, Users } from "lucide-react";
+import { ArrowRightLeft, Mail, Phone, Trash2, Users } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { AddFriendSheet } from "@/components/ledger/add-friend-sheet";
 import { AddLedgerEntrySheet } from "@/components/ledger/add-ledger-entry-sheet";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireOwnerId } from "@/lib/auth/session";
 import { isEmailConfigured } from "@/lib/email/resend";
+import { isNessieConfigured } from "@/lib/nessie/client";
 import { selectLedgerEntries } from "@/lib/finance/calculations";
 import { getFriends } from "@/lib/finance/friends";
 import { getFinancialEventRepository } from "@/lib/finance/repository";
@@ -24,6 +25,7 @@ export default async function SettleUpPage() {
   const friends = getFriends(ownerId);
   const emailReady = isEmailConfigured();
   const emailableFriendIds = friends.filter((f) => f.email).map((f) => f.id);
+  const nessieFriendIds = isNessieConfigured() ? friends.filter((f) => f.nessieAccountId).map((f) => f.id) : [];
 
   // Net balance per friend: positive = they owe you.
   const net = new Map<string, number>();
@@ -80,6 +82,12 @@ export default async function SettleUpPage() {
                         ) : (
                           <span>No email: can&apos;t be emailed</span>
                         )}
+                        {friend.nessieAccountId && (
+                          <span className="inline-flex items-center gap-1">
+                            <ArrowRightLeft className="size-3" aria-hidden="true" />
+                            Nessie ••{friend.nessieAccountId.slice(-4)}
+                          </span>
+                        )}
                         {friend.phone && (
                           <span className="inline-flex items-center gap-1">
                             <Phone className="size-3" aria-hidden="true" />
@@ -130,6 +138,7 @@ export default async function SettleUpPage() {
         entries={iOwe}
         emptyText="You don't owe anyone right now."
         allowSolanaSettlement
+        nessieFriendIds={nessieFriendIds}
       />
     </div>
   );

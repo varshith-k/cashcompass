@@ -53,6 +53,11 @@ export function AddFriendSheet() {
             <Input id="friend-phone" name="phone" type="tel" autoComplete="off" placeholder="+1 555 123 4567" />
             <p className="text-xs text-muted-foreground">For one-tap WhatsApp reminders.</p>
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="friend-nessie">Capital One Nessie account ID (optional)</Label>
+            <Input id="friend-nessie" name="nessieAccountId" autoComplete="off" maxLength={24} placeholder="24-character sandbox account ID" className="font-mono" />
+            <p className="text-xs text-muted-foreground">Lets you settle up with a Nessie peer-to-peer transfer (sandbox, no real money).</p>
+          </div>
           {state.status === "error" && (
             <p role="alert" className="text-sm text-critical">
               {state.message}
