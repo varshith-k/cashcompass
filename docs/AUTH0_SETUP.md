@@ -85,21 +85,19 @@ Settings can let users change their display name. Auth0 has to allow the app to 
 
 For Google users, Auth0 overwrites the name from Google on each login unless you turn off **Sync user profile attributes at each login** under Authentication → Social → Google. Email and photo always come from the sign-in provider.
 
-## 7. Sign-in security: 2FA always on, MFA optional
+## 7. Optional two-factor sign-in
 
-Every account signs in with two-factor: after the password or Google sign-in, Auth0 emails a 6-digit code. In **Settings → Sign-in security** users can turn on **Use an authenticator app (MFA)** to use Google Authenticator, Authy or similar instead. Auth0 asks for the codes on its login page; CashCompass never sees them. The choice is stored in the user's `app_metadata.login_security` (`"app"`, otherwise email).
+In **Settings → Sign-in security** users can turn on **Two-factor sign-in**. After their password or Google sign-in, Auth0 then asks for a code from an authenticator app (Google Authenticator, Authy or similar), with a QR code to set it up the first time. It is off by default. Auth0 asks for the codes on its login page; CashCompass never sees them. The choice is stored in the user's `app_metadata.login_security` (`"app"` or `"off"`).
 
-1. **Security → Multi-factor Auth**: turn on **Email** and **One-time Password**. Leave **Require Multi-factor Auth** on **Never**. The Action below decides when to ask.
+1. **Security → Multi-factor Auth**: turn on **One-time Password** (Email is optional; Auth0 only allows it as a second option once another factor is on). Leave **Require Multi-factor Auth** on **Never**. The Action below asks only users who opted in.
 2. **Actions → Library → Create Action → Build from scratch**, trigger **Login / Post Login**. Paste [`docs/auth0-actions/login-security.js`](auth0-actions/login-security.js), then **Deploy**.
 3. **Actions → Triggers → post-login**: drag the Action into the flow and **Apply**.
-4. **Applications → APIs → Auth0 Management API → Machine to Machine Applications**: authorize **CashCompass** with `read:users` and `update:users`. Enable the **Client Credentials** grant as in §6.
+4. **Applications → APIs → Auth0 Management API → Application Access**: give **CashCompass** client access with `read:users` and `update:users`. Enable the **Client Credentials** grant as in §6.
 5. Set `AUTH0_LOGIN_SECURITY=true` and restart. Settings shows the switch from then on.
 
 Notes:
-- Codes can only be emailed to a verified address. Users who haven't verified their email are asked to set up an authenticator app until they do. Google accounts are verified already.
-- Turning the authenticator app off needs a sign-in within the last 10 minutes, so a forgotten open session can't weaken it.
-- If the Action editor says `challengeWith` / `enrollWith` aren't available on your plan, set **Require Multi-factor Auth** to **Always** with **One-time Password** instead. Everyone then uses an authenticator app, and the Settings switch has no effect.
-- Every sign-in asks for a code, including demo accounts. Make sure whoever presents can open that account's email.
+- Two-factor can't be required for everyone by email code: Auth0 only emails codes to users who already have another factor. To require it for everyone, set **Require Multi-factor Auth** to **Always** with One-time Password, which makes every user, including demo accounts and judges, install an authenticator app.
+- Turning two-factor off needs a sign-in within the last 10 minutes, so a forgotten open session can't weaken it.
 
 ## 8. Hackathon demo account
 
