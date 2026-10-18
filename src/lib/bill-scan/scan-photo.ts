@@ -1,5 +1,7 @@
 import "server-only";
-import { extractBillFromImage, type ExtractedBill } from "./extract";
+import { extractBillFromImage, type ExtractedBill, type ScanKind } from "./extract";
+
+export type { ScanKind } from "./extract";
 
 export interface ScanBillResult {
   ok: boolean;
@@ -15,7 +17,7 @@ export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
  * upload (signed-in) and the phone upload (one-time scan token); callers
  * do their own authorization first.
  */
-export async function scanPhoto(file: FormDataEntryValue | null): Promise<ScanBillResult> {
+export async function scanPhoto(file: FormDataEntryValue | null, kind: ScanKind = "bill"): Promise<ScanBillResult> {
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, message: "No photo received." };
   }
@@ -27,7 +29,7 @@ export async function scanPhoto(file: FormDataEntryValue | null): Promise<ScanBi
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const fields = await extractBillFromImage(buffer.toString("base64"), file.type || "image/jpeg");
+  const fields = await extractBillFromImage(buffer.toString("base64"), file.type || "image/jpeg", kind);
 
   if (!fields) {
     return { ok: false, message: "Couldn't read that photo clearly — fill in the form manually." };

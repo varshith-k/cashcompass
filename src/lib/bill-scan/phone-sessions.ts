@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import type { ScanBillResult } from "./scan-photo";
+import type { ScanBillResult, ScanKind } from "./scan-photo";
 
 /**
  * "Scan with your phone" sessions. The laptop (signed in) starts one and
@@ -19,6 +19,7 @@ export type PhoneScanStatus = "waiting" | "processing" | "done" | "failed" | "ex
 
 interface PhoneScanSession {
   ownerId: string;
+  kind: ScanKind;
   createdAt: number;
   status: Exclude<PhoneScanStatus, "expired">;
   result?: ScanBillResult;
@@ -37,14 +38,14 @@ function sweep(now = Date.now()) {
   }
 }
 
-export function createPhoneScanSession(ownerId: string): { token: string; expiresAt: number } {
+export function createPhoneScanSession(ownerId: string, kind: ScanKind = "bill"): { token: string; expiresAt: number } {
   sweep();
   // One open session per user is enough; starting again replaces the old one.
   for (const [token, session] of sessions) if (session.ownerId === ownerId) sessions.delete(token);
   if (sessions.size >= MAX_SESSIONS) throw new Error("Too many scan sessions; try again shortly");
   const token = randomBytes(24).toString("base64url");
   const createdAt = Date.now();
-  sessions.set(token, { ownerId, createdAt, status: "waiting" });
+  sessions.set(token, { ownerId, kind, createdAt, status: "waiting" });
   return { token, expiresAt: createdAt + PHONE_SCAN_TTL_MS };
 }
 
@@ -63,13 +64,20 @@ export function isPhoneScanOpen(token: string): boolean {
   return sessions.get(token)?.status === "waiting";
 }
 
-/** Phone side: claims the session for one upload. Returns false if it's expired or already used. */
-export function claimPhoneScan(token: string): boolean {
+/** Phone side: whether the open session is for a bill or a receipt. */
+export function phoneScanKind(token: string): ScanKind | null {
   sweep();
   const session = sessions.get(token);
-  if (!session || session.status !== "waiting") return false;
+  return session?.status === "waiting" ? session.kind : null;
+}
+
+/** Phone side: claims the session for one upload. Returns its kind, or null if it's expired or already used. */
+export function claimPhoneScan(token: string): ScanKind | null {
+  sweep();
+  const session = sessions.get(token);
+  if (!session || session.status !== "waiting") return null;
   session.status = "processing";
-  return true;
+  return session.kind;
 }
 
 export function completePhoneScan(token: string, result: ScanBillResult) {

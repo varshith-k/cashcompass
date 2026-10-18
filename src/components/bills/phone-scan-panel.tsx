@@ -13,7 +13,15 @@ const POLL_MS = 2000;
  * link, then polls until the phone's photo has been read and hands the
  * result back to the bill form.
  */
-export function PhoneScanPanel({ onResult, onClose }: { onResult: (result: ScanBillResult) => void; onClose: () => void }) {
+export function PhoneScanPanel({
+  kind = "bill",
+  onResult,
+  onClose,
+}: {
+  kind?: "bill" | "receipt";
+  onResult: (result: ScanBillResult) => void;
+  onClose: () => void;
+}) {
   const [link, setLink] = useState<string | null>(null);
   const [qrSvg, setQrSvg] = useState<string | null>(null);
   const [status, setStatus] = useState<"starting" | "waiting" | "processing" | "expired" | "error">("starting");
@@ -28,7 +36,7 @@ export function PhoneScanPanel({ onResult, onClose }: { onResult: (result: ScanB
 
     async function start() {
       try {
-        const { token, expiresAt, phoneOrigin } = await startPhoneScan();
+        const { token, expiresAt, phoneOrigin } = await startPhoneScan(kind);
         if (cancelled) return;
         // In development the server supplies the laptop's Wi-Fi address (phones can't open localhost).
         const url = `${phoneOrigin ?? window.location.origin}/scan/${token}`;
@@ -61,7 +69,7 @@ export function PhoneScanPanel({ onResult, onClose }: { onResult: (result: ScanB
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, []);
+  }, [kind]);
 
   const onLocalhost = typeof window !== "undefined" && ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
 
@@ -92,7 +100,7 @@ export function PhoneScanPanel({ onResult, onClose }: { onResult: (result: ScanB
                 dangerouslySetInnerHTML={{ __html: qrSvg }}
               />
             )}
-            <p className="text-center text-xs text-muted-foreground">Point your phone camera at the code, then take a photo of the bill.</p>
+            <p className="text-center text-xs text-muted-foreground">Point your phone camera at the code, then take a photo of the {kind}.</p>
           </div>
           <div className="flex gap-2">
             <input readOnly value={link} aria-label="Phone scan link" className="h-8 min-w-0 flex-1 rounded-lg border border-input bg-background px-2 font-mono text-xs" />

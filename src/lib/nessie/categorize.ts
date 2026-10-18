@@ -4,6 +4,7 @@ type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
 // Checked in order; the first category whose keywords appear wins.
 const RULES: [ExpenseCategory, RegExp][] = [
+  ["Credit card", /\b(credit card|card payment|card services|visa|mastercard|amex|american express|discover card)\b/i],
   ["Housing", /\b(rent|apartment|apartments|landlord|mortgage|housing|property|lease)\b/i],
   ["Utilities", /\b(electric|energy|power|water|gas company|utility|utilities|internet|wifi|comcast|xfinity|verizon|at&t|t-mobile|phone|wireless|sewer|trash)\b/i],
   ["Subscriptions", /\b(netflix|spotify|hulu|disney|youtube|prime|subscription|membership|apple music|icloud|patreon)\b/i],

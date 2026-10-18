@@ -13,7 +13,10 @@ import { getDemoEvents } from "./demo-data";
  * Each user gets their own copy of the demo events on first access, so
  * one person's edits never show up for anyone else.
  */
-const stores = new Map<string, FinancialEvent[]>();
+// On globalThis so route handlers (e.g. the reminder job) and pages/server
+// actions, which Next bundles separately, see the same in-memory data.
+const globalStore = globalThis as typeof globalThis & { __cashcompassDemoEvents?: Map<string, FinancialEvent[]> };
+const stores = (globalStore.__cashcompassDemoEvents ??= new Map<string, FinancialEvent[]>());
 
 function storeFor(ownerId: string) {
   let events = stores.get(ownerId);

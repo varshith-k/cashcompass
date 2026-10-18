@@ -4,14 +4,14 @@ import { networkInterfaces } from "node:os";
 import { headers } from "next/headers";
 import { requireSession } from "@/lib/auth/session";
 import { createPhoneScanSession, readPhoneScanSession, type PhoneScanStatus } from "./phone-sessions";
-import { scanPhoto, type ScanBillResult } from "./scan-photo";
+import { scanPhoto, type ScanBillResult, type ScanKind } from "./scan-photo";
 
 export type { ScanBillResult } from "./scan-photo";
 
 export async function scanBillImage(formData: FormData): Promise<ScanBillResult> {
   // Spends the Gemini API key, so only signed-in users may call it.
   await requireSession();
-  return scanPhoto(formData.get("photo"));
+  return scanPhoto(formData.get("photo"), formData.get("kind") === "receipt" ? "receipt" : "bill");
 }
 
 /**
@@ -40,9 +40,9 @@ async function devPhoneOrigin(): Promise<string | undefined> {
 }
 
 /** Laptop: starts a one-time "scan with your phone" session (QR code token). */
-export async function startPhoneScan(): Promise<{ token: string; expiresAt: number; phoneOrigin?: string }> {
+export async function startPhoneScan(kind: ScanKind = "bill"): Promise<{ token: string; expiresAt: number; phoneOrigin?: string }> {
   const { user } = await requireSession();
-  return { ...createPhoneScanSession(user.id), phoneOrigin: await devPhoneOrigin() };
+  return { ...createPhoneScanSession(user.id, kind === "receipt" ? "receipt" : "bill"), phoneOrigin: await devPhoneOrigin() };
 }
 
 /** Laptop: polls for the phone's photo result. Only the session's owner can read it. */

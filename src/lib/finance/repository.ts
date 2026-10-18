@@ -50,6 +50,16 @@ function getStore(): FinancialEventStore {
   return cachedStore;
 }
 
+/**
+ * Store access for trusted background jobs (the bill-reminder job, behind
+ * CRON_SECRET), which run without a signed-in user and pass the owner
+ * explicitly. Never call this from request-driven code: use
+ * getFinancialEventRepository(), which takes the owner from the session.
+ */
+export function getEventStoreForJobs(): FinancialEventStore {
+  return getStore();
+}
+
 const userScopedRepository: FinancialEventRepository = {
   async listEvents() {
     return getStore().listEvents(await requireOwnerId());

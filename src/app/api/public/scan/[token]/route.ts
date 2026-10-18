@@ -12,7 +12,8 @@ const TOKEN_PATTERN = /^[A-Za-z0-9_-]{32}$/;
  */
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  if (!TOKEN_PATTERN.test(token) || !claimPhoneScan(token)) {
+  const kind = TOKEN_PATTERN.test(token) ? claimPhoneScan(token) : null;
+  if (!kind) {
     return NextResponse.json({ ok: false, message: "This scan link has expired or was already used. Start a new one on your laptop." }, { status: 410 });
   }
 
@@ -23,7 +24,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     // fall through: scanPhoto reports "No photo received."
   }
 
-  const result = await scanPhoto(photo);
+  const result = await scanPhoto(photo, kind);
   completePhoneScan(token, result);
   return NextResponse.json(
     result.ok ? { ok: true, message: "Sent to your laptop. Check the details there and save." } : { ok: false, message: result.message },
