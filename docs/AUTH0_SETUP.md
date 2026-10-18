@@ -60,9 +60,16 @@ Do this in the Auth0 dashboard. No code is involved.
 | Widget corner radius | `12px`; buttons `12px`; inputs `12px` |
 | Font URL | Inter from Google Fonts (`https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap`) |
 
-Under **Branding → Universal Login → Advanced Options → Text** (or *Customize Text*), set the login prompt title to **"Welcome to CashCompass"** and the description to **"Your money. Your direction."**
+Also set the **tenant friendly name** to `CashCompass` under **Settings → General**, and the support email there too. Skipping this is why an unconfigured tenant shows lowercase "cashcompass" in login copy — Auth0's default prompt text interpolates the raw tenant name until a friendly name is set.
 
-Also set the **tenant friendly name** to `CashCompass` and the support email under **Settings → General**.
+Under **Branding → Universal Login → Advanced Options → Text** (or *Customize Text* → prompt **Login**, screen **login**), set:
+
+| Field | Value |
+|---|---|
+| Title | `Welcome to CashCompass` |
+| Description | `Login/Create to continue to CashCompass` |
+
+If the editor doesn't expose `description` directly, use the **Raw JSON** view and set `"description"` under `"login"` to that string — it overrides Auth0's default `"Log in to ${companyName} to continue to ${clientName}."` line.
 
 Don't use Capital One logos or wordmarks on the login page.
 
