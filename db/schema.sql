@@ -50,8 +50,13 @@ CREATE INDEX IF NOT EXISTS financial_events_category_idx ON financial_events (ca
 -- and the dashboard's "monthly expenses" metric. Only actual (not planned)
 -- events count toward real spend. Refreshes incrementally as new events
 -- land, instead of re-scanning history on every dashboard load.
+-- materialized_only = false enables real-time aggregation: a query against
+-- this view transparently unions the materialized (refreshed hourly, below)
+-- history with a live aggregate over whatever hasn't been refreshed yet.
+-- Without it, a transaction added seconds ago wouldn't show up here until
+-- the next scheduled refresh - up to an hour of a visibly stale dashboard.
 CREATE MATERIALIZED VIEW IF NOT EXISTS monthly_category_spend
-WITH (timescaledb.continuous) AS
+WITH (timescaledb.continuous, timescaledb.materialized_only = false) AS
 SELECT
   owner_id,
   time_bucket('1 month', event_date) AS month,
@@ -61,6 +66,10 @@ SELECT
 FROM financial_events
 WHERE record = 'actual'
 GROUP BY owner_id, month, category, direction;
+
+-- Safe to re-run: fixes an existing installation created before this
+-- setting was added above (IF NOT EXISTS skips the CREATE either way).
+ALTER MATERIALIZED VIEW monthly_category_spend SET (timescaledb.materialized_only = false);
 
 SELECT add_continuous_aggregate_policy('monthly_category_spend',
   start_offset => INTERVAL '3 months',

@@ -1,4 +1,5 @@
 import "server-only";
+import { spendByCategoryThisMonth } from "./calculations";
 import type { FinancialEventStore } from "./repository";
 import type { FinancialEvent, FinancialEventUpdate, NewFinancialEvent } from "./types";
 import { getDemoEvents } from "./demo-data";
@@ -50,5 +51,10 @@ export class DemoFinancialEventStore implements FinancialEventStore {
     if (index !== -1) {
       events.splice(index, 1);
     }
+  }
+
+  // No continuous aggregate in demo mode - derive the same shape in JS.
+  async getMonthlyCategorySpend(ownerId: string) {
+    return spendByCategoryThisMonth(storeFor(ownerId));
   }
 }

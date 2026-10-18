@@ -168,4 +168,26 @@ export class TigerDataFinancialEventStore implements FinancialEventStore {
       client.query("DELETE FROM financial_events WHERE id = $1 AND owner_id = $2", [id, ownerId]),
     );
   }
+
+  /**
+   * Reads the pre-computed `monthly_category_spend` continuous aggregate
+   * (db/schema.sql) for the current UTC calendar month, instead of pulling
+   * every event and summing in JS. This is the actual point of defining a
+   * continuous aggregate - lag-free category totals that refresh
+   * incrementally as new events land, rather than a full table scan on
+   * every dashboard load.
+   */
+  async getMonthlyCategorySpend(ownerId: string): Promise<Map<string, number>> {
+    return this.withClient(async (client) => {
+      const result = await client.query<{ category: string; total: string }>(
+        `SELECT category, total
+         FROM monthly_category_spend
+         WHERE owner_id = $1 AND direction = 'expense' AND month = date_trunc('month', now())`,
+        [ownerId],
+      );
+      const totals = new Map<string, number>();
+      for (const row of result.rows) totals.set(row.category, Number(row.total));
+      return totals;
+    });
+  }
 }
