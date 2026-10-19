@@ -28,7 +28,7 @@ Verification: 195 default unit tests pass; three opt-in local Timescale tests re
 
 ## Current implementation handoff — October 18, 2026
 
-The numbered sections below preserve the original product requirements. **Do not restart implementation from the historical initial-repository section.** The app already exists. Current work is on `feature/nessie-per-user-accounts`, incorporating `origin/main` through `9c23514` (MoneyQuest and the teammate's Live Split Room entry point). Other remote feature branches are not automatically merged by this handoff.
+The numbered sections below preserve the original product requirements. **Do not restart implementation from the historical initial-repository section.** The app already exists. Current work is on `feature/nessie-per-user-accounts`, incorporating `origin/main` through `9c23514` (MoneyQuest). Other remote feature branches are not automatically merged by this handoff.
 
 ### Per-user Nessie account handoff — October 18, 2026
 
@@ -65,7 +65,6 @@ Gemini follow-up (October 18): a validated guidance tool now handles greetings, 
 | Scheduled bill reminders | Per-bill days-before, hour, and time-zone selection; owner login email; Resend templates; occurrence tracking; cron endpoint and hourly systemd unit templates. | Requires `RESEND_API_KEY`, `EMAIL_FROM`, `CRON_SECRET`, and an installed scheduler. Units in Git do not install themselves. Live delivery is not confirmed by source inspection. |
 | Settle Up and friends | Money owed/to repay, named friends or one-off contacts, optional contact email, partial repayments, WhatsApp links, and optional email notifications. | Shared balances are financial records, not proof of an external transfer. Email needs configured sender access. |
 | Split a bill | Equal/custom splits or Gemini suggestions from a description; integer-cent reconciliation; receipt linkage; friend/guest shares become Settle Up receivables; optional notifications. | User reviews and confirms shares. Suggestions do not save or transfer funds. No notification was sent during this handoff update. |
-| Live Split Room | Settle Up links to the separate DeepSpace collaborative draft-splitting app; configurable destination with a default deployed URL. | Teammate entry point incorporated from main `9c23514`. External app/presence not independently verified; confirming a split remains in CashCompass. |
 | Capital One Nessie | Per-user durable sandbox customer/account provisioning, setup/recovery, owned-account sync, mapped P2P payer, reference balances and shareable account ID, categories, UUID/empty-account support. | Feature branch tested locally with disposable Postgres. Requires configured Auth0 + DB + Nessie key; live per-user onboarding still needs verification. |
 | Budgets | Editable allocations and spending comparisons; Tiger-backed category totals read `monthly_category_spend`. | Continuous aggregate must exist when using a configured database. Demo mode uses local calculations. |
 | Wishlist and savings | Goals, confirmed contributions, weekly reservations, partial final contributions, forecast impact, and planned AutoSave. | Reservations are not bank transfers. Some planning state is still process-local on this branch. |
