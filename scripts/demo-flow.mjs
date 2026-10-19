@@ -102,12 +102,10 @@ try {
   dialog = page.getByRole("dialog");
   await dialog.getByLabel("Friend", { exact: true }).selectOption("");
   await dialog.getByLabel("Who", { exact: true }).fill(tag);
-  await dialog.getByLabel("Their phone (optional)").fill("+15555550123");
   await dialog.getByLabel("Amount", { exact: true }).fill("50");
   await dialog.getByLabel("Expected by", { exact: true }).fill(date(5));
   await dialog.getByRole("button", { name: "Add balance", exact: true }).click();
   await saved();
-  assert((await row(tag).getByRole("link", { name: "Remind" }).getAttribute("href")).startsWith("https://wa.me/"));
   await row(tag).getByLabel(`Amount settled for ${tag}`).fill("20");
   await row(tag).getByRole("button", { name: "Log payment", exact: true }).click();
   await row(tag).getByText("$30.00", { exact: true }).waitFor();
@@ -116,7 +114,7 @@ try {
   await visit("/transactions");
   await row(tag).getByRole("button", { name: `Delete transaction with ${tag}`, exact: true }).click();
   await row(tag).waitFor({ state: "hidden" });
-  console.log("PASS ledger → grounded WhatsApp link → partial repayment → cleanup");
+  console.log("PASS ledger → partial repayment → cleanup");
 
   assert.deepEqual(errors, [], "Browser runtime errors");
   console.log("Demo flow passed without browser runtime errors.");

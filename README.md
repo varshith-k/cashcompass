@@ -21,7 +21,7 @@ Open <http://localhost:3000/overview>. With Auth0 unset, development uses an iso
 - Bills, monthly renewals, and user-confirmed Gemini photo extraction.
 - Reversible scenarios and a financial copilot with deterministic result cards.
 - Editable budgets, wishlist goals, weekly reserve schedules, and partial repayments.
-- Grounded WhatsApp reminder links and verified Solana **devnet** settlement.
+- Verified Solana **devnet** settlement.
 - Optional Capital One Nessie simulated account selection and idempotent imports.
 
 ## Integrations
@@ -58,3 +58,9 @@ See [phase status, verification, and limitations](docs/PROJECT_STATUS.md) and th
 ## Contributors
 
 Built by the CashCompass team for SwampHacks.
+
+## Planned messaging automation
+
+WhatsApp reminders are currently unavailable. A future integration will send opt-in automated repayment reminders through a WhatsApp Business messaging provider, with recipient consent, scheduling, delivery tracking, and unsubscribe controls. Existing email reminders remain available where configured.
+
+Weekly savings plans reserve money in the forecast; they do not transfer funds between accounts.

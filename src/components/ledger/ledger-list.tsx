@@ -1,19 +1,14 @@
 import { ActionForm } from "@/components/ui/action-form";
-import { HandCoins, MessageCircle, Trash2 } from "lucide-react";
+import { HandCoins, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteLedgerEntry, logLedgerPayment } from "@/lib/finance/actions";
 import type { FinancialEvent } from "@/lib/finance/types";
 import { formatCurrency, formatRelativeDay } from "@/lib/format";
-import { buildWhatsAppReminderLink } from "@/lib/whatsapp";
 import { settlementRecipient } from "@/lib/solana/server-config";
 import { PayWithSolanaDialog } from "./pay-with-solana-dialog";
 import { SendReminderButton } from "./send-reminder-button";
 import { PayWithNessieButton } from "./pay-with-nessie-button";
-
-function reminderMessage(entry: FinancialEvent): string {
-  return `Hi ${entry.counterparty}! Friendly reminder from CashCompass: you owe ${formatCurrency(entry.amount, { cents: true })}, expected ${formatRelativeDay(entry.date).toLowerCase()}. No rush, just a nudge 🙂`;
-}
 
 export function LedgerList({
   title,
@@ -58,26 +53,6 @@ export function LedgerList({
               <p className="text-sm font-medium tabular-nums shrink-0">
                 {formatCurrency(entry.amount, { cents: true })}
               </p>
-
-              {entry.direction === "income" && entry.counterpartyPhone && (
-                <Button
-                  render={
-                    <a
-                      href={buildWhatsAppReminderLink(entry.counterpartyPhone, reminderMessage(entry))}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <MessageCircle className="size-3.5" />
-                      Remind
-                    </a>
-                  }
-                  nativeButton={false}
-                  role="link"
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 text-positive border-positive/30 hover:bg-positive/10"
-                />
-              )}
 
               {entry.direction === "income" && entry.friendId && emailableFriendIds.includes(entry.friendId) && (
                 <SendReminderButton entryId={entry.id} friendName={entry.counterparty} />

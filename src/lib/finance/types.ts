@@ -24,7 +24,7 @@ export interface FinancialEvent {
   counterparty: string;
   /** Baseline events feed the real forecast; a what-if event is reversible and scoped to a simulation only. */
   scenarioId?: string;
-  /** Ledger entries only — lets "remind to pay" use a real WhatsApp link instead of a fabricated one. */
+  /** Optional legacy contact number retained for existing ledger records. */
   counterpartyPhone?: string;
   /** Settle Up entries only: the friend this balance is with (see friends.ts), for email notifications. */
   friendId?: string;

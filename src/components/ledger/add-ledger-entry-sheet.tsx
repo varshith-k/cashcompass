@@ -127,13 +127,6 @@ export function AddLedgerEntrySheet({ friends = [] }: { friends?: FriendOption[]
                   <Input id="email" name="email" type="email" maxLength={254} autoComplete="off" placeholder="sam@example.com" value={typedEmail} onChange={(e) => setTypedEmail(e.target.value)} />
                   <p className="text-xs text-muted-foreground">Lets CashCompass email them. They&apos;ll be saved to your friends so reminders work later.</p>
                 </div>
-                {direction === "income" && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="phone">Their phone (optional)</Label>
-                    <Input id="phone" name="phone" type="tel" placeholder="+1 555 123 4567" />
-                    <p className="text-xs text-muted-foreground">For a one-tap WhatsApp reminder.</p>
-                  </div>
-                )}
               </>
             )}
 

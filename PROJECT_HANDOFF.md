@@ -63,11 +63,11 @@ Gemini follow-up (October 18): a validated guidance tool now handles greetings, 
 | Receipts | Separate already-paid receipt log, merchant/date/category/notes, monthly/category totals, deletion, and links to split an unsplit receipt. | Receipt spend enters the financial-event model; receipt images are not retained as an image archive. |
 | Phone/photo capture | Upload or capture an image; laptop QR handoff to a phone; development QR links use the laptop's network address. | One-time token, one upload, ten-minute process-local expiry. User confirms extracted fields on the laptop before saving. |
 | Scheduled bill reminders | Per-bill days-before, hour, and time-zone selection; owner login email; Resend templates; occurrence tracking; cron endpoint and hourly systemd unit templates. | Requires `RESEND_API_KEY`, `EMAIL_FROM`, `CRON_SECRET`, and an installed scheduler. Units in Git do not install themselves. Live delivery is not confirmed by source inspection. |
-| Settle Up and friends | Money owed/to repay, named friends or one-off contacts, optional contact email, partial repayments, WhatsApp links, and optional email notifications. | Shared balances are financial records, not proof of an external transfer. Email needs configured sender access. |
+| Settle Up and friends | Money owed/to repay, named friends or one-off contacts, optional contact email, partial repayments and optional email notifications. | Shared balances are financial records, not proof of an external transfer. Email needs configured sender access. |
 | Split a bill | Equal/custom splits or Gemini suggestions from a description; integer-cent reconciliation; receipt linkage; friend/guest shares become Settle Up receivables; optional notifications. | User reviews and confirms shares. Suggestions do not save or transfer funds. No notification was sent during this handoff update. |
 | Capital One Nessie | Per-user durable sandbox customer/account provisioning, setup/recovery, owned-account sync, mapped P2P payer, reference balances and shareable account ID, categories, UUID/empty-account support. | Feature branch tested locally with disposable Postgres. Requires configured Auth0 + DB + Nessie key; live per-user onboarding still needs verification. |
 | Budgets | Editable allocations and spending comparisons; Tiger-backed category totals read `monthly_category_spend`. | Continuous aggregate must exist when using a configured database. Demo mode uses local calculations. |
-| Wishlist and savings | Goals, confirmed contributions, weekly reservations, partial final contributions, forecast impact, and planned AutoSave. | Reservations are not bank transfers. Some planning state is still process-local on this branch. |
+| Wishlist and savings | Goals, confirmed contributions, weekly reservations, partial final contributions, forecast impact, and weekly savings plans. | Reservations are not bank transfers. Some planning state is still process-local on this branch. |
 | Gemini copilot | Validated financial tools, grounded answer cards, simulator links, model fallback, disclosed offline fallback, and image extraction. | Live Gemini, photo extraction, and split suggestions require configuration/quota and separate live evidence. |
 | Tiger Data / TimescaleDB | Owner-scoped financial-event persistence; schema for receipt/card/split fields, reminder settings, and Solana claims; monthly continuous aggregate; owner-segmented compression policy after 30 days. | Source/schema implemented. Applying migrations, confirming aggregate/compression jobs, and live persistence remain deployment checks. Current pool encrypts traffic but disables certificate validation; record this deployment trust limitation. |
 | Solana | Phantom/Solflare devnet connection, fixed demo USD/SOL rate and recipient, on-chain transfer verification, signature reuse protection, and ledger settlement. | Actual wallet payment is still unverified: the latest user attempt stayed at Sending without a Phantom approval window. Do not call this prize proof complete. |
@@ -415,7 +415,7 @@ Provide:
 - Payment reminders
 - Monthly obligation totals
 - Photo-based bill capture: upload a photo of a bill/receipt, extract payee, amount, and due date automatically, and pre-fill the add-bill form for the user to confirm before saving. Never auto-saves unconfirmed data. Uses Gemini's image input (same seam as the AI copilot); when no Gemini key is configured, fails honestly to a manual-entry prompt rather than guessing fields. No raw image storage — the photo is used once to extract fields, then discarded.
-- WhatsApp payment reminders: for ledger entries where someone owes the user money, an optional phone number lets the user send a one-tap reminder via WhatsApp's click-to-chat link (`wa.me`), grounded in the entry's real amount and due date. No WhatsApp Business API, Meta approval, or credentials required — this is intentionally the zero-credential version of that idea.
+- WhatsApp reminders are currently removed. Future work: opt-in automated repayment reminders through a business messaging provider, with consent, delivery tracking, and scheduling.
 
 Urgency must be meaningful. A bill due tomorrow should be distinguishable from one due next month without making every bill alarming.
 
@@ -448,7 +448,7 @@ Integrate relevant entries into forecasting. Clearly distinguish expected repaym
 
 Do not build a complex group-settlement platform unless existing functionality requires it.
 
-## 12. Wishlist and AutoSave
+## 12. Wishlist and weekly savings plans
 
 Users should be able to:
 
@@ -464,7 +464,7 @@ Use refined goal cards, progress indicators, and milestone information.
 
 Only show calculated dates and amounts based on real available data and stated assumptions.
 
-AutoSave is planned or earmarked savings unless actual transfer functionality exists. Never imply money moved between accounts when it did not.
+Weekly savings plans earmark money in the forecast and do not execute transfers. Never imply money moved between accounts when it did not.
 
 ## 13. Gemini financial copilot
 
@@ -684,9 +684,9 @@ Where backend support does not exist, expose clearly labeled demo functionality 
 ### Phase 5 — Budgets, goals, and ledger
 
 - Add budget planning and recommendations.
-- Add wishlist and planned AutoSave goals.
+- Add wishlist goals and weekly savings plans.
 - Add money owed/lent ledger and repayment events.
-- Add WhatsApp click-to-chat payment reminders for money owed to the user.
+- Future: add opt-in automated WhatsApp repayment reminders through a business messaging provider.
 - Feed all modules into the same forecast engine.
 
 ### Phase 6 — Polish and verification
@@ -742,7 +742,7 @@ For every significant design decision, briefly explain whether it improves clari
 - Do not imply Capital One endorsement.
 - Do not invent financial data or projections.
 - Do not let Gemini override deterministic calculations.
-- Do not claim transfers occurred when AutoSave is only planned.
+- Do not claim transfers occurred when funds are only reserved in a weekly savings plan.
 - Do not silently swallow API or synchronization errors.
 - Do not use decorative visuals that obscure financial meaning.
 - Do not sacrifice working functionality for visual appearance.

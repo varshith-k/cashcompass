@@ -78,7 +78,7 @@ export function GoalCard({
             <Input name="weeklyAmount" type="number" min="0.01" step="0.01" defaultValue={recommendedWeekly} aria-label={`Weekly planned savings for ${goal.name}`} className="h-8" />
             <Button type="submit" size="sm" variant="outline" className="shrink-0">Plan weekly savings</Button>
           </div>
-          <p className="text-xs text-muted-foreground">Replaces this goal&rsquo;s future savings plan with weekly reserves through the target date (up to 52 weeks). No transfers occur.</p>
+          <p className="text-xs text-muted-foreground">Weekly savings plan: reserves funds in your forecast through the target date (up to 52 weeks), replacing any existing future plan. No money is transferred.</p>
         </ActionForm>}
         {!reached && (
           <ActionForm action={addWishlistContribution} className="flex items-center gap-2">

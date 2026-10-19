@@ -48,7 +48,7 @@ Available funds start from a confirmed balance checkpoint or the latest synchron
 
 Posted events across recorded history determine current modeled funds; planned income is excluded. Forecasts include monthly planned bills and dated income/savings/repayments. Uncertain incoming repayments also have a conservative path in which they never arrive. Overdue expenses remain obligations; overdue planned income is not treated as received cash. Nessie snapshots are simulated, can become stale, and are not an atomic snapshot of a real bank ledger.
 
-Goal progress includes confirmed reserves only. Contributions replace scheduled reserve amounts to avoid counting the same funds twice. AutoSave does not move money. All date buckets use UTC calendar days. See [project status](../../../docs/PROJECT_STATUS.md) for the full assumptions and deployment limits.
+Goal progress includes confirmed reserves only. Contributions replace scheduled reserve amounts to avoid counting the same funds twice. Weekly savings plans do not move money. All date buckets use UTC calendar days. See [project status](../../../docs/PROJECT_STATUS.md) for the full assumptions and deployment limits.
 
 ## Per-user data (Auth0)
 
