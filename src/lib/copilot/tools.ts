@@ -1,5 +1,6 @@
 import {
   computeForecast,
+  computeAvailableBalance,
   countBillsAtRisk,
   recommendedWeeklyContribution,
   savingsProgressForGoal,
@@ -78,6 +79,32 @@ export function compareBuyTimings(ctx: ForecastContext, purchase: { amount: numb
   return {
     now: checkAffordability(ctx, { ...purchase, date: new Date().toISOString() }),
     afterPayday: ctx.nextPaydayDate ? checkAffordability(ctx, { ...purchase, date: ctx.nextPaydayDate }) : null,
+  };
+}
+
+/** Explain a fresh forecast with the same dates and calculation rules as the cards. */
+export function explainPurchaseForecast(ctx: ForecastContext, purchase: { amount: number; label: string; afterPayday: boolean }) {
+  const purchaseDate = purchase.afterPayday ? ctx.nextPaydayDate : new Date().toISOString();
+  if (!purchaseDate) return null;
+  const scenario = buildPurchaseEvent({ ...purchase, date: purchaseDate });
+  const points = computeForecast(ctx.openingBalance, ctx.events.concat(scenario), {
+    days: ctx.forecastDays, startDate: startDateFor(ctx.historyDays), lowBalanceThreshold: ctx.bufferThreshold, dailySpend: ctx.dailySpend,
+  }).slice(ctx.historyDays);
+  const minimum = points.reduce((lowest, point) => point.projectedBalance < lowest.projectedBalance ? point : lowest);
+  const today = new Date().toISOString().slice(0, 10);
+  const days = Math.round((Date.parse(minimum.date) - Date.parse(today)) / 86400000);
+  const future = ctx.events.filter(event => event.record === "planned" || event.date.slice(0, 10) > today);
+  const contribution = (direction: "income" | "expense") => Math.abs(computeForecast(0, future.filter(event => event.direction === direction), {
+    startDate: new Date(today), days: days + 1, lowBalanceThreshold: 0,
+  }).at(-1)!.projectedBalance);
+  return {
+    purchaseDate, minimum,
+    available: computeAvailableBalance(ctx.openingBalance, ctx.events),
+    income: contribution("income"),
+    otherOutflows: contribution("expense"),
+    purchaseByMinimum: scenario.date.slice(0, 10) <= minimum.date ? purchase.amount : 0,
+    everydaySpending: Math.round((ctx.dailySpend ?? 0) * days * 100) / 100,
+    days,
   };
 }
 

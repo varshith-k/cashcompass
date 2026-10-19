@@ -1,9 +1,9 @@
-import { spendByCategoryThisMonth } from "@/lib/finance/calculations";
+import { computeAvailableBalance, computeSafeToSpend, safeToSpendWindow, spendByCategoryThisMonth } from "@/lib/finance/calculations";
 import { formatCurrency, formatShortDate } from "@/lib/format";
-import { checkAffordability, checkRepaymentDelay, compareBuyTimings, spendingBreakdown, suggestSavingsPlan, type ForecastContext } from "./tools";
-import type { CopilotResult } from "./types";
+import { checkAffordability, checkRepaymentDelay, compareBuyTimings, explainPurchaseForecast, spendingBreakdown, suggestSavingsPlan, type ForecastContext } from "./tools";
+import type { ChatMessage, CopilotResult } from "./types";
 
-export type CopilotTool = "check_affordability" | "check_repayment_delay" | "suggest_savings_plan" | "spending_breakdown" | "explain_capabilities";
+export type CopilotTool = "check_affordability" | "check_repayment_delay" | "suggest_savings_plan" | "spending_breakdown" | "plan_event_budget" | "explain_purchase_forecast" | "explain_capabilities";
 function assumptionsFor(ctx: ForecastContext) {
   return [
     ctx.dailySpend
@@ -21,6 +21,53 @@ function positiveAmount(value: unknown): number {
 
 /** All financial prose and cards come from deterministic tool results. */
 export function respondToTool(name: CopilotTool, args: Record<string, unknown>, ctx: ForecastContext): CopilotResult {
+  if (name === "explain_purchase_forecast") {
+    const amount = positiveAmount(args.amount);
+    if (args.timing !== "today" && args.timing !== "after_payday") throw new Error("Invalid purchase timing");
+    const label = typeof args.label === "string" ? args.label.slice(0, 120) : "this purchase";
+    const result = explainPurchaseForecast(ctx, { amount, label, afterPayday: args.timing === "after_payday" });
+    if (!result) return { reply: "No future payday is recorded. Add your paycheck before comparing a purchase after payday.", assumptions: [], kind: "guidance" };
+    return {
+      reply: `Rechecking ${label} for ${formatCurrency(amount)} ${args.timing === "after_payday" ? `after payday on ${formatShortDate(result.purchaseDate)}` : "today"}: the expected minimum is ${formatCurrency(result.minimum.projectedBalance, { cents: true })} on ${formatShortDate(result.minimum.date)}. This is the lowest balance across the visible forecast, not necessarily your balance immediately after payday. By that date: ${formatCurrency(result.available, { cents: true })} available today + ${formatCurrency(result.income, { cents: true })} forecast income − ${formatCurrency(result.otherOutflows, { cents: true })} other scheduled outflows − ${formatCurrency(result.purchaseByMinimum, { cents: true })} for this purchase − ${formatCurrency(result.everydaySpending, { cents: true })} estimated everyday spending over ${result.days} days = ${formatCurrency(result.minimum.projectedBalance, { cents: true })}. The ${formatCurrency(ctx.bufferThreshold)} buffer is a safety threshold, not another deduction from the projected balance.${result.minimum.conservativeBalance !== result.minimum.projectedBalance ? ` Without uncertain repayments, the balance on that date would be ${formatCurrency(result.minimum.conservativeBalance, { cents: true })}.` : ""}`,
+      assumptions: [...assumptionsFor(ctx), "Recalculated from current account records. If your data changed, these figures may differ from the previous reply."],
+      actionLabel: "Review the scenario", actionHref: `/cash-flow?amount=${amount}&label=${encodeURIComponent(label)}`,
+    };
+  }
+  if (name === "plan_event_budget") {
+    const guests = args.guestCount;
+    if (guests !== undefined && (typeof guests !== "number" || !Number.isInteger(guests) || guests < 1 || guests > 10000)) throw new Error("Invalid guest count");
+    const date = args.date;
+    if (date !== undefined && (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date)) throw new Error("Invalid event date");
+    if (args.paymentMode !== undefined && !["covering_all", "splitting"].includes(String(args.paymentMode))) throw new Error("Invalid event payment mode");
+    const total = args.totalAmount === undefined ? undefined : positiveAmount(args.totalAmount);
+    const ownAmount = args.ownAmount === undefined ? args.paymentMode === "covering_all" ? total : undefined : positiveAmount(args.ownAmount);
+    if (total !== undefined && ownAmount !== undefined && ownAmount > total) throw new Error("Event share exceeds total");
+    const today = new Date().toISOString().slice(0, 10);
+    const end = new Date(today); end.setUTCDate(end.getUTCDate() + ctx.forecastDays - ctx.historyDays - 1);
+    if (date && (date < today || date > end.toISOString().slice(0, 10))) return { reply: "Please choose a future event date within the visible forecast so I can check its cost against your recorded obligations.", assumptions: [], kind: "guidance" };
+    if (date && ownAmount !== undefined) {
+      const check = checkAffordability(ctx, { amount: ownAmount, label: "Group event", date });
+      return {
+        reply: `For the event${guests ? ` with ${guests} people` : ""} on ${formatShortDate(date)}, your proposed share is ${formatCurrency(ownAmount, { cents: true })}. That ${check.affordable ? "keeps the visible forecast above" : "could take the visible forecast below"} your ${formatCurrency(ctx.bufferThreshold)} buffer. Expected minimum: ${formatCurrency(check.minBalance, { cents: true })}; without uncertain repayments: ${formatCurrency(check.conservativeMinBalance, { cents: true })}. This checks the cost you provided; venue availability and prices have not been verified.`,
+        assumptions: assumptionsFor(ctx), comparison: [{ label: `Event on ${formatShortDate(date)}`, ...check }],
+        actionLabel: "Review cash flow", actionHref: "/cash-flow",
+      };
+    }
+    const available = computeAvailableBalance(ctx.openingBalance, ctx.events);
+    const window = safeToSpendWindow(ctx.events, ctx.dailySpend ?? 0);
+    const { safeToSpend } = computeSafeToSpend({ availableBalance: available, upcomingBills: window.bills, savingsEarmarks: window.savings, debtsOwed: window.debtsOwed, everydaySpending: window.everydaySpending, preferredBuffer: ctx.bufferThreshold });
+    const questions = [
+      !date ? "What exact date and city or area are you considering?" : undefined,
+      !args.paymentMode && ownAmount === undefined ? "Are you paying for everyone or splitting the cost, and how much do you expect to spend in total?" : undefined,
+      args.paymentMode === "splitting" && ownAmount === undefined ? "What will your own share cost? I won't divide by the guest count without knowing the agreed split." : undefined,
+      args.paymentMode === "covering_all" && total === undefined && ownAmount === undefined ? "What is the expected total cost you'll cover?" : undefined,
+    ].filter(Boolean).join(" ");
+    return {
+      reply: `I can help you budget for that${guests ? ` group of ${guests}` : " event"}. Your current Safe to Spend is ${formatCurrency(safeToSpend, { cents: true })}, after reserving for obligations, estimated everyday spending, and your ${formatCurrency(ctx.bufferThreshold)} buffer through ${formatShortDate(window.endDate)}. That is today's estimate, not a confirmed budget for the event date. ${questions} Once we know the date and your share, we can check it against the forecast before choosing an activity.`,
+      assumptions: [...assumptionsFor(ctx), "Guest counts are not dollar amounts. No venue prices, event cost, or future affordability have been assumed."],
+      actionLabel: "Review the forecast", actionHref: "/cash-flow", kind: "guidance",
+    };
+  }
   if (name === "explain_capabilities") {
     const replies = {
       greeting: "Hi! I’m your CashCompass copilot. I can check a purchase against your upcoming bills, compare buying today versus payday, plan savings, or review spending. What would you like to check?",
@@ -105,11 +152,41 @@ export function purchaseLabel(message: string, amountMatch: RegExpMatchArray | n
 }
 
 const WORD_NUMBERS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
-export function respondOffline(message: string, ctx: ForecastContext): CopilotResult {
+
+/** Recognize planning intent without mistaking a headcount for a purchase price. */
+export function eventBudgetRequest(message: string): { guestCount?: number } | null {
+  if (!/\b(party|celebration|birthday|graduation|wedding|dinner|trip|vacation|outing)\b/i.test(message) ||
+      !/\b(plan|planning|budget|afford|spend|spending|cost|pay|host|hosting|invite|inviting|guests|people|friends|celebrate|celebrating|organize|organizing|organise|treat|throw|give)\b/i.test(message)) return null;
+  const count = message.match(/\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:people|guests?|friends?)\b/i)?.[1];
+  const guestCount = count ? WORD_NUMBERS[count.toLowerCase()] ?? Number(count) : undefined;
+  return guestCount && guestCount <= 10000 ? { guestCount } : {};
+}
+
+export function purchaseFollowUp(message: string, history: ChatMessage[]): Record<string, unknown> | null {
+  if (!/\b(why|explain|minimum|how (?:come|is)|what does|what is .+ mean)\b/i.test(message)) return null;
+  for (const turn of [...history].reverse()) {
+    if (turn.role !== "user") continue;
+    if (eventBudgetRequest(turn.content)) return null;
+    if (!/\b(buy|afford|purchase)\b/i.test(turn.content)) continue;
+    const match = turn.content.match(/\$?\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)/);
+    if (!match) continue;
+    return {
+      amount: Number(match[1].replace(/,/g, "")), label: purchaseLabel(turn.content, match),
+      timing: /after\s+(?:my\s+)?pay\s*day/i.test(message) ? "after_payday" : "today",
+    };
+  }
+  return null;
+}
+
+export function respondOffline(message: string, ctx: ForecastContext, history: ChatMessage[] = []): CopilotResult {
   const lower = message.toLowerCase();
   const amountMatch = message.match(/\$?\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)/);
   const amount = amountMatch ? Number(amountMatch[1].replace(/,/g, "")) : null;
   const run = (name: CopilotTool, args: Record<string, unknown>) => ({ ...respondToTool(name, args, ctx), engine: "offline" as const });
+  const followUp = purchaseFollowUp(message, history);
+  if (followUp) return run("explain_purchase_forecast", followUp);
+  const eventRequest = eventBudgetRequest(message);
+  if (eventRequest) return run("plan_event_budget", eventRequest);
   if (lower.includes("overspen") || lower.includes("where") && lower.includes("month")) return run("spending_breakdown", {});
   if ((lower.includes("late") || lower.includes("roommate")) && lower.includes("pay")) {
     const digits = message.match(/(\d+)\s*day/i)?.[1];

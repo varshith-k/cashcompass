@@ -53,6 +53,30 @@ describe.skipIf(!LIVE)("Gemini API (live)", () => {
     expect(result.comparison).toBeUndefined();
   }, 60_000);
 
+  it("Gemini clarifies a graduation party budget without treating guests as dollars", async () => {
+    const { respondWithGemini } = await import("@/lib/copilot/gemini-client");
+    const result = await respondWithGemini("based on my safe to spend im thinking to give party next week because i graduated i will invite 10 people where do we go or what do i do", await context());
+    expect(result.engine).toBe("gemini");
+    expect(result.kind).toBe("guidance");
+    expect(result.reply).toContain("group of 10");
+    expect(result.reply).toContain("exact date and city");
+    expect(result.reply).toContain("paying for everyone or splitting");
+    expect(result.comparison).toBeUndefined();
+  }, 60_000);
+
+  it("Gemini explains the previous purchase when asked about its after-payday minimum", async () => {
+    const { respondWithGemini } = await import("@/lib/copilot/gemini-client");
+    const result = await respondWithGemini("why is it 107 after pay day", await context(), [
+      { role: "user", content: "Can I afford a $1,200 MacBook today?" },
+      { role: "assistant", content: "The after-payday expected minimum was -$107.06." },
+    ]);
+    expect(result.engine).toBe("gemini");
+    expect(result.reply).toContain("MacBook for $1,200");
+    expect(result.reply).toContain("lowest balance across the visible forecast");
+    expect(result.reply).toContain("forecast income");
+    expect(result.assumptions).toContain("Recalculated from current account records. If your data changed, these figures may differ from the previous reply.");
+  }, 60_000);
+
   it("bill scan reads a bill photo", async () => {
     const sharp = (await import("sharp")).default;
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400">

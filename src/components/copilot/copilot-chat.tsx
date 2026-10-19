@@ -44,7 +44,7 @@ export function CopilotChat() {
     setInput("");
     setPending(true);
     try {
-      const result = await askCopilot(message);
+      const result = await askCopilot(message, turns.slice(-12).map(({ role, content }) => ({ role, content })));
       setTurns((prev) => [...prev, { role: "assistant", content: result.reply, result }]);
     } catch {
       setTurns((prev) => [...prev, { role: "assistant", content: "Unable to check your financial data. Please try again." }]);

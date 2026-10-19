@@ -62,8 +62,8 @@ export function NessieCard({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row flex-wrap gap-2 items-center justify-between">
-        <CardTitle>Capital One Nessie demo data</CardTitle>
+      <CardHeader className="flex flex-row flex-wrap gap-3 items-center justify-between">
+        <CardTitle>Capital One Nessie</CardTitle>
         <Badge
           variant="outline"
           className={accounts.length ? "border-positive/40 text-positive" : "border-border text-muted-foreground"}
@@ -79,35 +79,43 @@ export function NessieCard({
           )}
         </Badge>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          Simulated banking records from Capital One&rsquo;s Nessie sandbox, not a real connected
-          bank account, and no real credentials are ever requested.
+      <CardContent className="space-y-5">
+        <p className="text-sm leading-6 text-muted-foreground">
+          Connect simulated banking records for your demo. This sandbox account contains no real money or real bank credentials.
         </p>
 
-        {accounts.length > 0 && <div className="space-y-1.5">
+        {accounts.length > 0 && <div className="grid min-w-0 gap-3">
           <label htmlFor="nessie-account" className="text-sm font-medium">Your sandbox checking account</label>
-          <select id="nessie-account" className="w-full rounded-lg border border-border bg-card p-2 text-sm" value={accountId} onChange={(event) => setAccountId(event.target.value)} disabled={pending}>
+          <select id="nessie-account" className="h-11 w-full min-w-0 max-w-full rounded-lg border border-border bg-card px-3 text-sm" value={accountId} onChange={(event) => setAccountId(event.target.value)} disabled={pending}>
             {accounts.map((account) => <option key={account._id} value={account._id}>{account.nickname} · {account.type} · {formatCurrency(account.balance, { cents: true })}</option>)}
           </select>
-          <p className="text-xs text-muted-foreground">Synchronizing reconciles the forecast with these simulated account balances. Posted imports already reflected in a balance are not counted twice.</p>
-          <p className="text-xs text-muted-foreground break-all">Account ID: {accountId}. Share this ID with a friend for sandbox P2P transfers.</p>
+          <p className="text-xs leading-5 text-muted-foreground">Sync uses the sandbox balance and avoids counting imported activity twice.</p>
+          <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-4">
+            <p className="text-xs font-medium">Account ID</p>
+            <p className="break-all font-mono text-xs leading-5 text-muted-foreground">{accountId}</p>
+            <p className="text-xs leading-5 text-muted-foreground">Share this ID with a friend for sandbox P2P transfers.</p>
+          </div>
         </div>}
         {accountError && <p role="alert" className="text-xs text-caution">{accountError}</p>}
-        {status && (
-          <p className="text-xs text-muted-foreground">
-            Last synced {new Date(status.timestamp).toLocaleString()}: {status.added} added, {status.updated ?? 0} updated, {status.skipped} already up to date.
-          </p>
-        )}
         {message && <p role="status" className="text-xs text-caution">{message}</p>}
 
-        {accounts.length === 0 && canSetup && <Button type="button" variant="outline" size="sm" onClick={handleSetup} disabled={pending}>
-          {pending ? "Preparing…" : "Set up / recover my sandbox account"}
-        </Button>}
-        <Button type="button" variant="outline" size="sm" onClick={handleSync} disabled={pending || !accountId}>
-          <RefreshCw className={pending ? "size-3.5 animate-spin" : "size-3.5"} />
-          {pending ? "Syncing…" : "Sync Nessie data"}
-        </Button>
+        <div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          {status && (
+            <div className="space-y-1 text-xs leading-5 text-muted-foreground">
+              <p>Last synced {new Date(status.timestamp).toLocaleString()}</p>
+              <p>{status.added} added · {status.updated ?? 0} updated · {status.skipped} up to date</p>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-3">
+            {accounts.length === 0 && canSetup && <Button type="button" variant="outline" className="min-h-11 whitespace-normal" onClick={handleSetup} disabled={pending}>
+              {pending ? "Preparing…" : "Set up / recover my sandbox account"}
+            </Button>}
+            <Button type="button" variant="outline" className="min-h-11" onClick={handleSync} disabled={pending || !accountId}>
+              <RefreshCw className={pending ? "size-3.5 animate-spin" : "size-3.5"} />
+              {pending ? "Syncing…" : "Sync Nessie data"}
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
